@@ -1,0 +1,38 @@
+#voting-container {
+	overflow: auto;
+	background-color: var(--theme-lighter-grey);
+}
+
+.voter-label {
+	text-transform: uppercase;
+	font-family: 'Montserrat', sans-serif;
+	color: var(--theme-green);
+	font-weight: 700;
+	font-size: 0.8rem;
+}
+
+.voter-info {
+	font-family: 'Open Sans', sans-serif;
+	padding-top: 5px;
+	padding-bottom: 5px;
+	margin-bottom: 25px;
+}
+
+#voter-column,
+#candidates-column {
+	height: 100%;
+	display: inline-block;
+	float: left;
+}
+
+#voter-column {
+	background-color: var(--theme-lighter-grey);
+	width: 180px;
+	padding: 40px;
+}
+
+#candidates-column {
+	width: calc(100% - 260px);
+	background-color: white;
+	text-align: center;
+}

@@ -1,0 +1,8 @@
+body {
+  background: white; 
+  margin: 0;
+  font-family: 'Montserrat', sans-serif;
+  color: var(--theme-grey);
+  width: 100vw;
+  overflow-x: hidden;
+}
