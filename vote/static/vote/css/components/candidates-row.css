@@ -1,0 +1,80 @@
+.candidates-row {
+    width: calc(100% - 85px);
+    margin: 40px;
+    margin-bottom: 0px;
+    padding-bottom: 68px;
+    border-bottom: 2px solid #D7D7D7;
+}
+
+.candidates-row:last-of-type {
+    border: none;
+}
+
+.candidate-position {
+    font-weight: 700;
+    color: var(--theme-green);
+    font-size: 1.4rem;
+    text-align: left;
+}
+
+.candidate {
+    display: inline-block;
+    float: left;
+    width: 33.33%;
+    text-align: center;
+    font-family: 'Open Sans', sans-serif;
+}
+
+.candidate-name,
+.candidate-party {
+    padding-top: 3px;
+    padding-bottom: 3px;
+}
+
+.candidate-img {
+    height: 85px;
+    width: 85px;
+    background-size: cover;
+    margin-top: 40px;
+    margin-bottom: 15px;
+}
+
+.candidate-name {
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.candidate-party {
+    font-style: italic;
+    font-size: 0.85rem;
+}
+
+.candidate-response {
+    color: var(--theme-green);
+    font-size: 0.7rem;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.response-link {
+    position: relative;
+}
+
+.response-link:after {
+    background-color: var(--theme-green);
+    content: "";
+    height: 1px;
+    left: 0px;
+    position: absolute;
+    top: 17px;
+    width: 0;
+    -webkit-transition: all 0.2s ease-in-out;
+    -moz-transition: all 0.2s ease-in-out;
+    -o-transition: all 0.2s ease-in-out;
+    -ms-transition: all 0.2s ease-in-out;
+    transition: all 0.25s ease-in-out;
+}
+
+.response-link:hover:after {
+    width: 100%;
+}
