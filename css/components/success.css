@@ -40,3 +40,15 @@
 	font-weight: 600;
 	text-decoration: underline;
 }
+
+@media screen and (max-height: 800px) {
+	#success-container {
+		min-height: 480px;
+		margin-top: 20%;
+		height: 60%;
+	}
+	body {
+		height: 800px;
+		overflow-y: scroll;
+	}
+}

@@ -4,3 +4,9 @@
 	bottom: 25px;
 	right: calc(50vw - 210px);
 }
+
+@media screen and (max-height: 800px) {
+	#success-org-logos {
+		bottom: 0;
+	}
+}
