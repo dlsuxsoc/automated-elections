@@ -124,3 +124,14 @@ LOGIN_URL = '/login/'
 
 # The URL where requests are redirected after login
 LOGIN_REDIRECT_URL = '/'
+
+# Email settings
+EMAIL_HOST = 'smtp.gmail.com'
+
+EMAIL_HOST_USER = 'comelec.dlsu.autoelections.sysad@gmail.com'
+
+EMAIL_HOST_PASSWORD = 'ch0m3l@ck:amino!'
+
+EMAIL_PORT = 587
+
+EMAIL_USE_TLS = True
