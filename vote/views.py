@@ -8,6 +8,7 @@ from django.shortcuts import render, redirect
 from django.views import View
 
 
+# Sends an email receipt containing the voted candidates to the voter
 def send_email_receipt(user, voted):
     from_email = settings.EMAIL_HOST_USER
     to_email = [user.username + '@dlsu.edu.ph']
