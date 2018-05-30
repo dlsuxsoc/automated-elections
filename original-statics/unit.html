@@ -1,0 +1,109 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="css/components/unit.css" />
+	</head>
+	<body>
+		<div id="header-container">
+			<img id="header-ballot" src="assets/svg/ballot-white.svg">
+			<a>Voter's List</a>
+			<a>Candidate's List</a>
+			<a>Comelec Offices</a>
+			<a>Unit</a>
+			<div id="user-container">
+				<img id="user-icon" src="assets/svg/user.svg">
+				<div id="user-name"> Troy Bolton</div>
+			</div>
+			
+		</div>
+
+		<div id="tab-buttons-container">
+		  	<button class="tab-buttons" onclick="openTab(event, 'All')" id="tab-all">See all units</button>
+		 	<button class="tab-buttons" onclick="openTab(event, 'Add')"  id="tab-add">Add a unit</button>
+			<form action="" id="tab-search">
+				<input  id="search" type="text" name="search-unit" placeholder="Search a unit...">
+			</form>
+		</div>
+
+		<div id="tab-container">
+			<div id="All" class="tab-content">
+				<table>
+					<tr class="row-0">
+						<td class="col-checkbox"><input type="checkbox"></td>
+						<td class="col-name">College</td>
+						<td class="col-id">Batch</td>
+						<td class="col-unit">Unit Name</td>
+					</tr>
+					<tr class="row-1">
+						<td class="col-checkbox"><input type="checkbox"></td>
+						<td class="col-name">COB</td>
+						<td class="col-id">115</td>
+						<td class="col-unit">BLAZEIT420</td>
+					</tr>
+					<tr class="row-2">
+						<td class="col-checkbox"><input type="checkbox"></td>
+						<td class="col-name">COS</td>
+						<td class="col-id">113</td>
+						<td class="col-unit">Unit Name</td>
+					</tr>
+
+				</table>
+			</div>
+
+			<form action="" id="Add" class="tab-content">
+				<div class="info-fields-container">
+					<div class="info-container">
+						<div class="info-label"> College </div>
+						<select class="info-input" name="cand-college">
+							<option>CCS</option>
+							<option>COB</option>
+							<option>COE</option>
+							<option>CLA</option>
+							<option>COS</option>
+						</select>
+					</div>
+
+					<div class="info-container">
+						<div class="info-label"> Batch</div>
+						<input type="text" class="info-input" name="cand-id" placeholder="ex. 116">
+					</div>
+
+					<div class="info-container">
+						<div class="info-label"> Unit Name</div>
+						<input type="text" class="info-input" name="cand-id" placeholder="ex. ABSOLUTEUNIT">
+					</div>
+
+				</div>
+
+				<div class="info-buttons-container">
+					<button class="button cancel">Cancel</button>
+					<input class="button confirm" type="submit" value="Add new unit">
+				</div>
+			</form>
+
+		</div>
+
+		<div id="logo">
+			<img width= 500 height=50 src="assets/png/org-logos.png">
+		</div>
+	</body>
+
+	<script>
+		function openTab(evt, tab) {
+		    var i, tabcontent, tabButtons;
+		    tabcontent = document.getElementsByClassName("tab-content");
+		    for (i = 0; i < tabcontent.length; i++) {
+		        tabcontent[i].style.display = "none";
+		    }
+		    tabButtons = document.getElementsByClassName("tab-buttons");
+		    for (i = 0; i < tabButtons.length; i++) {
+		        tabButtons[i].className = tabButtons[i].className.replace(" active", "");
+		    }
+		    document.getElementById(tab).style.display = "block";
+		    evt.currentTarget.className += " active";
+		}
+		//set default tab to All Candidates Tab
+		document.getElementById("tab-all").click();
+	</script>	
+</html>
+
+

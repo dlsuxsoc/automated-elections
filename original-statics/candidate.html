@@ -1,0 +1,192 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="css/components/candidate.css" />
+	</head>
+	<body>
+		<div id="header-container">
+			<img id="header-ballot" src="assets/svg/ballot-white.svg">
+			<a>Voter's List</a>
+			<a>Candidate's List</a>
+			<a>Comelec Offices</a>
+			<a>Unit</a>
+			<div id="user-container">
+				<img id="user-icon" src="assets/svg/user.svg">
+				<div id="user-name"> Troy Bolton</div>
+			</div>
+			
+		</div>
+
+		<div id="tab-buttons-container">
+		  	<button class="tab-buttons" onclick="openTab(event, 'All')" id="tab-all">See all candidates</button>
+		 	<button class="tab-buttons" onclick="openTab(event, 'Add')"  id="tab-add">Add a candidate</button>
+			<button class="tab-buttons" onclick="openTab(event, 'Edit')"  id="tab-edit-take">Edit takes</button>
+			<form action="" id="tab-search">
+				<input  id="search" type="text" name="search-cand" placeholder="Search a candidate...">
+			</form>
+		</div>
+
+		<div id="tab-container">
+			<div id="All" class="tab-content">
+				<table>
+					<tr class="row-0">
+						<td class="col-checkbox"><input type="checkbox"></td>
+						<td class="col-name">Full Name</td>
+						<td class="col-id">ID Number</td>
+						<td class="col-position">Position</td>
+						<td class="col-status">Has Voted</td>
+					</tr>
+					<tr class="row-1">
+						<td class="col-checkbox"><input type="checkbox"></td>
+						<td class="col-name">Logan Paul</td>
+						<td class="col-id">17496849</td>
+						<td class="col-position">Youtuber</td>
+						<td class="col-status">NO</td>
+					</tr>
+					<tr class="row-2">
+						<td class="col-checkbox"><input type="checkbox"></td>
+						<td class="col-name">Jake Paul</td>
+						<td class="col-id">17496849</td>
+						<td class="col-position">Youtuber</td>
+						<td class="col-status">YES</td>
+					</tr>
+					<tr class="row-1">
+						<td class="col-checkbox"><input type="checkbox"></td>
+						<td class="col-name">Logan Paul</td>
+						<td class="col-id">17496849</td>
+						<td class="col-position">Youtuber</td>
+						<td class="col-status">NO</td>
+					</tr>
+					<tr class="row-2">
+						<td class="col-checkbox"><input type="checkbox"></td>
+						<td class="col-name">Jake Paul</td>
+						<td class="col-id">17496849</td>
+						<td class="col-position">Youtuber</td>
+						<td class="col-status">YES</td>
+					</tr>
+					<tr class="row-1">
+						<td class="col-checkbox"><input type="checkbox"></td>
+						<td class="col-name">Logan Paul</td>
+						<td class="col-id">17496849</td>
+						<td class="col-position">Youtuber</td>
+						<td class="col-status">NO</td>
+					</tr>
+					<tr class="row-2">
+						<td class="col-checkbox"><input type="checkbox"></td>
+						<td class="col-name">Jake Paul</td>
+						<td class="col-id">17496849</td>
+						<td class="col-position">Youtuber</td>
+						<td class="col-status">YES</td>
+					</tr>
+				</table>
+			</div>
+
+			<form action="" id="Add" class="tab-content">
+				<div class="info-fields-container">
+					<div class="info-container">
+						<div class="info-label"> Full Name </div>
+						<input type="text" class="info-input" name="cand-name" placeholder="ex. Logan Paul">
+					</div>
+
+					<div class="info-container">
+						<div class="info-label"> ID Number</div>
+						<input type="text" class="info-input" name="cand-id" placeholder="ex. 18002738255">
+					</div>
+
+					<div class="info-container">
+						<div class="info-label"> College</div>
+						<select class="info-input" name="cand-college">
+							<option>CCS</option>
+							<option>COB</option>
+							<option>COE</option>
+							<option>CLA</option>
+							<option>COS</option>
+						</select>
+					</div>
+
+					<div class="info-container">
+						<div class="info-label"> Voting Status</div>
+						<select class="info-input" name="cand-status">
+							<option>YES</option>
+							<option>NO</option>
+							<option>MAYBE</option>
+							<option>PERHAPS</option>
+							<option>POSSIBLY</option>
+						</select>
+					</div>
+
+					<div class="info-container">
+						<div class="info-label"> Position</div>
+						<select class="info-input" name="cand-position">
+							<option>Janitor</option>
+							<option>USB PRESIDENT</option>
+						</select>
+					</div>
+
+				</div>
+
+				<div class="info-buttons-container">
+					<button class="button cancel">Cancel</button>
+					<input class="button confirm" type="submit" value="Add new candidate">
+				</div>
+			</form>
+
+			<form action="" id="Edit" class="tab-content">
+				<div class="takes-container">
+					
+					<div class="info-container">
+						<div class="info-label"> Select an Issue</div>
+						<select class="info-input" name="cand-college">
+							<option>Doktorr maymays, whynot?</option>
+							<option>Doktorr maymays, whynot?</option>
+							<option>Doktorr maymays, whynot?</option>
+						</select>
+					</div>
+
+					<div class="info-container">
+						<div class="info-label"> Select a candidate</div>
+						<select class="info-input" name="cand-status">
+							<option>Uson Mocha</option>
+							<option>Mocha Uson</option>	
+							<option>Mocha Uson</option>
+						</select>
+					</div>
+				</div>
+
+				<div class="response-container">
+					<div class="info-label"> Talk/Response to the Issue</div>
+					<textarea class="response-textarea">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam eget eros et ligula accumsan blandit sed vitae massa. Cras sit amet lacinia velit. Duis id risus quam. Fusce in lorem vitae lectus cursus condimentum. In hac habitasse platea dictumst. In ac purus consequat risus eleifend feugiat. Maecenas ornare nisi sed nulla blandit faucibus. Ut mattis diam felis. Vivamus convallis, massa sit amet iaculis aliquet, massa leo tincidunt neque, in iaculis nisl ligula in ligula. Suspendisse vestibulum, sem in luctus vulputate, sem orci lobortis dolor, eu vestibulum tellus nisi ac lacus. Nullam ultricies a elit ac aliquam. Nullam at tincidunt arcu. Sed eu ante semper, volutpat quam a, tincidunt dui. Vivamus sagittis a ipsum eu congue.
+					</textarea>
+				</div>
+
+				<div class="info-buttons-container">
+					<button class="button cancel">Cancel</button>
+					<input class="button confirm" type="submit" value="Save Changes">
+				</div>
+			</form>
+		</div>
+
+		<div id="logo">
+			<img width= 500 height=50 src="assets/ipng/org-logos.png">
+		</div>
+	</body>
+
+	<script>
+		function openTab(evt, tab) {
+		    var i, tabcontent, tabButtons;
+		    tabcontent = document.getElementsByClassName("tab-content");
+		    for (i = 0; i < tabcontent.length; i++) {
+		        tabcontent[i].style.display = "none";
+		    }
+		    tabButtons = document.getElementsByClassName("tab-buttons");
+		    for (i = 0; i < tabButtons.length; i++) {
+		        tabButtons[i].className = tabButtons[i].className.replace(" active", "");
+		    }
+		    document.getElementById(tab).style.display = "block";
+		    evt.currentTarget.className += " active";
+		}
+		//set default tab to All Candidates Tab
+		document.getElementById("tab-all").click();
+	</script>	
+</html>
+
+
