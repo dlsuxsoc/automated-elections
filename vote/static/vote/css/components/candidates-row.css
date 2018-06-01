@@ -10,6 +10,29 @@
     border: none;
 }
 
+.abstain {
+    border: 0;
+    background: none;
+    box-shadow: none;
+    border-radius: 5px;
+    background-color: var(--theme-green);
+    color: white;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 0.85rem;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    cursor: pointer;
+    -webkit-transition: all 0.2s ease;
+    vertical-align: middle;
+    margin-left: 10px;
+}
+
+.abstain:hover {
+    filter: brightness(110%);
+}
+
 .candidate-position {
     font-weight: 700;
     color: var(--theme-green);
@@ -25,7 +48,7 @@
     font-family: 'Open Sans', sans-serif;
 }
 
-.candidate-name,
+.candidate-name, 
 .candidate-party {
     padding-top: 3px;
     padding-bottom: 3px;

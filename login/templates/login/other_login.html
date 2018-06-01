@@ -1,0 +1,45 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+
+    <!-- external links for typefaces -->
+    <link href="https://fonts.googleapis.com/css?family=Montserrat:400,700" rel="stylesheet">
+
+
+    <!-- elements -->
+    <link href="{% static 'login/css/elements/body.css' %}" rel="stylesheet" type="text/css"/>
+    <link href="{% static 'login/css/elements/root.css' %}" rel="stylesheet" type="text/css"/>
+
+    <!-- components -->
+    <link href="{% static 'login/css/components/landing.css' %}" rel="stylesheet" type="text/css"/>
+    <link href="{% static 'login/css/components/landing-form.css' %}" rel="stylesheet" type="text/css"/>
+    <link href="{% static 'login/css/components/landing-logos.css' %}" rel="stylesheet" type="text/css"/>
+
+</head>
+<body>
+<img src="{% static 'login/assets/png/uxsoc-logo.png' %}" id="uxsoc-logo"/>
+<div id="landing-container">
+    <div id="landing-child">
+        <div id="title">Welcome to the Elections</div>
+
+        <div id="login-label">Ready to vote? Sign in here!</div>
+        <form id="landing-form" method="POST" action="">
+            {% csrf_token %}
+            <div class="input-field">
+                <input type="text" name="username" id="id-number" required="required"/>
+                <label for="id-number">email</label>
+            </div>
+            <div class="input-field">
+                <input required="required" type="password" name="password" id="passcode"/>
+                <label for="passcode">password</label>
+            </div>
+            <input type="submit" hidden="hidden"/>
+        </form>
+
+        <img src="{% static 'login/assets/png/org-logos.png' %}" id="org-logos"/>
+    </div>
+</div>
+</body>
+</html>
