@@ -48,6 +48,15 @@ body::after {
     margin: 10px;
 }
 
+#error {
+    color: red;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-left: 10px;
+    line-height: 1.75rem;
+}
+
 #login-label {
     color: #36A472;
     text-transform: uppercase;

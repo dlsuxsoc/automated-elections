@@ -1,4 +1,4 @@
-:root{
+:root {
     --theme-green: #36A472;
     --theme-lighter-green: #81C4A5;
     --theme-grey: #333333;
@@ -7,5 +7,5 @@
 }
 
 .clearfix {
-	overflow: auto;
+    overflow: auto;
 }
