@@ -1,154 +1,157 @@
 <!DOCTYPE html>
 <html>
-	<head>
-		<title></title>
+<head>
+    <title></title>
 
-		<!-- external links for typefaces -->
-		<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,700" rel="stylesheet">
-		<link href="https://fonts.googleapis.com/css?family=Montserrat:400,700" rel="stylesheet">
+    <!-- external links for typefaces -->
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,700" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Montserrat:400,700" rel="stylesheet">
 
 
-		<!-- elements -->
-		<link href="css/elements/body.css" rel="stylesheet" type="text/css" />
-		<link href="css/elements/root.css" rel="stylesheet" type="text/css" />
-		<link href="css/elements/link.css" rel="stylesheet" type="text/css" />
+    <!-- elements -->
+    <link href="css/elements/body.css" rel="stylesheet" type="text/css"/>
+    <link href="css/elements/root.css" rel="stylesheet" type="text/css"/>
+    <link href="css/elements/link.css" rel="stylesheet" type="text/css"/>
 
-		<!-- components -->
-		<link href="css/components/voting.css" rel="stylesheet" type="text/css" />
-		<link href="css/components/candidates-row.css" rel="stylesheet" type="text/css" />
-		<link href="css/components/candidates-form.css" rel="stylesheet" type="text/css" />
+    <!-- components -->
+    <link href="css/components/voting.css" rel="stylesheet" type="text/css"/>
+    <link href="css/components/candidates-row.css" rel="stylesheet" type="text/css"/>
+    <link href="css/components/candidates-form.css" rel="stylesheet" type="text/css"/>
 
-		<!-- scripts -->
-		
-	</head>
-	<body>
-		<div id="voting-container">
-			<div id="voter-column">
-				<div class="voter-label">
-					Name
-				</div>
-				<div class="voter-info" id="voter-name">
-					Mike Jaren Yap
-				</div>
+    <!-- scripts -->
 
-				<div class="voter-label">
-					ID Number
-				</div>
-				<div class="voter-info" id="voter-od">
-					11527013
-				</div>
+</head>
+<body>
+<div id="voting-container">
+    <div id="voter-column">
+        <div class="voter-label">
+            Name
+        </div>
+        <div class="voter-info" id="voter-name">
+            Mike Jaren Yap
+        </div>
 
-				<div class="voter-label">
-					Your Votes
-				</div>
-				<div class="voter-info" id="voter-progress">
-					1/3
-				</div>
-			</div>
-			<div id="candidates-column">
-				<form>
-					<div class="candidates-row clearfix">
-						<div class="candidate-position">Batch President</div>
-						<div class="candidate">
-							<img src="assets/svg/user.svg" class="candidate-img"/>
-							<div class="candidate-name">Jose Rizal</div>
-							<div class="candidate-party">Santugon sa Tawag ng Panahon</div>
-							<div class="candidate-response">
-								<a href="#" class="response-link">Read the response >></a>
-							</div>
-							<input type="radio" name="batch-president" value="1" id="president-1" checked>
-							<label for="president-1"></label>
-						</div>
-						<div class="candidate">
-							<img src="assets/svg/user.svg" class="candidate-img"/>
-							<div class="candidate-name">Emilio Aguinaldo</div>
-							<div class="candidate-party">Independent party</div>
-							<div class="candidate-response">
-								<a href="#" class="response-link">Read the response >></a>
-							</div>
-							<input type="radio" name="batch-president" value="2" id="president-2">
-							<label for="president-2"></label>
-						</div>
-						<div class="candidate">
-							<img src="assets/svg/user.svg" class="candidate-img"/>
-							<div class="candidate-name">Graciano Lopez Jaena</div>
-							<div class="candidate-party">Alysansang Tapat</div>
-							<div class="candidate-response">
-								<a href="#" class="response-link">Read the response >></a>
-							</div>
-							<input type="radio" name="batch-president" value="3" id="president-3">
-							<label for="president-3"></label>
-						</div>
-					</div>
-					<div class="candidates-row clearfix">
-						<div class="candidate-position">Batch Vice President</div>
-						<div class="candidate">
-							<img src="assets/svg/user.svg" class="candidate-img"/>
-							<div class="candidate-name">Jose Rizal</div>
-							<div class="candidate-party">Santugon sa Tawag ng Panahon</div>
-							<div class="candidate-response">
-								<a href="#" class="response-link">Read the response >></a>
-							</div>
-							<input type="radio" name="batch-vice-president" value="1" id="vice-president-1" checked>
-							<label for="vice-president-1"></label>
-						</div>
-						<div class="candidate">
-							<img src="assets/svg/user.svg" class="candidate-img"/>
-							<div class="candidate-name">Emilio Aguinaldo</div>
-							<div class="candidate-party">Independent party</div>
-							<div class="candidate-response">
-								<a href="#" class="response-link">Read the response >></a>
-							</div>
-							<input type="radio" name="batch-vice-president" value="2" id="vice-president-2">
-							<label for="vice-president-2"></label>
-						</div>
-						<div class="candidate">
-							<img src="assets/svg/user.svg" class="candidate-img"/>
-							<div class="candidate-name">Graciano Lopez Jaena</div>
-							<div class="candidate-party">Alysansang Tapat</div>
-							<div class="candidate-response">
-								<a href="#" class="response-link">Read the response >></a>
-							</div>
-							<input type="radio" name="batch-vice-president" value="3" id="vice-president-3">
-							<label for="vice-president-3"></label>
-						</div>
-					</div>
-					<div class="candidates-row clearfix">
-						<div class="candidate-position">Legislative Assembly Representative</div>
-						<div class="candidate">
-							<img src="assets/svg/user.svg" class="candidate-img"/>
-							<div class="candidate-name">Jose Rizal</div>
-							<div class="candidate-party">Santugon sa Tawag ng Panahon</div>
-							<div class="candidate-response">
-								<a href="#" class="response-link">Read the response >></a>
-							</div>
-							<input type="radio" name="legislative-assembly-representative" value="1" id="legislative-assembly-representative-1" checked>
-							<label for="legislative-assembly-representative-1"></label>
-						</div>
-						<div class="candidate">
-							<img src="assets/svg/user.svg" class="candidate-img"/>
-							<div class="candidate-name">Emilio Aguinaldo</div>
-							<div class="candidate-party">Independent party</div>
-							<div class="candidate-response">
-								<a href="#" class="response-link">Read the response >></a>
-							</div>
-							<input type="radio" name="legislative-assembly-representative" value="2" id="legislative-assembly-representative-2">
-							<label for="legislative-assembly-representative-2"></label>
-						</div>
-						<div class="candidate">
-							<img src="assets/svg/user.svg" class="candidate-img"/>
-							<div class="candidate-name">Graciano Lopez Jaena</div>
-							<div class="candidate-party">Alysansang Tapat</div>
-							<div class="candidate-response">
-								<a href="#" class="response-link">Read the response >></a>
-							</div>
-							<input type="radio" name="legislative-assembly-representative" value="3" id="legislative-assembly-representative-3">
-							<label for="legislative-assembly-representative-3"></label>
-						</div>
-					</div>
-					<input type="submit" id="voting-submit" value="Submit my vote"/>
-				</form>
-			</div>
-		</div>
-	</body>
+        <div class="voter-label">
+            ID Number
+        </div>
+        <div class="voter-info" id="voter-od">
+            11527013
+        </div>
+
+        <div class="voter-label">
+            Your Votes
+        </div>
+        <div class="voter-info" id="voter-progress">
+            1/3
+        </div>
+    </div>
+    <div id="candidates-column">
+        <form>
+            <div class="candidates-row clearfix">
+                <div class="candidate-position">Batch President</div>
+                <div class="candidate">
+                    <img src="assets/svg/user.svg" class="candidate-img"/>
+                    <div class="candidate-name">Jose Rizal</div>
+                    <div class="candidate-party">Santugon sa Tawag ng Panahon</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="batch-president" value="1" id="president-1" checked>
+                    <label for="president-1"></label>
+                </div>
+                <div class="candidate">
+                    <img src="assets/svg/user.svg" class="candidate-img"/>
+                    <div class="candidate-name">Emilio Aguinaldo</div>
+                    <div class="candidate-party">Independent party</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="batch-president" value="2" id="president-2">
+                    <label for="president-2"></label>
+                </div>
+                <div class="candidate">
+                    <img src="assets/svg/user.svg" class="candidate-img"/>
+                    <div class="candidate-name">Graciano Lopez Jaena</div>
+                    <div class="candidate-party">Alysansang Tapat</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="batch-president" value="3" id="president-3">
+                    <label for="president-3"></label>
+                </div>
+            </div>
+            <div class="candidates-row clearfix">
+                <div class="candidate-position">Batch Vice President</div>
+                <div class="candidate">
+                    <img src="assets/svg/user.svg" class="candidate-img"/>
+                    <div class="candidate-name">Jose Rizal</div>
+                    <div class="candidate-party">Santugon sa Tawag ng Panahon</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="batch-vice-president" value="1" id="vice-president-1" checked>
+                    <label for="vice-president-1"></label>
+                </div>
+                <div class="candidate">
+                    <img src="assets/svg/user.svg" class="candidate-img"/>
+                    <div class="candidate-name">Emilio Aguinaldo</div>
+                    <div class="candidate-party">Independent party</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="batch-vice-president" value="2" id="vice-president-2">
+                    <label for="vice-president-2"></label>
+                </div>
+                <div class="candidate">
+                    <img src="assets/svg/user.svg" class="candidate-img"/>
+                    <div class="candidate-name">Graciano Lopez Jaena</div>
+                    <div class="candidate-party">Alysansang Tapat</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="batch-vice-president" value="3" id="vice-president-3">
+                    <label for="vice-president-3"></label>
+                </div>
+            </div>
+            <div class="candidates-row clearfix">
+                <div class="candidate-position">Legislative Assembly Representative</div>
+                <div class="candidate">
+                    <img src="assets/svg/user.svg" class="candidate-img"/>
+                    <div class="candidate-name">Jose Rizal</div>
+                    <div class="candidate-party">Santugon sa Tawag ng Panahon</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="legislative-assembly-representative" value="1"
+                           id="legislative-assembly-representative-1" checked>
+                    <label for="legislative-assembly-representative-1"></label>
+                </div>
+                <div class="candidate">
+                    <img src="assets/svg/user.svg" class="candidate-img"/>
+                    <div class="candidate-name">Emilio Aguinaldo</div>
+                    <div class="candidate-party">Independent party</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="legislative-assembly-representative" value="2"
+                           id="legislative-assembly-representative-2">
+                    <label for="legislative-assembly-representative-2"></label>
+                </div>
+                <div class="candidate">
+                    <img src="assets/svg/user.svg" class="candidate-img"/>
+                    <div class="candidate-name">Graciano Lopez Jaena</div>
+                    <div class="candidate-party">Alysansang Tapat</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="legislative-assembly-representative" value="3"
+                           id="legislative-assembly-representative-3">
+                    <label for="legislative-assembly-representative-3"></label>
+                </div>
+            </div>
+            <input type="submit" id="voting-submit" value="Submit my vote"/>
+        </form>
+    </div>
+</div>
+</body>
 </html>

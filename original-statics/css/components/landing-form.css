@@ -1,44 +1,44 @@
 .input-field > input {
-	width: 100%;
-	border: 0;
-	outline: 0;
-	padding: 15px;
-	border: 3px solid var(--theme-green);
+    width: 100%;
+    border: 0;
+    outline: 0;
+    padding: 15px;
+    border: 3px solid var(--theme-green);
 }
 
-.input-field > input:focus~label,
-.input-field > input:valid~label {
-	top: -5px;
-	color: var(--theme-green);
-	background-color: #FFFFFF;
-	line-height: 1rem;
+.input-field > input:focus ~ label,
+.input-field > input:valid ~ label {
+    top: -5px;
+    color: var(--theme-green);
+    background-color: #FFFFFF;
+    line-height: 1rem;
 }
 
 .input-field > label {
-  position: absolute;
-	top: 0;
-	color: var(--theme-lighter-green);
-	transition: 0.2s all;
-	margin-left: 15px;
-	padding-left: 5px;
-	padding-right: 5px;
-	font-weight: 600;
-	font-size: 0.85rem;
+    position: absolute;
+    top: 0;
+    color: var(--theme-lighter-green);
+    transition: 0.2s all;
+    margin-left: 15px;
+    padding-left: 5px;
+    padding-right: 5px;
+    font-weight: 600;
+    font-size: 0.85rem;
 }
 
 .input-field {
-	position: relative;
-	width: 400px;
-	height: 55px;
-	line-height: 55px;
-	margin-bottom: 10px;
-	margin-left: 10px;
-	margin-right: 10px;
-	color: #333;
+    position: relative;
+    width: 400px;
+    height: 55px;
+    line-height: 55px;
+    margin-bottom: 10px;
+    margin-left: 10px;
+    margin-right: 10px;
+    color: #333;
 }
 
-#id-number::-webkit-inner-spin-button, 
-#id-number::-webkit-outer-spin-button { 
-	-webkit-appearance: none; 
-	margin: 0; 
+#id-number::-webkit-inner-spin-button,
+#id-number::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }

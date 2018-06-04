@@ -37,9 +37,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'login',
     'logout',
-    'register',
     'vote',
     'passcode',
+    'sysadmin',
 ]
 
 MIDDLEWARE = [
@@ -135,3 +135,7 @@ EMAIL_HOST_PASSWORD = 'ch0m3l@ck:amino!'
 EMAIL_PORT = 587
 
 EMAIL_USE_TLS = True
+
+# Session expiry settings
+# Voting session expires in 10 minutes
+SESSION_COOKIE_AGE = 60 * 10
