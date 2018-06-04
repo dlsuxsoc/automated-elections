@@ -18,7 +18,7 @@
     <link href="{% static 'vote/css/components/voting.css' %}" rel="stylesheet" type="text/css"/>
     <link href="{% static 'vote/css/components/candidates-row.css' %}" rel="stylesheet" type="text/css"/>
     <link href="{% static 'vote/css/components/candidates-form.css' %}" rel="stylesheet" type="text/css"/>
-    <link href="{% static 'css/components/vote-summary.css' %}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'vote/css/components/vote-summary.css' %}" rel="stylesheet" type="text/css"/>
 
     <!-- scripts -->
     <script src="{% static 'vote/js/abstain.js' %}" type="text/javascript"></script>
@@ -42,50 +42,54 @@
             {{ user.username }}
         </div>
 
-        <div class="voter-label">
+        {% comment %}        <div class="voter-label">
             Your Votes
         </div>
         <div class="voter-info" id="voter-progress">
             1/3
-        </div>
+        </div>{% endcomment %}
     </div>
     <div id="candidates-column">
-        <form method="POST" action="">
+        {# TODO: Revise once voting is available #}
+        <form id="vote" method="POST" action="">
             {% csrf_token %}
+            <div class="candidate-category">
+                BATCH
+            </div>
             <div class="candidates-row clearfix">
                 <div class="candidate-position">
                     Batch President
                     <button type="button" id="abstain-1" class="abstain" onclick="abstain(1)">Abstain</button>
                 </div>
                 <div class="candidate">
-                    <img src="assets/svg/user.svg" class="candidate-img"/>
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
                     <div class="candidate-name">Jose Rizal</div>
                     <div class="candidate-party">Santugon sa Tawag ng Panahon</div>
                     <div class="candidate-response">
                         <a href="#" class="response-link">Read the response >></a>
                     </div>
-                    <input type="radio" name="batch-president" value="1" id="president-1">
-                    <label for="president-1"></label>
+                    <input type="radio" name="batch-president" value="1" id="batch-president-1">
+                    <label for="batch-president-1"></label>
                 </div>
                 <div class="candidate">
-                    <img src="assets/svg/user.svg" class="candidate-img"/>
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
                     <div class="candidate-name">Emilio Aguinaldo</div>
                     <div class="candidate-party">Independent party</div>
                     <div class="candidate-response">
                         <a href="#" class="response-link">Read the response >></a>
                     </div>
-                    <input type="radio" name="batch-president" value="2" id="president-2">
-                    <label for="president-2"></label>
+                    <input type="radio" name="batch-president" value="2" id="batch-president-2">
+                    <label for="batch-president-2"></label>
                 </div>
                 <div class="candidate">
-                    <img src="assets/svg/user.svg" class="candidate-img"/>
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
                     <div class="candidate-name">Graciano Lopez Jaena</div>
                     <div class="candidate-party">Alysansang Tapat</div>
                     <div class="candidate-response">
                         <a href="#" class="response-link">Read the response >></a>
                     </div>
-                    <input type="radio" name="batch-president" value="3" id="president-3">
-                    <label for="president-3"></label>
+                    <input type="radio" name="batch-president" value="3" id="batch-president-3">
+                    <label for="batch-president-3"></label>
                 </div>
             </div>
             <div class="candidates-row clearfix">
@@ -94,34 +98,34 @@
                     <button type="button" id="abstain-1" class="abstain" onclick="abstain(2)">Abstain</button>
                 </div>
                 <div class="candidate">
-                    <img src="assets/svg/user.svg" class="candidate-img"/>
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
                     <div class="candidate-name">Jose Rizal</div>
                     <div class="candidate-party">Santugon sa Tawag ng Panahon</div>
                     <div class="candidate-response">
                         <a href="#" class="response-link">Read the response >></a>
                     </div>
-                    <input type="radio" name="batch-vice-president" value="1" id="vice-president-1">
-                    <label for="vice-president-1"></label>
+                    <input type="radio" name="batch-vice-president" value="1" id="batch-vice-president-1">
+                    <label for="batch-vice-president-1"></label>
                 </div>
                 <div class="candidate">
-                    <img src="assets/svg/user.svg" class="candidate-img"/>
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
                     <div class="candidate-name">Emilio Aguinaldo</div>
                     <div class="candidate-party">Independent party</div>
                     <div class="candidate-response">
                         <a href="#" class="response-link">Read the response >></a>
                     </div>
-                    <input type="radio" name="batch-vice-president" value="2" id="vice-president-2">
-                    <label for="vice-president-2"></label>
+                    <input type="radio" name="batch-vice-president" value="2" id="batch-vice-president-2">
+                    <label for="batch-vice-president-2"></label>
                 </div>
                 <div class="candidate">
-                    <img src="assets/svg/user.svg" class="candidate-img"/>
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
                     <div class="candidate-name">Graciano Lopez Jaena</div>
                     <div class="candidate-party">Alysansang Tapat</div>
                     <div class="candidate-response">
                         <a href="#" class="response-link">Read the response >></a>
                     </div>
-                    <input type="radio" name="batch-vice-president" value="3" id="vice-president-3">
-                    <label for="vice-president-3"></label>
+                    <input type="radio" name="batch-vice-president" value="3" id="batch-vice-president-3">
+                    <label for="batch-vice-president-3"></label>
                 </div>
             </div>
             <div class="candidates-row clearfix">
@@ -130,34 +134,271 @@
                     <button type="button" id="abstain-1" class="abstain" onclick="abstain(3)">Abstain</button>
                 </div>
                 <div class="candidate">
-                    <img src="assets/svg/user.svg" class="candidate-img"/>
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
                     <div class="candidate-name">Jose Rizal</div>
                     <div class="candidate-party">Santugon sa Tawag ng Panahon</div>
                     <div class="candidate-response">
                         <a href="#" class="response-link">Read the response >></a>
                     </div>
-                    <input type="radio" name="legislative-assembly-representative" value="1" id="legislative-assembly-representative-1">
+                    <input type="radio" name="legislative-assembly-representative" value="1"
+                           id="legislative-assembly-representative-1">
                     <label for="legislative-assembly-representative-1"></label>
                 </div>
                 <div class="candidate">
-                    <img src="assets/svg/user.svg" class="candidate-img"/>
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
                     <div class="candidate-name">Emilio Aguinaldo</div>
                     <div class="candidate-party">Independent party</div>
                     <div class="candidate-response">
                         <a href="#" class="response-link">Read the response >></a>
                     </div>
-                    <input type="radio" name="legislative-assembly-representative" value="2" id="legislative-assembly-representative-2">
+                    <input type="radio" name="legislative-assembly-representative" value="2"
+                           id="legislative-assembly-representative-2">
                     <label for="legislative-assembly-representative-2"></label>
                 </div>
                 <div class="candidate">
-                    <img src="assets/svg/user.svg" class="candidate-img"/>
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
                     <div class="candidate-name">Graciano Lopez Jaena</div>
                     <div class="candidate-party">Alysansang Tapat</div>
                     <div class="candidate-response">
                         <a href="#" class="response-link">Read the response >></a>
                     </div>
-                    <input type="radio" name="legislative-assembly-representative" value="3" id="legislative-assembly-representative-3">
+                    <input type="radio" name="legislative-assembly-representative" value="3"
+                           id="legislative-assembly-representative-3">
                     <label for="legislative-assembly-representative-3"></label>
+                </div>
+            </div>
+            <div class="candidate-category">
+                COLLEGE
+            </div>
+            <div class="candidates-row clearfix">
+                <div class="candidate-position">
+                    College President
+                    <button type="button" id="abstain-1" class="abstain" onclick="abstain(4)">Abstain</button>
+                </div>
+                <div class="candidate">
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
+                    <div class="candidate-name">Jose Rizal</div>
+                    <div class="candidate-party">Santugon sa Tawag ng Panahon</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="college-president" value="1" id="college-president-1">
+                    <label for="college-president-1"></label>
+                </div>
+                <div class="candidate">
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
+                    <div class="candidate-name">Emilio Aguinaldo</div>
+                    <div class="candidate-party">Independent party</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="college-president" value="2" id="college-president-2">
+                    <label for="college-president-2"></label>
+                </div>
+                <div class="candidate">
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
+                    <div class="candidate-name">Graciano Lopez Jaena</div>
+                    <div class="candidate-party">Alysansang Tapat</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="college-president" value="3" id="college-president-3">
+                    <label for="college-president-3"></label>
+                </div>
+            </div>
+            <div class="candidate-category">
+                EXECUTIVE BOARD
+            </div>
+            <div class="candidates-row clearfix">
+                <div class="candidate-position">
+                    President
+                    <button type="button" id="abstain-1" class="abstain" onclick="abstain(5)">Abstain</button>
+                </div>
+                <div class="candidate">
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
+                    <div class="candidate-name">Jose Rizal</div>
+                    <div class="candidate-party">Santugon sa Tawag ng Panahon</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="president" value="1" id="president-1">
+                    <label for="president-1"></label>
+                </div>
+                <div class="candidate">
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
+                    <div class="candidate-name">Emilio Aguinaldo</div>
+                    <div class="candidate-party">Independent party</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="president" value="2" id="president-2">
+                    <label for="president-2"></label>
+                </div>
+                <div class="candidate">
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
+                    <div class="candidate-name">Graciano Lopez Jaena</div>
+                    <div class="candidate-party">Alysansang Tapat</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="president" value="3" id="president-3">
+                    <label for="president-3"></label>
+                </div>
+            </div>
+            <div class="candidates-row clearfix">
+                <div class="candidate-position">
+                    Vice President for Internal Affairs
+                    <button type="button" id="abstain-1" class="abstain" onclick="abstain(6)">Abstain</button>
+                </div>
+                <div class="candidate">
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
+                    <div class="candidate-name">Jose Rizal</div>
+                    <div class="candidate-party">Santugon sa Tawag ng Panahon</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="vice-president-internal" value="1"
+                           id="vice-president-internal-1">
+                    <label for="vice-president-internal-1"></label>
+                </div>
+                <div class="candidate">
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
+                    <div class="candidate-name">Emilio Aguinaldo</div>
+                    <div class="candidate-party">Independent party</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="vice-president-internal" value="2"
+                           id="vice-president-internal-2">
+                    <label for="vice-president-internal-2"></label>
+                </div>
+                <div class="candidate">
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
+                    <div class="candidate-name">Graciano Lopez Jaena</div>
+                    <div class="candidate-party">Alysansang Tapat</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="vice-president-internal" value="3"
+                           id="vice-president-internal-3">
+                    <label for="vice-president-internal-3"></label>
+                </div>
+            </div>
+            <div class="candidates-row clearfix">
+                <div class="candidate-position">
+                    Vice President for External Affairs
+                    <button type="button" id="abstain-1" class="abstain" onclick="abstain(7)">Abstain</button>
+                </div>
+                <div class="candidate">
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
+                    <div class="candidate-name">Jose Rizal</div>
+                    <div class="candidate-party">Santugon sa Tawag ng Panahon</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="vice-president-external" value="1"
+                           id="vice-president-external-1">
+                    <label for="vice-president-external-1"></label>
+                </div>
+                <div class="candidate">
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
+                    <div class="candidate-name">Emilio Aguinaldo</div>
+                    <div class="candidate-party">Independent party</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="vice-president-external" value="2"
+                           id="vice-president-external-2">
+                    <label for="vice-president-external-2"></label>
+                </div>
+                <div class="candidate">
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
+                    <div class="candidate-name">Graciano Lopez Jaena</div>
+                    <div class="candidate-party">Alysansang Tapat</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="vice-president-external" value="3"
+                           id="vice-president-external-3">
+                    <label for="vice-president-external-3"></label>
+                </div>
+            </div>
+            <div class="candidates-row clearfix">
+                <div class="candidate-position">
+                    Secretary
+                    <button type="button" id="abstain-1" class="abstain" onclick="abstain(8)">Abstain</button>
+                </div>
+                <div class="candidate">
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
+                    <div class="candidate-name">Jose Rizal</div>
+                    <div class="candidate-party">Santugon sa Tawag ng Panahon</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="secretary" value="1"
+                           id="secretary-1">
+                    <label for="secretary-1"></label>
+                </div>
+                <div class="candidate">
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
+                    <div class="candidate-name">Emilio Aguinaldo</div>
+                    <div class="candidate-party">Independent party</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="secretary" value="2"
+                           id="secretary-2">
+                    <label for="secretary-2"></label>
+                </div>
+                <div class="candidate">
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
+                    <div class="candidate-name">Graciano Lopez Jaena</div>
+                    <div class="candidate-party">Alysansang Tapat</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="secretary" value="3"
+                           id="secretary-3">
+                    <label for="secretary-3"></label>
+                </div>
+            </div>
+            <div class="candidates-row clearfix">
+                <div class="candidate-position">
+                    Treasurer
+                    <button type="button" id="abstain-1" class="abstain" onclick="abstain(9)">Abstain</button>
+                </div>
+                <div class="candidate">
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
+                    <div class="candidate-name">Jose Rizal</div>
+                    <div class="candidate-party">Santugon sa Tawag ng Panahon</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="treasurer" value="1"
+                           id="treasurer-1">
+                    <label for="treasurer-1"></label>
+                </div>
+                <div class="candidate">
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
+                    <div class="candidate-name">Emilio Aguinaldo</div>
+                    <div class="candidate-party">Independent party</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="treasurer" value="2"
+                           id="treasurer-2">
+                    <label for="treasurer-2"></label>
+                </div>
+                <div class="candidate">
+                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
+                    <div class="candidate-name">Graciano Lopez Jaena</div>
+                    <div class="candidate-party">Alysansang Tapat</div>
+                    <div class="candidate-response">
+                        <a href="#" class="response-link">Read the response >></a>
+                    </div>
+                    <input type="radio" name="treasurer" value="3"
+                           id="treasurer-3">
+                    <label for="treasurer-3"></label>
                 </div>
             </div>
             <button id="voting-submit" type="button" onclick="showVote()">Submit my vote</button>
@@ -165,19 +406,43 @@
             <div id="vote-modal">
                 <div id="vote-summary">
                     <div class="candidate-row">
-                        <div class="candidate-position">President</div>
-                        <div class="candidate-person">Rodrigo Duterte</div>
+                        <div class="candidate-position">Batch President</div>
+                        <div class="candidate-person" id="batch-president-summary"></div>
+                    </div>
+                    <div class="candidate-row">
+                        <div class="candidate-position">Batch Vice President</div>
+                        <div class="candidate-person" id="batch-vice-president-summary"></div>
+                    </div>
+                    <div class="candidate-row">
+                        <div class="candidate-position">Batch Vice President</div>
+                        <div class="candidate-person" id="legislative-assembly-representative-summary"></div>
+                    </div>
+                    <div class="candidate-row">
+                        <div class="candidate-position">College President</div>
+                        <div class="candidate-person" id="college-president-summary"></div>
                     </div>
                     <div class="candidate-row">
                         <div class="candidate-position">President</div>
-                        <div class="candidate-person">Rodrigo Duterte</div>
+                        <div class="candidate-person" id="president-summary"></div>
                     </div>
                     <div class="candidate-row">
-                        <div class="candidate-position">President</div>
-                        <div class="candidate-person">Rodrigo Duterte</div>
+                        <div class="candidate-position">Vice President for Internal Affairs</div>
+                        <div class="candidate-person" id="vice-president-internal-summary"></div>
+                    </div>
+                    <div class="candidate-row">
+                        <div class="candidate-position">Vice President for External Affairs</div>
+                        <div class="candidate-person" id="vice-president-external-summary"></div>
+                    </div>
+                    <div class="candidate-row">
+                        <div class="candidate-position">Secretary</div>
+                        <div class="candidate-person" id="secretary-summary"></div>
+                    </div>
+                    <div class="candidate-row">
+                        <div class="candidate-position">Treasurer</div>
+                        <div class="candidate-person" id="treasurer-summary"></div>
                     </div>
                     <div id="summary-confirm" class="clearfix">
-                        <button type="button" id="cancel">Revise my votes</button>
+                        <button type="button" id="cancel" onclick="closeModal(event)">Revise my votes</button>
                         <input type="submit" id="confirm" value="Confirm my submission"/>
                     </div>
                 </div>

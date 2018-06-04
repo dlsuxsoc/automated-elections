@@ -17,8 +17,6 @@
     <link href="{% static 'login/css/components/landing-form.css' %}" rel="stylesheet" type="text/css"/>
     <link href="{% static 'login/css/components/landing-logos.css' %}" rel="stylesheet" type="text/css"/>
 
-    <!-- scripts -->
-    <script src="{% static 'login/js/landing-form.js' %}" type="text/javascript"></script>
 </head>
 <body>
 <img src="{% static 'login/assets/png/uxsoc-logo.png' %}" id="uxsoc-logo"/>
@@ -26,17 +24,24 @@
     <div id="landing-child">
         <div id="title">Welcome to the Elections</div>
 
-        <div id="login-label">Ready to vote? Sign in here!</div>
+        <div id="login-label">Administrator? Sign in here!</div>
+        {% if messages %}
+            <div>
+                {% for message in messages %}
+                    <p id="error">{{ message }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
         <form id="landing-form" method="POST" action="">
             {% csrf_token %}
             <div class="input-field">
-                <input type="text" name="username" id="id-number" min="0" required="required"
-                       onkeypress="return isNumberKey(event)"/>
-                <label for="id-number">ID number</label>
+                <input type="text" name="username" id="username" required="required"/>
+                <label for="username">username</label>
             </div>
             <div class="input-field">
-                <input required="required" type="text" name="password" id="passcode"/>
-                <label for="passcode">passcode</label>
+                <input required="required" type="password" name="password" id="passcode"/>
+                <label for="passcode">password</label>
             </div>
             <input type="submit" hidden="hidden"/>
         </form>
