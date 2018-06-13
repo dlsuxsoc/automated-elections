@@ -22,7 +22,7 @@ def generate_passcode():
 
     # Generate a random passcode of specified length
     for index in range(length):
-        passcode += charset[randint(0, len(charset))]
+        passcode += charset[randint(0, len(charset) - 1)]
 
     return passcode
 
@@ -45,11 +45,6 @@ def is_currently_in(user):
 
 class PasscodeView(UserPassesTestMixin, View):
     template_name = 'passcode/password_generator.html'
-
-    # Redirect the user to a 404 page when the user does is not allowed to view this page
-    def get_login_url(self):
-        # TODO: Create a 404 page
-        return redirect('page_404:page_404')
 
     # Check whether the user accessing this page is a COMELEC officer or not
     def test_func(self):
