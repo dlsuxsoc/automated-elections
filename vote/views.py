@@ -26,11 +26,6 @@ def send_email_receipt(user, voted):
 class VoteView(UserPassesTestMixin, View):
     template_name = 'vote/voting.html'
 
-    # Redirect the user to a 404 page when the user does is not allowed to view this page
-    def get_login_url(self):
-        # TODO: Create a 404 page
-        return redirect('page_404:page_404')
-
     # Check whether the user accessing this page is a voter or not
     def test_func(self):
         if self.request.user.is_authenticated:
