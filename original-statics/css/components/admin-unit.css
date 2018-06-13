@@ -1,0 +1,11 @@
+table tr td.col-name {
+    width: 15%;
+}
+
+table tr td.col-id {
+    width: 10%;
+}
+
+table tr td.col-unit {
+    width: 20%;
+}

@@ -1,54 +1,55 @@
 #success-container {
-	text-align: center;
-	height: 60vh;
-	margin-top: 20vh;
-	position: relative;
+    text-align: center;
+    height: 60vh;
+    margin-top: 20vh;
+    position: relative;
 }
 
 #success-title,
 #success-subtitle,
 #success-link {
-	color: var(--theme-green);
-	font-family: 'Montserrat', sans-serif;
+    color: var(--theme-green);
+    font-family: 'Montserrat', sans-serif;
 }
 
 #success-title {
-	font-weight: 800;
-	font-size: 4rem;
-	text-transform: uppercase;
+    font-weight: 800;
+    font-size: 4rem;
+    text-transform: uppercase;
 }
 
 #success-subtitle {
-	font-weight: 600;
+    font-weight: 600;
 }
 
 #instruction-container {
-	width: 100vw;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	font-family: 'Open Sans', sans-serif;
-	margin-top: 25px;
-	margin-bottom: 25px;
+    width: 100vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Open Sans', sans-serif;
+    margin-top: 25px;
+    margin-bottom: 25px;
 }
 
 #success-link {
-	text-transform: uppercase;
+    text-transform: uppercase;
 }
 
-#success-link a{
-	font-weight: 600;
-	text-decoration: underline;
+#success-link a {
+    font-weight: 600;
+    text-decoration: underline;
 }
 
 @media screen and (max-height: 800px) {
-	#success-container {
-		min-height: 480px;
-		margin-top: 20%;
-		height: 60%;
-	}
-	body {
-		height: 800px;
-		overflow-y: scroll;
-	}
+    #success-container {
+        min-height: 480px;
+        margin-top: 20%;
+        height: 60%;
+    }
+
+    body {
+        height: 800px;
+        overflow-y: scroll;
+    }
 }
