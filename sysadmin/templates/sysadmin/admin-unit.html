@@ -14,12 +14,12 @@
 <div id="header-container">
     <img id="header-ballot" src="{% static 'sysadmin/assets/svg/ballot-white.svg' %}">
     <a href="{% url 'sysadmin:voters' %}">Voters List</a>
-    <a href="{% url 'sysadmin:candidates' %}" id="selected">Candidates List</a>
+    <a href="{% url 'sysadmin:candidates' %}"">Candidates List</a>
     <a href="{% url 'sysadmin:officers' %}">Comelec Officers</a>
-    <a href="{% url 'sysadmin:unit' %}" id="selected">Unit</a>
+    <a href="{% url 'sysadmin:unit' %}" id="selected">Units</a>
     <div id="user-container">
         <img id="user-icon" src="{% static 'sysadmin/assets/svg/user.svg' %}">
-        <div id="user-name"> Troy Bolton</div>
+        <div id="user-name">{{ user.first_name }} {{ user.last_name }}</div>
     </div>
 
 </div>
@@ -58,6 +58,7 @@
                 <td class="col-unit">Unit Name</td>
             </tr>
 
+            {% comment %}
             <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
             <tr class="row-1">
                 <td class="col-checkbox"><input type="checkbox"></td>
@@ -84,8 +85,37 @@
                 <td class="col-id">113</td>
                 <td class="col-unit">Unit Name</td>
             </tr>
-
+            {% endcomment %}
+            {% for unit in units %}
+                <tr class="{% cycle 'row-1' 'row-2' %}">
+                    <td class="col-checkbox"><input type="checkbox"></td>
+                    <td class="col-name">
+                        {% if unit.college is None %}
+                            None
+                        {% else %}
+                            {{ unit.college.name }}
+                        {% endif %}
+                    </td>
+                    <td class="col-id">{{ unit.batch }}</td>
+                    <td class="col-unit">{{ unit.name }}</td>
+                </tr>
+            {% endfor %}
         </table>
+
+        <div class="pagination">
+            <span class="step-links">
+                {% if units.has_previous %}
+                    <a href="?page=1">&laquo; first</a>
+                    <a href="?page={{ units.previous_page_number }}">previous</a>
+                {% endif %}
+                <span class="current">Page {{ units.number }} of {{ units.paginator.num_pages }}.</span>
+
+                {% if units.has_next %}
+                    <a href="?page={{ units.next_page_number }}">next</a>
+                    <a href="?page={{ units.paginator.num_pages }}">last &raquo;</a>
+                {% endif %}
+            </span>
+        </div>
     </div>
 
     <!-- SECOND TAB (FORM TAB)-->

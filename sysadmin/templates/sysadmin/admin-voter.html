@@ -16,7 +16,7 @@
     <a href="{% url 'sysadmin:voters' %}" id="selected">Voters List</a>
     <a href="{% url 'sysadmin:candidates' %}">Candidates List</a>
     <a href="{% url 'sysadmin:officers' %}">Comelec Officers</a>
-    <a href="{% url 'sysadmin:unit' %}">Unit</a>
+    <a href="{% url 'sysadmin:unit' %}">Units</a>
     <div id="user-container">
         <img id="user-icon" src="{% static 'sysadmin/assets/svg/user.svg' %}">
         <div id="user-name">{{ user.first_name }} {{ user.last_name }}</div>
@@ -100,26 +100,54 @@
             {% endcomment %}
             {% for voter in voters %}
                 <tr class="{% cycle 'row-1' 'row-2' %}">
-                    <td class="col-checkbox"><input type="checkbox"></td>
-                    <td class="col-name">{{ voter.user.last_name }}, {{ voter.user.first_name }}</td>
-                    <td class="col-id">{{ voter.user.username }}</td>
-                    <td class="col-position">
-                        {% if voter.voting_status == 1 %}
-                            Yes
-                        {% else %}
-                            No
-                        {% endif %}
-                    </td>
-                    <td class="col-status">
-                        {% if voter.eligibility_status == 1 %}
-                            Eligible
-                        {% else %}
-                            Not eligible
-                        {% endif %}
-                    </td>
+                    <form action="" method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="form-type" value="save-status">
+                        <input type="hidden" name="user" value="{{ voter.id }}">
+                        <input type="hidden" name="page" value="{{ voters.number }}">
+                        <td class="col-checkbox"><input type="checkbox"></td>
+                        <td class="col-name">{{ voter.user.last_name }}, {{ voter.user.first_name }}</td>
+                        <td class="col-id">{{ voter.user.username }}</td>
+                        <td class="col-position">
+                            {% if voter.voting_status == 1 %}
+                                Yes
+                            {% else %}
+                                No
+                            {% endif %}
+                        </td>
+                        <td class="col-status">
+                            <select id="status-input" name="voter-eligibility-status" required="required">
+                                {% if voter.eligibility_status == 1 %}
+                                    <option selected="selected">Eligible</option>
+                                    <option>Not eligible</option>
+                                {% else %}
+                                    <option>Eligible</option>
+                                    <option selected="selected">Not eligible</option>
+                                {% endif %}
+                            </select>
+                        </td>
+                        <td class="col-save">
+                            <input id="save" type="submit" value="Save">
+                        </td>
+                    </form>
                 </tr>
             {% endfor %}
         </table>
+
+        <div class="pagination">
+            <span class="step-links">
+                {% if voters.has_previous %}
+                    <a href="?page=1">&laquo; first</a>
+                    <a href="?page={{ voters.previous_page_number }}">previous</a>
+                {% endif %}
+                <span class="current">Page {{ voters.number }} of {{ voters.paginator.num_pages }}.</span>
+
+                {% if voters.has_next %}
+                    <a href="?page={{ voters.next_page_number }}">next</a>
+                    <a href="?page={{ voters.paginator.num_pages }}">last &raquo;</a>
+                {% endif %}
+            </span>
+        </div>
     </div>
 
     <!-- SECOND TAB (FORM TAB)-->
@@ -180,21 +208,37 @@
     </form>
 
     <!-- THIRD TAB (BULK FORM TAB)-->
-    <form action="" id="AddMany" class="tab-content" method="POST">
+    <form action="" id="AddMany" class="tab-content" method="POST" enctype="multipart/form-data">
         {% csrf_token %}
+        <input type="hidden" name="form-type" value="add-bulk-voter">
         <div class="info-fields-container">
-            <input type="hidden" name="form-type" value="add-voter">
+            <div class="info-label"> First, download the CSV file with the proper format of the voters list <a
+                    id="download" href="{% url 'sysadmin:voters_list' %}">here</a>, fill it out, then
+                upload it here:
+            </div>
+            <input type="file" class="info-input" name="voters-list" placeholder="Voters list"
+                   required="required" accept=".csv">
             <div class="info-container">
-                <div class="info-label"> Upload a text (.txt) file containing the rows:</div>
-                <input type="file" class="info-input" name="voter-firstnames" placeholder="First names"
-                       required="required">
+                <div class="info-label"> Voting Status for all of them</div>
+                <select class="info-input" name="voter-voting-status" required="required">
+                    <option>Hasn't voted yet</option>
+                    <option>Has already voted</option>
+                </select>
+            </div>
+
+            <div class="info-container">
+                <div class="info-label"> Eligibility Status for all of them</div>
+                <select class="info-input" name="voter-eligibility-status" required="required">
+                    <option>Eligible</option>
+                    <option>Not eligible</option>
+                </select>
             </div>
         </div>
 
         <div class="info-buttons-container">
             <button class="button cancel">Cancel</button>
             <!-- SUBMIT BUTTON FOR THE TAB -->
-            <input class="button confirm" type="submit" value="Add new voter">
+            <input class="button confirm" type="submit" value="Add new voters">
         </div>
 
     </form>

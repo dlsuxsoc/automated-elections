@@ -16,10 +16,10 @@
     <a href="{% url 'sysadmin:voters' %}">Voters List</a>
     <a href="{% url 'sysadmin:candidates' %}" id="selected">Candidates List</a>
     <a href="{% url 'sysadmin:officers' %}">Comelec Officers</a>
-    <a href="{% url 'sysadmin:unit' %}">Unit</a>
+    <a href="{% url 'sysadmin:unit' %}">Units</a>
     <div id="user-container">
         <img id="user-icon" src="{% static 'sysadmin/assets/svg/user.svg' %}">
-        <div id="user-name"> Troy Bolton</div>
+        <div id="user-name">{{ user.first_name }} {{ user.last_name }}</div>
     </div>
     <!--
     <div id="user-container">
@@ -106,7 +106,7 @@
                     <td class="col-checkbox"><input type="checkbox"></td>
                     <td class="col-name">{{ candidate.voter.user.last_name }}, {{ candidate.voter.user.first_name }}</td>
                     <td class="col-id">{{ candidate.voter.user.username }}</td>
-                    <td class="col-position">{{ candidate.position.name }}</td>
+                    <td class="col-position">{{ candidate.position.name }} ({{ candidate.position.unit }})</td>
                     <td class="col-status">
                         {% if candidate.voter.voting_status == 1 %}
                             Yes
@@ -117,6 +117,21 @@
                 </tr>
             {% endfor %}
         </table>
+
+        <div class="pagination">
+            <span class="step-links">
+                {% if candidates.has_previous %}
+                    <a href="?page=1">&laquo; first</a>
+                    <a href="?page={{ candidates.previous_page_number }}">previous</a>
+                {% endif %}
+                <span class="current">Page {{ candidates.number }} of {{ candidates.paginator.num_pages }}.</span>
+
+                {% if candidates.has_next %}
+                    <a href="?page={{ candidates.next_page_number }}">next</a>
+                    <a href="?page={{ candidates.paginator.num_pages }}">last &raquo;</a>
+                {% endif %}
+            </span>
+        </div>
     </div>
 
     <!-- SECOND TAB (FORM TAB)-->
