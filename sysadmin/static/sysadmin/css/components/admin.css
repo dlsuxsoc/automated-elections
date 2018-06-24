@@ -367,3 +367,21 @@ select {
     margin-top: 200px;
     margin-bottom: 30px;
 }
+
+#error {
+    color: red;
+    text-transform: uppercase;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-left: 10px;
+    line-height: 1.75rem;
+}
+
+#success {
+    color: green;
+    text-transform: uppercase;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-left: 10px;
+    line-height: 1.75rem;
+}

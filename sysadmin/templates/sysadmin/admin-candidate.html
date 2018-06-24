@@ -13,8 +13,8 @@
 <!-- HEADER BAR THING -->
 <div id="header-container">
     <img id="header-ballot" src="{% static 'sysadmin/assets/svg/ballot-white.svg' %}">
-    <a href="{% url 'sysadmin:voters' %}">Voter's List</a>
-    <a href="{% url 'sysadmin:candidates' %}" id="selected">Candidate's List</a>
+    <a href="{% url 'sysadmin:voters' %}">Voters List</a>
+    <a href="{% url 'sysadmin:candidates' %}" id="selected">Candidates List</a>
     <a href="{% url 'sysadmin:officers' %}">Comelec Officers</a>
     <a href="{% url 'sysadmin:unit' %}">Unit</a>
     <div id="user-container">
@@ -70,6 +70,7 @@
                 <td class="col-status">Has Voted</td>
             </tr>
 
+            {% comment %}
             <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
             <tr class="row-1">
                 <td class="col-checkbox"><input type="checkbox"></td>
@@ -99,6 +100,22 @@
                 <td class="col-position">Youtuber</td>
                 <td class="col-status">YES</td>
             </tr>
+            {% endcomment %}
+            {% for candidate in candidates %}
+                <tr class="{% cycle 'row-1' 'row-2' %}">
+                    <td class="col-checkbox"><input type="checkbox"></td>
+                    <td class="col-name">{{ candidate.voter.user.last_name }}, {{ candidate.voter.user.first_name }}</td>
+                    <td class="col-id">{{ candidate.voter.user.username }}</td>
+                    <td class="col-position">{{ candidate.position.name }}</td>
+                    <td class="col-status">
+                        {% if candidate.voter.voting_status == 1 %}
+                            Yes
+                        {% else %}
+                            No
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
         </table>
     </div>
 
