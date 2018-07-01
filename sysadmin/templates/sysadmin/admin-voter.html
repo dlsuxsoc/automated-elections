@@ -20,6 +20,7 @@
     <div id="user-container">
         <img id="user-icon" src="{% static 'sysadmin/assets/svg/user.svg' %}">
         <div id="user-name"> Troy Bolton</div>
+        <a id="log-out">Log out</a>
     </div>
 
 </div>
@@ -31,16 +32,17 @@
 
     <!-- SEARCH BAR AND DESELECT-DELETE TAKE UP THE SAME SPOT. THEY ARE ACTIVATED AND DEACTIVATED RESPECTIVELY-->
 
-    <!-- SEARCH BAR
+    <!-- SEARCH BAR-->
     <form action="" id="tab-search">
         <input  id="search" type="text" name="search-voter" placeholder="Search a voter...">
-    </form> -->
+    </form> 
 
     <!-- DESELECT-DELETE -->
-    <div id="deselect-delete">
-        <button id="deselect">Deselect All</button>
-        <button id="delete">Delete Selected Candidate(s)</button>
-    </div>
+    <!--<div id="deselect-delete">
+        <button id="deselect">Deselect All</button>-->
+        <button id="delete">Delete Selected Voter(s)</button>
+    <!--</div>-->
+
 
 </div>
 
@@ -49,48 +51,78 @@
 
     <!-- FIRST TAB -->
     <div id="All" class="tab-content">
-        <table>
-            <!-- FIRST ROW IS HEADER/TITLE ROW. DO NOT CHANGE!! -->
-            <tr class="row-0">
-                <td class="col-checkbox"><input type="checkbox"></td>
-                <td class="col-name">Full Name</td>
-                <td class="col-id">ID Number</td>
-                <td class="col-position">Has Voted</td>
-                <td class="col-status">Eligibility</td>
-            </tr>
+        <div id="table-container">
+            <!-- FIRST ROW IS HEADER/TITLE ROW. -->
+            <div class="table-row row-0">
+                <div class="col-checkbox"><input type="checkbox"  id="toggle-all" onclick="toggle(this)"></div>
+                <div class="col-name">Full Name</div>
+                <div class="col-id">ID Number</div>
+                <div class="col-voted">Has Voted</div>
+                <div class="col-eligible">Eligibility</div>
+            </div>
 
             <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
-            <tr class="row-1">
-                <td class="col-checkbox"><input type="checkbox"></td>
-                <td class="col-name">Logan Paul</td>
-                <td class="col-id">17496849</td>
-                <td class="col-position">NO</td>
-                <td class="col-status">NO</td>
-            </tr>
-            <tr class="row-2">
-                <td class="col-checkbox"><input type="checkbox"></td>
-                <td class="col-name">Jake Paul</td>
-                <td class="col-id">17496849</td>
-                <td class="col-position">YES</td>
-                <td class="col-status">YES</td>
-            </tr>
+            <div class="table-row row-1">
+                <div class="col-checkbox"><input type="checkbox" name="check" onclick="selected(this)"></div>
+                <div class="col-name">
+                    <div class="name" onclick="edit(this)"> 
+                        Logan Paul
+                    </div>
+                </div>
+                <div class="col-id">17496849</div>
+                <div class="col-voted">NO</div>
+                <div class="col-eligible">Active</div>
+            </div>
 
-            <tr class="row-1">
-                <td class="col-checkbox"><input type="checkbox"></td>
-                <td class="col-name">Logan Paul</td>
-                <td class="col-id">17496849</td>
-                <td class="col-position">NO</td>
-                <td class="col-status">NO</td>
-            </tr>
-            <tr class="row-2">
-                <td class="col-checkbox"><input type="checkbox"></td>
-                <td class="col-name">Jake Paul</td>
-                <td class="col-id">17496849</td>
-                <td class="col-position">YES</td>
-                <td class="col-status">YES</td>
-            </tr>
+            <!-- EXPERIMENTAL!! DO NOT TOUCH TY
+                <div class="table-row row-1" id="row-data-0">
+                <div class="col-checkbox"><input type="checkbox" name="check" onclick="selected(this)"></div>
+                <div class="col-name">
+                    <div class="name" data-value="0" onclick="edit(this)">  
+                        Logan Paul
+                    </div>
+                </div>
+                <div class="col-id">17496849</div>
+                <div class="col-voted">NO</div>
+                <div class="col-eligible">Active</div>
+            </div>-->
 
-        </table>
+            <div class="table-row row-2">
+                <div class="col-checkbox"><input type="checkbox" name="check" onclick="selected(this)"></div>
+                <div class="col-name">
+                    <div class="name" onclick="edit(this)"> 
+                        Jake Paul
+                    </div>
+                </div>
+                <div class="col-id">17496849</div>
+                <div class="col-voted">YES</div>
+                <div class="col-eligible">Ineligible</div>
+            </div>
+
+            <div class="table-row row-1">
+                <div class="col-checkbox"><input type="checkbox" name="check" onclick="selected(this)"></div>
+                <div class="col-name">
+                    <div class="name" onclick="edit(this)"> 
+                        Logan Paul
+                    </div>
+                </div>
+                <div class="col-id">17496849</div>
+                <div class="col-voted">NO</div>
+                <div class="col-eligible">Active</div>
+            </div>
+
+            <div class="table-row row-2">
+                <div class="col-checkbox"><input type="checkbox" name="check" onclick="selected(this)"></div>
+                <div class="col-name">
+                    <div class="name" onclick="edit(this)"> 
+                        Jake Paul
+                    </div>
+                </div>
+                <div class="col-id">17496849</div>
+                <div class="col-voted">YES</div>
+                <div class="col-eligible">Ineligible</div>
+            </div>
+        </div>
     </div>
 
     <!-- SECOND TAB (FORM TAB)-->
@@ -145,6 +177,58 @@
         </div>
     </form>
 
+    <!-- THIRD HIDDEN TAB (EDIT TAB)-->
+    <form action="" id="Edit" class="tab-content">
+        <div class="info-fields-container">
+            <div class="info-container">
+                <div class="info-label"> Full Name </div>
+                <input type="text" class="info-input" name="cand-name" placeholder="ex. Logan Paul">
+            </div>
+
+            <div class="info-container">
+                <div class="info-label"> ID Number</div>
+                <input type="text" class="info-input" name="cand-id" placeholder="ex. 18002738255">
+            </div>
+
+            <div class="info-container">
+                <div class="info-label"> College</div>
+                <select class="info-input" name="cand-college">
+                    <option>CCS</option>
+                    <option>COB</option>
+                    <option>COE</option>
+                    <option>CLA</option>
+                    <option>COS</option>
+                </select>
+            </div>
+
+            <div class="info-container">
+                <div class="info-label"> Voting Status</div>
+                <select class="info-input" name="cand-status">
+                    <option>YES</option>
+                    <option>NO</option>
+                    <option>MAYBE</option>
+                    <option>PERHAPS</option>
+                    <option>POSSIBLY</option>
+                </select>
+            </div>
+
+            <div class="info-container">
+                <div class="info-label"> Eligibility Status</div>
+                <select class="info-input" name="cand-position">
+                    <option>Active</option>
+                    <option>Activen't</option>
+                </select>
+            </div>
+
+        </div>
+
+        <div class="info-buttons-container">
+            <button class="button cancel">Cancel</button>
+            <!-- SUBMIT BUTTON FOR THE TAB -->
+            <input class="button confirm" type="submit" value="Save Changes">
+        </div>
+    </form>
+
 </div>
 
 <div id="logo">
@@ -153,11 +237,7 @@
 </body>
 
 <!-- JAVASCRIPT LINK-->
-<script src="{% static 'sysadmin/js/admin.js' %}">
-    //set default tab to "All" Tab by activating it on page load
-    document.getElementById("tab-all").click();
-</script>
-
+<script src="{% static 'sysadmin/js/admin.js' %}"></script>
 </html>
 
 

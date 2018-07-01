@@ -1,11 +1,9 @@
-table tr td.col-name {
-    width: 15%;
+.col-college{
+	flex-basis: 25%;
 }
-
-table tr td.col-id {
-    width: 10%;
+.col-batch{
+	flex-basis: 20%;
 }
-
-table tr td.col-unit {
-    width: 20%;
+.col-unit{
+	flex-basis: 40%;
 }
