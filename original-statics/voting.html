@@ -17,8 +17,12 @@
     <link href="css/components/voting.css" rel="stylesheet" type="text/css"/>
     <link href="css/components/candidates-row.css" rel="stylesheet" type="text/css"/>
     <link href="css/components/candidates-form.css" rel="stylesheet" type="text/css"/>
+    <link href="css/components/read_more-modal.css" rel="stylesheet" type="text/css"/>
 
     <!-- scripts -->
+    <script src="js/abstain.js" type="text/javascript"></script>
+    <script src="js/vote_modal.js" type="text/javascript"></script>
+    <script src="js/read_more-modal.js" type="text/javascript"></script>
 
 </head>
 <body>
@@ -54,7 +58,7 @@
                     <div class="candidate-name">Jose Rizal</div>
                     <div class="candidate-party">Santugon sa Tawag ng Panahon</div>
                     <div class="candidate-response">
-                        <a href="#" class="response-link">Read the response >></a>
+                        <a id="response-1" onclick="hintBrowser(1)" class="response-link button-read">Read the response >></a>
                     </div>
                     <input type="radio" name="batch-president" value="1" id="president-1" checked>
                     <label for="president-1"></label>
@@ -150,6 +154,25 @@
                 </div>
             </div>
             <input type="submit" id="voting-submit" value="Submit my vote"/>
+
+            <div id="overlay" onclick="removeHint()">
+            </div>
+            <div id="modal-read">
+                <div id="modal__content-read">
+                    <div>
+                        <blockquote class = "blue">
+                                    Infuse your life with action. Don't wait for it to happen. Make it happen. Make your own future. Make your own hope. Make
+                                    your own love. And whatever your beliefs, honor your creator, not by passively waiting for grace to come down from upon high,
+                                    but by doing what you can to make grace happen... yourself, right now, right down here on Earth. 
+                            <footer>
+                                <cite>
+                                    Bradley Whitford
+                                </cite>
+                            </footer>
+                        </blockquote>
+                    </div>
+                </div>
+            </div>
         </form>
     </div>
 </div>
