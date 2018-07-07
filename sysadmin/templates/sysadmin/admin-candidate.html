@@ -39,6 +39,7 @@
 <div id="tab-buttons-container">
     <button class="tab-buttons" onclick="openTab(event, 'All')" id="tab-all">See all candidates</button>
     <button class="tab-buttons" onclick="openTab(event, 'Add')" id="tab-add">Add a candidate</button>
+    <button class="tab-buttons" onclick="openTab(event, 'Issue')" id="tab-add-issue">Add issue</button>
     <button class="tab-buttons" onclick="openTab(event, 'Edit')" id="tab-edit-take">Edit takes</button>
 
     <!-- SEARCH BAR AND DESELECT-DELETE TAKE UP THE SAME SPOT. THEY ARE ACTIVATED AND DEACTIVATED RESPECTIVELY-->
@@ -57,6 +58,13 @@
 
 <!-- CONTAINER WHERE TABS WILL OCCUPY -->
 <div id="tab-container">
+    {% if messages %}
+        <div>
+            {% for message in messages %}
+                <p {% if message.tags %}id="{{ message.tags }}"{% endif %}>{{ message }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
 
     <!-- FIRST TAB -->
     <div id="All" class="tab-content">
@@ -106,7 +114,7 @@
                     <td class="col-checkbox"><input type="checkbox"></td>
                     <td class="col-name">{{ candidate.voter.user.last_name }}, {{ candidate.voter.user.first_name }}</td>
                     <td class="col-id">{{ candidate.voter.user.username }}</td>
-                    <td class="col-position">{{ candidate.position.name }} ({{ candidate.position.unit }})</td>
+                    <td class="col-position">{{ candidate.position.name }} ({{ candidate.position.unit.name }})</td>
                     <td class="col-status">
                         {% if candidate.voter.voting_status == 1 %}
                             Yes
@@ -135,7 +143,7 @@
     </div>
 
     <!-- SECOND TAB (FORM TAB)-->
-    <form action="" id="Add" class="tab-content">
+    <form action="" id="Add" class="tab-content" method="POST">
         <div class="info-fields-container">
             <div class="info-container">
                 <div class="info-label"> Full Name</div>
@@ -176,51 +184,82 @@
                     <option>USB PRESIDENT</option>
                 </select>
             </div>
-
         </div>
 
-        <div class="info-buttons-container">
-            <button class="button cancel">Cancel</button>
-            <!-- SUBMIT BUTTON FOR THE TAB -->
-            <input class="button confirm" type="submit" value="Add new candidate">
+        {% comment %}
+            {% csrf_token %}
+            <input type="hidden" name="form-type" value="add-candidate">
+            {% if candidate_form %}
+                {% for field in candidate_form %}
+                    <div class="info-container">
+                        <div class="info-label">{{ field.label }}</div>
+                        {{ field }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+            {% endcomment %}
+</div>
+
+<div class="info-buttons-container">
+    <button class="button cancel">Cancel</button>
+    <!-- SUBMIT BUTTON FOR THE TAB -->
+    <input class="button confirm" type="submit" value="Add new candidate">
+</div>
+</form>
+<!-- THIRD TAB (FORM TAB)-->
+<form action="" id="Issue" class="tab-content" method="POST">
+    <div class="issue-container">
+        {% csrf_token %}
+        <input type="hidden" name="form-type" value="add-issue">
+        {% if issue_form %}
+            {% for field in issue_form %}
+                <div class="info-container">
+                    <div class="info-label">{{ field.label }}</div>
+                    {{ field }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+    <div class="info-buttons-container">
+        <button class="button cancel">Cancel</button>
+        <!-- SUBMIT BUTTON FOR THE TAB -->
+        <input class="button confirm" type="submit" value="Save Changes">
+    </div>
+</form>
+<!-- FOURTH TAB (FORM TAB)-->
+<form action="" id="Edit" class="tab-content">
+    <div class="takes-container">
+        <div class="info-container">
+            <div class="info-label"> Select an Issue</div>
+            <select class="info-input" name="cand-college">
+                <option>Doktorr maymays, whynot?</option>
+                <option>Doktorr maymays, whynot?</option>
+                <option>Doktorr maymays, whynot?</option>
+            </select>
         </div>
-    </form>
 
-    <!-- THIRD TAB (FORM TAB)-->
-    <form action="" id="Edit" class="tab-content">
-        <div class="takes-container">
-
-            <div class="info-container">
-                <div class="info-label"> Select an Issue</div>
-                <select class="info-input" name="cand-college">
-                    <option>Doktorr maymays, whynot?</option>
-                    <option>Doktorr maymays, whynot?</option>
-                    <option>Doktorr maymays, whynot?</option>
-                </select>
-            </div>
-
-            <div class="info-container">
-                <div class="info-label"> Select a candidate</div>
-                <select class="info-input" name="cand-status">
-                    <option>Uson Mocha</option>
-                    <option>Mocha Uson</option>
-                    <option>Mocha Uson</option>
-                </select>
-            </div>
+        <div class="info-container">
+            <div class="info-label"> Select a candidate</div>
+            <select class="info-input" name="cand-status">
+                <option>Uson Mocha</option>
+                <option>Mocha Uson</option>
+                <option>Mocha Uson</option>
+            </select>
         </div>
+    </div>
 
-        <div class="response-container">
-            <div class="info-label"> Talk/Response to the Issue</div>
-            <textarea class="response-textarea">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam eget eros et ligula accumsan blandit sed vitae massa. Cras sit amet lacinia velit. Duis id risus quam. Fusce in lorem vitae lectus cursus condimentum. In hac habitasse platea dictumst. In ac purus consequat risus eleifend feugiat. Maecenas ornare nisi sed nulla blandit faucibus. Ut mattis diam felis. Vivamus convallis, massa sit amet iaculis aliquet, massa leo tincidunt neque, in iaculis nisl ligula in ligula. Suspendisse vestibulum, sem in luctus vulputate, sem orci lobortis dolor, eu vestibulum tellus nisi ac lacus. Nullam ultricies a elit ac aliquam. Nullam at tincidunt arcu. Sed eu ante semper, volutpat quam a, tincidunt dui. Vivamus sagittis a ipsum eu congue.
+    <div class="response-container">
+        <div class="info-label"> Talk/Response to the Issue</div>
+        <textarea class="response-textarea">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam eget eros et ligula accumsan blandit sed vitae massa. Cras sit amet lacinia velit. Duis id risus quam. Fusce in lorem vitae lectus cursus condimentum. In hac habitasse platea dictumst. In ac purus consequat risus eleifend feugiat. Maecenas ornare nisi sed nulla blandit faucibus. Ut mattis diam felis. Vivamus convallis, massa sit amet iaculis aliquet, massa leo tincidunt neque, in iaculis nisl ligula in ligula. Suspendisse vestibulum, sem in luctus vulputate, sem orci lobortis dolor, eu vestibulum tellus nisi ac lacus. Nullam ultricies a elit ac aliquam. Nullam at tincidunt arcu. Sed eu ante semper, volutpat quam a, tincidunt dui. Vivamus sagittis a ipsum eu congue.
 					</textarea>
-        </div>
+    </div>
 
-        <div class="info-buttons-container">
-            <button class="button cancel">Cancel</button>
-            <!-- SUBMIT BUTTON FOR THE TAB -->
-            <input class="button confirm" type="submit" value="Save Changes">
-        </div>
-    </form>
+    <div class="info-buttons-container">
+        <button class="button cancel">Cancel</button>
+        <!-- SUBMIT BUTTON FOR THE TAB -->
+        <input class="button confirm" type="submit" value="Save Changes">
+    </div>
+</form>
 </div>
 
 <div id="logo">

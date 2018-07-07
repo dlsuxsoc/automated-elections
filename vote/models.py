@@ -38,15 +38,24 @@ class Voter(models.Model):
     eligibility_status = models.BooleanField(default=True)
 
     def __str__(self):
-        return self.user.first_name + " " + self.user.last_name + " (" + self.user.username + ")"
+        return "(" + self.user.username + ") " + self.user.first_name + " " + self.user.last_name
+
+
+class Party(models.Model):
+    name = models.CharField(max_length=32, unique=True)
+
+    def __str__(self):
+        return self.name
 
 
 class Candidate(models.Model):
     voter = models.OneToOneField(Voter, on_delete=models.CASCADE, unique=True)
     position = models.ForeignKey(Position, on_delete=models.CASCADE)
+    party = models.ForeignKey(Party, on_delete=models.CASCADE, default=None, null=True, blank=True)
 
     def __str__(self):
-        return self.voter.user.first_name + " " + self.voter.user.last_name
+        return self.voter.user.first_name + " " + self.voter.user.last_name \
+               + " (" + self.position.name + ", " + (self.party.name if self.party is not None else "Independent") + ")"
 
 
 class Issue(models.Model):

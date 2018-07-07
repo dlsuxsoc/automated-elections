@@ -1,17 +1,15 @@
 # Create your views here.
-import os
 
 from django.contrib import messages
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.contrib.auth.models import Group, User
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
-from django.http import HttpResponse, Http404
 from django.shortcuts import render
 from django.views import View
 
-from autoelect import settings
 from passcode.views import generate_passcode
+from sysadmin.forms import CandidateForm, IssueForm
 from vote.models import Voter, College, Candidate, Position, Unit
 
 
@@ -179,7 +177,6 @@ class VotersView(SysadminView):
                     context = self.display_objects(1)
 
                     return render(request, self.template_name, context)
-
                 else:
                     # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
                     # message
@@ -202,72 +199,85 @@ class VotersView(SysadminView):
                     num_voters_added = 0
                     has_passed_header = False
 
+                    # List of all voter information to be added
+                    voter_info = []
+
                     # Either all voters are added, or none at all
+                    # Iterate all rows
+                    for row in file:
+                        # Convert the row to string
+                        row_str = row.decode('utf-8').strip()
+
+                        # Skip the first row (the header)
+                        if not has_passed_header:
+                            has_passed_header = True
+
+                            continue
+
+                        # Check for missing rows
+                        try:
+                            voter_data_split = row_str.split(',', 4)
+
+                            if len(voter_data_split) != 4:
+                                raise ValueError
+                        except ValueError:
+                            messages.error(request,
+                                           'There were missing fields in the uploaded list. No voters were'
+                                           ' added.')
+
+                            context = self.display_objects(1)
+
+                            return render(request, self.template_name, context)
+
+                        # Get specific values
+                        id_number = voter_data_split[0].strip()
+                        last_name = voter_data_split[1].strip()
+                        first_names = voter_data_split[2].strip()
+                        college = voter_data_split[3].strip()
+
+                        # If the inputs contain invalid data, stop processing immediately
+                        if User.objects.filter(username=id_number).count() > 0 \
+                                or College.objects.filter(name=college).count() == 0:
+                            messages.error(request,
+                                           'The uploaded list contained invalid voter data or voters who were already'
+                                           ' added previously. No further voters were added.')
+
+                            context = self.display_objects(1)
+
+                            return render(request, self.template_name, context)
+
+                        # Add them to the list
+                        voter_info.append(
+                            {
+                                'id_number': id_number,
+                                'last_name': last_name,
+                                'first_names': first_names,
+                                'college': college,
+                            }
+                        )
+
+                        # Increment the added voter count
+                        num_voters_added += 1
+
+                    # If the file uploaded was empty
+                    if num_voters_added == 0:
+                        messages.error(request,
+                                       'The uploaded list did not contain any voters.')
                     try:
-                        with transaction.atomic():
-                            # Iterate all rows
-                            for row in file:
-                                # Convert the row to string
-                                row_str = row.decode('utf-8').strip()
-
-                                # Skip the first row (the header)
-                                if not has_passed_header:
-                                    has_passed_header = True
-
-                                    continue
-
-                                # Check for missing rows
-                                try:
-                                    voter_data_split = row_str.split(',', 4)
-
-                                    if len(voter_data_split) != 4:
-                                        raise ValueError
-                                except ValueError:
-                                    messages.error(request,
-                                                   'There were missing fields in the uploaded list. No voters were'
-                                                   ' added.')
-
-                                    context = self.display_objects(1)
-
-                                    return render(request, self.template_name, context)
-
-                                # Get specific values
-                                id_number = voter_data_split[0]
-                                last_name = voter_data_split[1]
-                                first_names = voter_data_split[2]
-                                college = voter_data_split[3]
-
-                                # If the inputs contain invalid data, stop processing immediately
-                                if User.objects.filter(username=id_number).count() > 0 \
-                                        or College.objects.filter(name=college).count() == 0:
-                                    messages.error(request,
-                                                   'The uploaded list contained invalid voter data. No voters were'
-                                                   ' added.')
-
-                                    context = self.display_objects(1)
-
-                                    return render(request, self.template_name, context)
-
+                        for voter in voter_info:
+                            with transaction.atomic():
                                 # Try to create the voter
                                 create_voter(
-                                    first_names,
-                                    last_name,
-                                    id_number,
-                                    college,
+                                    voter['first_names'],
+                                    voter['last_name'],
+                                    voter['id_number'],
+                                    voter['college'],
                                     voting_status_name,
                                     eligibility_status_name
                                 )
 
-                                # Increment the added voter count
-                                num_voters_added += 1
-
-                            # If the file uploaded was empty
-                            if num_voters_added == 0:
-                                messages.error(request,
-                                               'The uploaded list did not contain any voters.')
-
-                            # Display a success message after all voters have been successfully added
-                            messages.success(request, 'All {0} voter(s) successfully added.'.format(num_voters_added))
+                        # Display a success message after all voters have been successfully added
+                        messages.success(request, 'All {0} voter(s) successfully added.'.format(num_voters_added))
                     except IntegrityError:
                         messages.error(request, 'A voter with that ID number already exists.')
                     except College.DoesNotExist:
@@ -295,7 +305,6 @@ class VotersView(SysadminView):
                     context = self.display_objects(page)
 
                     return render(request, self.template_name, context)
-
                 else:
                     # If no objects are received, it's an invalid request, so stay on the page and then show an error
                     # message
@@ -332,9 +341,14 @@ class CandidatesView(SysadminView):
         paginator = Paginator(candidates, self.objects_per_page)
         paginated_candidates = paginator.get_page(page)
 
+        candidate_form = CandidateForm()
+        issue_form = IssueForm()
+
         context = {
             'candidates': paginated_candidates,
             'positions': positions,
+            'candidate_form': candidate_form,
+            'issue_form': issue_form
         }
 
         return context
@@ -349,10 +363,48 @@ class CandidatesView(SysadminView):
     def post(self, request):
         form_type = request.POST.get('form-type', False)
 
+        candidate_form = CandidateForm(request.POST)
+        issue_form = IssueForm(request.POST)
+
         if form_type is not False:
-            # The submitted form is for adding a voter
-            if form_type == 'add-voter':
-                pass
+            # The submitted form is for adding a candidate
+            if form_type == 'add-candidate':
+                if candidate_form.is_valid():
+                    # Save the form to the database if it is valid
+                    candidate_form.save()
+
+                    messages.success(request, 'Candidate successfully added.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+                else:
+                    # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                    # message
+                    messages.error(request, 'Could not add this candidate.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+            elif form_type == 'add-issue':
+                # The submitted form is for adding an issue
+                if issue_form.is_valid():
+                    # Save the form to the database if it is valid
+                    issue_form.save()
+
+                    messages.success(request, 'Issue successfully added.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+                else:
+                    # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                    # message
+                    messages.error(request, 'Could not add this issue.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
             else:
                 # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
                 # message
@@ -426,16 +478,15 @@ class UnitView(SysadminView):
     def post(self, request):
         return render(request, self.template_name)
 
-
-class DownloadVotersListView(DownloadView):
-
-    def get(self, request):
-        file_path = os.path.join(settings.MEDIA_ROOT, 'voters_list.csv')
-
-        if os.path.exists(file_path):
-            with open(file_path, 'rb') as file:
-                response = HttpResponse(file.read(), content_type='text/csv')
-                response['Content-Disposition'] = 'inline; filename=' + os.path.basename(file_path)
-
-                return response
-        raise Http404
+# class DownloadVotersListView(DownloadView):
+#
+#     def get(self, request):
+#         file_path = os.path.join(settings.MEDIA_ROOT, 'voters_list.csv')
+#
+#         if os.path.exists(file_path):
+#             with open(file_path, 'rb') as file:
+#                 response = HttpResponse(file.read(), content_type='text/csv')
+#                 response['Content-Disposition'] = 'inline; filename=' + os.path.basename(file_path)
+#
+#                 return response
+#         raise Http404

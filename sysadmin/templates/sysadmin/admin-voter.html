@@ -212,9 +212,8 @@
         {% csrf_token %}
         <input type="hidden" name="form-type" value="add-bulk-voter">
         <div class="info-fields-container">
-            <div class="info-label"> First, download the CSV file with the proper format of the voters list <a
-                    id="download" href="{% url 'sysadmin:voters_list' %}">here</a>, fill it out, then
-                upload it here:
+            <div class="info-label"> Upload the official CSV file containing the voters list below with the columns:
+                <code>ID Number, Last Name, First Names, College</code>
             </div>
             <input type="file" class="info-input" name="voters-list" placeholder="Voters list"
                    required="required" accept=".csv">

@@ -1,6 +1,6 @@
 from django.urls import path
 
-from sysadmin.views import VotersView, CandidatesView, OfficersView, UnitView, DownloadVotersListView
+from sysadmin.views import VotersView, CandidatesView, OfficersView, UnitView
 
 app_name = 'sysadmin'
 
@@ -17,6 +17,6 @@ urlpatterns = [
     # /sysadmin/unit/
     path('unit/', UnitView.as_view(), name='unit'),
 
-    # /sysadmin/voters_list/
-    path('voters_list', DownloadVotersListView.as_view(), name='voters_list')
+    # # /sysadmin/voters_list/
+    # path('voters_list', DownloadVotersListView.as_view(), name='voters_list')
 ]
