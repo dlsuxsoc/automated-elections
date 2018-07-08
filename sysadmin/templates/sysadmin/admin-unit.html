@@ -14,7 +14,7 @@
 <div id="header-container">
     <img id="header-ballot" src="{% static 'sysadmin/assets/svg/ballot-white.svg' %}">
     <a href="{% url 'sysadmin:voters' %}">Voters List</a>
-    <a href="{% url 'sysadmin:candidates' %}"">Candidates List</a>
+    <a href="{% url 'sysadmin:candidates' %}">Candidates List</a>
     <a href="{% url 'sysadmin:officers' %}">Comelec Officers</a>
     <a href="{% url 'sysadmin:unit' %}" id="selected">Units</a>
     <div id="user-container">
@@ -30,11 +30,6 @@
     <button class="tab-buttons" onclick="openTab(event, 'Add')" id="tab-add">Add a unit</button>
 
     <!-- SEARCH BAR AND DESELECT-DELETE TAKE UP THE SAME SPOT. THEY ARE ACTIVATED AND DEACTIVATED RESPECTIVELY-->
-
-    <!-- SEARCH BAR
-    <form action="" id="tab-search">
-        <input  id="search" type="text" name="search-unit" placeholder="Search a unit...">
-    </form> -->
 
     <!-- DESELECT-DELETE -->
     <div id="deselect-delete">
@@ -57,35 +52,7 @@
                 <td class="col-id">Batch</td>
                 <td class="col-unit">Unit Name</td>
             </tr>
-
-            {% comment %}
-            <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
-            <tr class="row-1">
-                <td class="col-checkbox"><input type="checkbox"></td>
-                <td class="col-name">COB</td>
-                <td class="col-id">115</td>
-                <td class="col-unit">BLAZEIT420</td>
-            </tr>
-            <tr class="row-2">
-                <td class="col-checkbox"><input type="checkbox"></td>
-                <td class="col-name">COS</td>
-                <td class="col-id">113</td>
-                <td class="col-unit">Unit Name</td>
-            </tr>
-
-            <tr class="row-1">
-                <td class="col-checkbox"><input type="checkbox"></td>
-                <td class="col-name">COB</td>
-                <td class="col-id">115</td>
-                <td class="col-unit">BLAZEIT420</td>
-            </tr>
-            <tr class="row-2">
-                <td class="col-checkbox"><input type="checkbox"></td>
-                <td class="col-name">COS</td>
-                <td class="col-id">113</td>
-                <td class="col-unit">Unit Name</td>
-            </tr>
-            {% endcomment %}
+        
             {% for unit in units %}
                 <tr class="{% cycle 'row-1' 'row-2' %}">
                     <td class="col-checkbox"><input type="checkbox"></td>

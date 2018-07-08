@@ -31,11 +31,6 @@
 
     <!-- SEARCH BAR AND DESELECT-DELETE TAKE UP THE SAME SPOT. THEY ARE ACTIVATED AND DEACTIVATED RESPECTIVELY-->
 
-    <!-- SEARCH BAR
-    <form action="" id="tab-search">
-        <input  id="search" type="text" name="search-officer" placeholder="Search an officer...">
-    </form> -->
-
     <!-- DESELECT-DELETE -->
     <div id="deselect-delete">
         <button id="deselect">Deselect All</button>
@@ -56,35 +51,6 @@
                 <td class="col-id">ID Number</td>
                 <td class="col-address">Email Address</td>
             </tr>
-
-            {% comment %}
-            <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
-            <tr class="row-1">
-                <td class="col-checkbox"><input type="checkbox"></td>
-                <td class="col-name">Logan Paul</td>
-                <td class="col-id">17496849</td>
-                <td class="col-address">logan_paul@youtube.com</td>
-            </tr>
-            <tr class="row-2">
-                <td class="col-checkbox"><input type="checkbox"></td>
-                <td class="col-name">Jake Paul</td>
-                <td class="col-id">17496849</td>
-                <td class="col-address">jake_paul@youtube.com</td>
-            </tr>
-
-            <tr class="row-1">
-                <td class="col-checkbox"><input type="checkbox"></td>
-                <td class="col-name">Logan Paul</td>
-                <td class="col-id">17496849</td>
-                <td class="col-address">logan_paul@youtube.com</td>
-            </tr>
-            <tr class="row-2">
-                <td class="col-checkbox"><input type="checkbox"></td>
-                <td class="col-name">Jake Paul</td>
-                <td class="col-id">17496849</td>
-                <td class="col-address">jake_paul@youtube.com</td>
-            </tr>
-            {% endcomment %}
 
             {% for officer in officers %}
                 <tr class="{% cycle 'row-1' 'row-2' %}">

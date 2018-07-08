@@ -21,18 +21,6 @@
         <img id="user-icon" src="{% static 'sysadmin/assets/svg/user.svg' %}">
         <div id="user-name">{{ user.first_name }} {{ user.last_name }}</div>
     </div>
-    <!--
-    <div id="user-container">
-        <button class="dropbtn">
-
-        </button>
-        <div id="user-container-content">
-            <div> Profile</div>
-            <div> Log out </div>
-
-        </div>
-    </div> -->
-
 </div>
 
 <!-- TABS BUTTONS TO TRAVERSE THE DIFF SECTIONS -->
@@ -43,11 +31,6 @@
     <button class="tab-buttons" onclick="openTab(event, 'Edit')" id="tab-edit-take">Edit takes</button>
 
     <!-- SEARCH BAR AND DESELECT-DELETE TAKE UP THE SAME SPOT. THEY ARE ACTIVATED AND DEACTIVATED RESPECTIVELY-->
-
-    <!-- SEARCH BAR
-    <form action="" id="tab-search">
-        <input  id="search" type="text" name="search-cand" placeholder="Search a candidate...">
-    </form> -->
 
     <!-- DESELECT-DELETE -->
     <div id="deselect-delete">
@@ -77,38 +60,6 @@
                 <td class="col-position">Position</td>
                 <td class="col-status">Has Voted</td>
             </tr>
-
-            {% comment %}
-            <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
-            <tr class="row-1">
-                <td class="col-checkbox"><input type="checkbox"></td>
-                <td class="col-name">Logan Paul</td>
-                <td class="col-id">17496849</td>
-                <td class="col-position">Youtuber</td>
-                <td class="col-status">NO</td>
-            </tr>
-            <tr class="row-2">
-                <td class="col-checkbox"><input type="checkbox"></td>
-                <td class="col-name">Jake Paul</td>
-                <td class="col-id">17496849</td>
-                <td class="col-position">Youtuber</td>
-                <td class="col-status">YES</td>
-            </tr>
-            <tr class="row-1">
-                <td class="col-checkbox"><input type="checkbox"></td>
-                <td class="col-name">Logan Paul</td>
-                <td class="col-id">17496849</td>
-                <td class="col-position">Youtuber</td>
-                <td class="col-status">NO</td>
-            </tr>
-            <tr class="row-2">
-                <td class="col-checkbox"><input type="checkbox"></td>
-                <td class="col-name">Jake Paul</td>
-                <td class="col-id">17496849</td>
-                <td class="col-position">Youtuber</td>
-                <td class="col-status">YES</td>
-            </tr>
-            {% endcomment %}
             {% for candidate in candidates %}
                 <tr class="{% cycle 'row-1' 'row-2' %}">
                     <td class="col-checkbox"><input type="checkbox"></td>
@@ -185,19 +136,6 @@
                 </select>
             </div>
         </div>
-
-        {% comment %}
-            {% csrf_token %}
-            <input type="hidden" name="form-type" value="add-candidate">
-            {% if candidate_form %}
-                {% for field in candidate_form %}
-                    <div class="info-container">
-                        <div class="info-label">{{ field.label }}</div>
-                        {{ field }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-            {% endcomment %}
 </div>
 
 <div class="info-buttons-container">
