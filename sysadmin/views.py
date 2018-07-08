@@ -5,6 +5,7 @@ from django.contrib.auth.mixins import UserPassesTestMixin
 from django.contrib.auth.models import Group, User
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
+from django.db.models import Q
 from django.shortcuts import render
 from django.views import View
 
@@ -17,7 +18,7 @@ class SysadminView(UserPassesTestMixin, View):
     template_name = ''
 
     # Defines the number of objects shown in a page
-    objects_per_page = 5
+    objects_per_page = 6
 
     # Check whether the user accessing this page is a system administrator or not
     def test_func(self):
@@ -27,7 +28,7 @@ class SysadminView(UserPassesTestMixin, View):
             return False
 
     # Display the necessary objects for a specific context
-    def display_objects(self, page):
+    def display_objects(self, page, query=False):
         pass
 
     def get(self, request):
@@ -35,97 +36,80 @@ class SysadminView(UserPassesTestMixin, View):
 
     def post(self, request):
         pass
-
-    class SysadminView(UserPassesTestMixin, View):
-        template_name = ''
-
-        # Check whether the user accessing this page is a system administrator or not
-        def test_func(self):
-            try:
-                return Group.objects.get(name='sysadmin') in self.request.user.groups.all()
-            except Group.DoesNotExist:
-                return False
-
-        # Display the necessary objects for a specific context
-        def display_objects(self):
-            pass
-
-        def get(self, request):
-            pass
-
-        def post(self, request):
-            pass
-
-
-class DownloadView(UserPassesTestMixin, View):
-    template_name = ''
-
-    # Check whether the user accessing this page is a system administrator or not
-    def test_func(self):
-        try:
-            return Group.objects.get(name='sysadmin') in self.request.user.groups.all()
-        except Group.DoesNotExist:
-            return False
-
-    def get(self, request):
-        pass
-
-    def post(self, request):
-        pass
-
-
-# A convenience function for creating a voter
-def create_voter(first_name, last_name, username, college_name, voting_status_name, eligibility_status_name):
-    # Derive the email from the username (the ID number)
-    email = username + '@dlsu.edu.ph'
-
-    # Set an initial password
-    password = generate_passcode()
-
-    # Retrieve the voting and eligibility statuses using the name provided
-    voting_status = True if voting_status_name == 'Has already voted' else False
-    eligibility_status = True if eligibility_status_name == 'Eligible' else False
-
-    # Create the user given the information provided
-    user = User.objects.create_user(username=username, email=email, first_name=first_name,
-                                    last_name=last_name,
-                                    password=password)
-
-    # Add the user to the voter group
-    group = Group.objects.get(name='voter')
-    group.user_set.add(user)
-
-    # Save the changes to the created user
-    user.save()
-
-    # Retrieve the college using the name provided
-    college = College.objects.get(name=college_name)
-
-    # Create and return the voter using the created user
-    return Voter.objects.create(user=user, college=college,
-                                voting_status=voting_status, eligibility_status=eligibility_status)
-
-
-# A convenience function for changing a voter
-def change_voter_eligibility(voter, eligibility_status_name):
-    # Retrieve the voter in question
-    voter = Voter.objects.get(id=voter)
-
-    # Resolve the input
-    eligibility_status = True if eligibility_status_name == 'Eligible' else False
-
-    # Modify the field in question with the given value
-    voter.eligibility_status = eligibility_status
-
-    # Save changes
-    voter.save()
 
 
 class VotersView(SysadminView):
     template_name = 'sysadmin/admin-voter.html'
 
-    def display_objects(self, page):
-        voters = Voter.objects.all().order_by('user__username')
+    # A convenience function for creating a voter
+    @staticmethod
+    def create_voter(first_name, last_name, username, college_name, voting_status_name, eligibility_status_name):
+        # Derive the email from the username (the ID number)
+        email = username + '@dlsu.edu.ph'
+
+        # Set an initial password
+        password = generate_passcode()
+
+        # Retrieve the voting and eligibility statuses using the name provided
+        voting_status = True if voting_status_name == 'Has already voted' else False
+        eligibility_status = True if eligibility_status_name == 'Eligible' else False
+
+        # Create the user given the information provided
+        user = User.objects.create_user(username=username, email=email, first_name=first_name,
+                                        last_name=last_name,
+                                        password=password)
+
+        # Add the user to the voter group
+        group = Group.objects.get(name='voter')
+        group.user_set.add(user)
+
+        # Save the changes to the created user
+        user.save()
+
+        # Retrieve the college using the name provided
+        college = College.objects.get(name=college_name)
+
+        # Create and return the voter using the created user
+        return Voter.objects.create(user=user, college=college,
+                                    voting_status=voting_status, eligibility_status=eligibility_status)
+
+    # A convenience function for changing a voter
+    @staticmethod
+    def change_voter_eligibility(voter_id, eligibility_status_name):
+        # Retrieve the voter in question
+        voter = Voter.objects.get(id=voter_id)
+
+        # Resolve the input
+        eligibility_status = True if eligibility_status_name == 'Eligible' else False
+
+        # Modify the field in question with the given value
+        voter.eligibility_status = eligibility_status
+
+        # Save changes
+        voter.save()
+
+    # A convenience function for deleting a voter
+    @staticmethod
+    def delete_voter(user_id):
+        # Take note that it is not really the voter that is deleted, but the user associated with that voter
+        user = User.objects.get(id=user_id)
+
+        # Get rid of that user
+        user.delete()
+
+    def display_objects(self, page, query=False):
+        # Search for everything if the query is empty
+
+        if query is False:
+            voters = Voter.objects.all().order_by('user__username')
+        else:
+            voters = Voter.objects.filter(
+                Q(user__username__contains=query) |
+                Q(user__first_name__icontains=query) |
+                Q(user__last_name__icontains=query)
+            ) \
+                .order_by('user__username')
+
         colleges = College.objects.all().order_by('name')
 
         paginator = Paginator(voters, self.objects_per_page)
@@ -133,15 +117,16 @@ class VotersView(SysadminView):
 
         context = {
             'voters': paginated_voters,
-            'colleges': colleges,
+            'colleges': colleges
         }
 
         return context
 
     def get(self, request):
         page = request.GET.get('page', False)
+        query = request.GET.get('query', False)
 
-        context = self.display_objects(page if page is not False else 1)
+        context = self.display_objects(page if page is not False else 1, query)
 
         return render(request, self.template_name, context)
 
@@ -164,15 +149,15 @@ class VotersView(SysadminView):
                     try:
                         with transaction.atomic():
                             # Create the voter
-                            create_voter(first_name, last_name, username, college_name, voting_status_name,
-                                         eligibility_status_name)
+                            self.create_voter(first_name, last_name, username, college_name, voting_status_name,
+                                              eligibility_status_name)
 
                             # Display a success message
                             messages.success(request, 'Voter successfully created.')
                     except IntegrityError:
                         messages.error(request, 'A voter with that ID number already exists.')
                     except College.DoesNotExist:
-                        messages.error(request, 'The uploaded list contained invalid voter data. No voters were added')
+                        messages.error(request, 'That college does not exist.')
 
                     context = self.display_objects(1)
 
@@ -185,7 +170,36 @@ class VotersView(SysadminView):
                     context = self.display_objects(1)
 
                     return render(request, self.template_name, context)
+            elif form_type == 'edit-voter':
+                # The submitted form is for editing a voter
+                page = request.POST.get('page', False)
+                voter_id = request.POST.get('edit-id', False)
+                eligibility_status_name = request.POST.get('voter-eligibility-status', False)
+
+                if page is not False and voter_id is not False and eligibility_status_name is not False:
+                    try:
+                        with transaction.atomic():
+                            # Edit the voter
+                            self.change_voter_eligibility(voter_id, eligibility_status_name)
+
+                            # Display a success message
+                            messages.success(request, 'Voter successfully edited.')
+                    except Voter.DoesNotExist:
+                        messages.error(request, 'No such voter exists.')
+
+                    context = self.display_objects(page)
+
+                    return render(request, self.template_name, context)
+                else:
+                    # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                    # message
+                    messages.error(request, 'Invalid request.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
             elif form_type == 'add-bulk-voter':
+                # The submitted form is for adding voters in bulk
                 voting_status_name = request.POST.get('voter-voting-status', False)
                 eligibility_status_name = request.POST.get('voter-eligibility-status', False)
 
@@ -267,7 +281,7 @@ class VotersView(SysadminView):
                         for voter in voter_info:
                             with transaction.atomic():
                                 # Try to create the voter
-                                create_voter(
+                                self.create_voter(
                                     voter['first_names'],
                                     voter['last_name'],
                                     voter['id_number'],
@@ -286,27 +300,43 @@ class VotersView(SysadminView):
                     context = self.display_objects(1)
 
                     return render(request, self.template_name, context)
-            elif form_type == 'save-status':
-                voter = request.POST.get('user', False)
-                page = request.POST.get('page', False)
-                eligibility_status_name = request.POST.get('voter-eligibility-status', False)
+                else:
+                    # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                    # message
+                    messages.error(request, 'Invalid request.')
 
-                if voter is not False and page is not False and eligibility_status_name is not False:
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+            elif form_type == 'delete-voter':
+                # The submitted form is for deleting voters
+                print(request.POST)
+
+                voters_list = request.POST.getlist('voters')
+
+                if voters_list is not False and len(voters_list) > 0:
                     try:
+                        voters_deleted = 0
+
+                        # Try to delete each voter in the list
                         with transaction.atomic():
-                            # Change the eligibility of the voter
-                            change_voter_eligibility(voter, eligibility_status_name)
+                            for voter in voters_list:
+                                self.delete_voter(voter)
 
-                            # Display a success message
-                            messages.success(request, 'Voter eligibility successfully changed.')
-                    except Voter.DoesNotExist:
-                        messages.error(request, 'No such voter exists.')
+                                voters_deleted += 1
 
-                    context = self.display_objects(page)
+                            messages.success(request, "All {0} voter(s) successfully deleted.".format(voters_deleted))
+                    except User.DoesNotExist:
+                        # If the user does not exist
+                        messages.error(request,
+                                       'One of the selected users do not exist in the first place. '
+                                       'No voters were deleted.')
+
+                    context = self.display_objects(1)
 
                     return render(request, self.template_name, context)
                 else:
-                    # If no objects are received, it's an invalid request, so stay on the page and then show an error
+                    # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
                     # message
                     messages.error(request, 'Invalid request.')
 
@@ -477,16 +507,3 @@ class UnitView(SysadminView):
 
     def post(self, request):
         return render(request, self.template_name)
-
-# class DownloadVotersListView(DownloadView):
-#
-#     def get(self, request):
-#         file_path = os.path.join(settings.MEDIA_ROOT, 'voters_list.csv')
-#
-#         if os.path.exists(file_path):
-#             with open(file_path, 'rb') as file:
-#                 response = HttpResponse(file.read(), content_type='text/csv')
-#                 response['Content-Disposition'] = 'inline; filename=' + os.path.basename(file_path)
-#
-#                 return response
-#         raise Http404

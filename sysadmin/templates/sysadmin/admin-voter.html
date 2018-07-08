@@ -31,14 +31,18 @@
     <button class="tab-buttons" onclick="openTab(event, 'AddMany')" id="tab-bulk">Add voters in bulk</button>
 
     <!-- SEARCH BAR AND DESELECT-DELETE TAKE UP THE SAME SPOT. THEY ARE ACTIVATED AND DEACTIVATED RESPECTIVELY-->
-    <form action="" id="tab-search">
-        <input id="search" type="text" name="search-voter" placeholder="Search a voter...">
+    <form action="" id="tab-search" method="GET">
+        <input id="search" type="text" name="query" placeholder="Search a voter...">
     </form>
 
     <!-- DESELECT-DELETE -->
     <!--<div id="deselect-delete">
-        <button id="deselect">Deselect All</button>-->
-    <button id="delete">Delete Selected Voter(s)</button>
+        <button id="deselect">Deselect All  </button>-->
+    <form action="" id="delete-voters" method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="form-type" value="delete-voter">
+        <button type="button" onclick="delete_selected()" id="delete">Delete Selected Voter(s)</button>
+    </form>
     <!--</div>-->
 </div>
 
@@ -65,59 +69,50 @@
             </div>
 
             <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
-            <form action="" method="POST">
-                {% csrf_token %}
-                <!-- EXPERIMENTAL!! DO NOT TOUCH TY
-                    <div class="table-row row-1" id="row-data-0">
-                    <div class="col-checkbox"><input type="checkbox" name="check" onclick="selected(this)"></div>
+            <!-- EXPERIMENTAL!! DO NOT TOUCH TY
+                <div class="table-row row-1" id="row-data-0">
+                <div class="col-checkbox"><input type="checkbox" name="check" onclick="selected(this)"></div>
+                <div class="col-name">
+                    <div class="name" data-value="0" onclick="edit(this)">
+                        Logan Paul
+                    </div>
+                </div>
+                <div class="col-id">17496849</div>
+                <div class="col-voted">NO</div>
+                <div class="col-eligible">Active</div>
+            </div>-->
+
+            {% for voter in voters %}
+                <div class="table-row {% cycle 'row-1' 'row-2' %}">
+                    <input type="hidden" name="form-type" value="save-status">
+                    <input type="hidden" name="user" value="{{ voter.id }}">
+                    <div class="col-checkbox"><input type="checkbox" name="check" value="{{ voter.user.id }}"
+                                                     onclick="selected(this)"></div>
                     <div class="col-name">
-                        <div class="name" data-value="0" onclick="edit(this)">
-                            Logan Paul
+                        <div class="name" onclick="edit_voter(this, '{{ voter|escapejs }}', {{ voter.number }})">
+                            {{ voter.user.last_name }}, {{ voter.user.first_name }}
                         </div>
                     </div>
-                    <div class="col-id">17496849</div>
-                    <div class="col-voted">NO</div>
-                    <div class="col-eligible">Active</div>
-                </div>-->
-
-                {% for voter in voters %}
-                    <div class="table-row {% cycle 'row-1' 'row-2' %}">
-                        <input type="hidden" name="form-type" value="save-status">
-                        <input type="hidden" name="user" value="{{ voter.id }}">
-                        <input type="hidden" name="page" value="{{ voters.number }}">
-                        <div class="col-checkbox"><input type="checkbox" name="check" onclick="selected(this)"></div>
-                        <div class="col-name">
-                            <div class="name" onclick="edit(this)">
-                                {{ voter.user.last_name }}, {{ voter.user.first_name }}
-                            </div>
-                        </div>
-                        <div class="col-id">{{ voter.user.username }}</div>
-                        <div class="col-voted">
-                            {% if voter.voting_status == 1 %}
-                                Yes
-                            {% else %}
-                                No
-                            {% endif %}
-                        </div>
-                        <div class="col-eligible">
-                            <select id="status-input" name="voter-eligibility-status" required="required">
-                                {% if voter.eligibility_status == 1 %}
-                                    <option selected="selected">Eligible</option>
-                                    <option>Not eligible</option>
-                                {% else %}
-                                    <option>Eligible</option>
-                                    <option selected="selected">Not eligible</option>
-                                {% endif %}
-                            </select>
-                        </div>
-                        <div class="col-save">
-                            <input id="save" type="submit" value="Save">
-                        </div>
+                    <div class="col-id">{{ voter.user.username }}</div>
+                    <div class="col-voted">
+                        {% if voter.voting_status == 1 %}
+                            Yes
+                        {% else %}
+                            No
+                        {% endif %}
                     </div>
-                {% endfor %}
-            </form>
+                    <div class="col-eligible">
+                        {% if voter.eligibility_status == 1 %}
+                            Eligible
+                        {% else %}
+                            Not eligible
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
 
-            <div class="pagination">
+        <div class="pagination">
             <span class="step-links">
                 {% if voters.has_previous %}
                     <a href="?page=1">&laquo; first</a>
@@ -130,7 +125,6 @@
                     <a href="?page={{ voters.paginator.num_pages }}">last &raquo;</a>
                 {% endif %}
             </span>
-            </div>
         </div>
     </div>
 
@@ -180,7 +174,6 @@
                     <option>Not eligible</option>
                 </select>
             </div>
-
         </div>
 
         <div class="info-buttons-container">
@@ -227,46 +220,43 @@
     </form>
 
     <!-- THIRD HIDDEN TAB (EDIT TAB)-->
-    <form action="" id="Edit" class="tab-content">
+    <form action="" id="Edit" class="tab-content" method="POST">
+        {% csrf_token %}
         <div class="info-fields-container">
+            <input type="hidden" name="form-type" value="edit-voter">
+            <input type="hidden" name="page" value="{{ voters.number }}">
+            <input type="hidden" name="edit-id" value="">
             <div class="info-container">
-                <div class="info-label"> Full Name</div>
-                <input type="text" class="info-input" name="cand-name" placeholder="ex. Logan Paul">
+                <div class="info-label"> First Names (w/ second & middle names)</div>
+                <input type="text" class="info-input" name="voter-firstnames" id="edit-firstnames"
+                       disabled="disabled" value="">
             </div>
 
             <div class="info-container">
-                <div class="info-label"> ID Number</div>
-                <input type="text" class="info-input" name="cand-id" placeholder="ex. 18002738255">
+                <div class="info-label"> Last Name</div>
+                <input type="text" class="info-input" name="voter-lastname" id="edit-lastname"
+                       disabled="disabled" value="">
             </div>
 
             <div class="info-container">
                 <div class="info-label"> College</div>
-                <select class="info-input" name="cand-college">
-                    <option>CCS</option>
-                    <option>COB</option>
-                    <option>COE</option>
-                    <option>CLA</option>
-                    <option>COS</option>
+                <select class="info-input" id="edit-college" name="voter-college" disabled="disabled">
+                    <option></option>
                 </select>
             </div>
 
             <div class="info-container">
                 <div class="info-label"> Voting Status</div>
-                <select class="info-input" name="cand-status">
-                    <option>YES</option>
-                    <option>NO</option>
-                    <option>MAYBE</option>
-                    <option>PERHAPS</option>
-                    <option>POSSIBLY</option>
+                <select class="info-input" id="edit-voting-status" name="voter-voting-status" disabled="disabled">
+                    <option></option>
                 </select>
             </div>
 
             <div class="info-container">
-
                 <div class="info-label"> Eligibility Status</div>
-                <select class="info-input" name="cand-position">
-                    <option>Active</option>
-                    <option>Activen't</option>
+                <select class="info-input" id="edit-eligibility-status" name="voter-eligibility-status">
+                    <option id="eligible">Eligible</option>
+                    <option id="not-eligible">Not eligible</option>
                 </select>
             </div>
         </div>

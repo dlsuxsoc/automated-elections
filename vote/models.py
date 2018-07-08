@@ -1,7 +1,9 @@
 # Create your models here.
+import json
 
 from django.contrib.auth.models import User
 from django.db import models
+from django.forms import model_to_dict
 
 
 class College(models.Model):
@@ -38,7 +40,11 @@ class Voter(models.Model):
     eligibility_status = models.BooleanField(default=True)
 
     def __str__(self):
-        return "(" + self.user.username + ") " + self.user.first_name + " " + self.user.last_name
+        return json.dumps(
+            [{"first_name": self.user.first_name, "last_name": self.user.last_name, "college": self.college.name},
+             model_to_dict(self)])
+
+        # return "(" + self.user.username + ") " + self.user.first_name + " " + self.user.last_name
 
 
 class Party(models.Model):
