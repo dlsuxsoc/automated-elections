@@ -19,7 +19,8 @@
     <a href="{% url 'sysadmin:unit' %}">Units</a>
     <div id="user-container">
         <img id="user-icon" src="{% static 'sysadmin/assets/svg/user.svg' %}">
-        <div id="user-name">{{ user.first_name }} {{ user.last_name }}</div>
+        <div id="user-name"> {{ user.first_name }} {{ user.last_name }}</div>
+        <a id="log-out">Log out</a>
     </div>
 </div>
 
@@ -30,13 +31,15 @@
     <button class="tab-buttons" onclick="openTab(event, 'AddMany')" id="tab-bulk">Add voters in bulk</button>
 
     <!-- SEARCH BAR AND DESELECT-DELETE TAKE UP THE SAME SPOT. THEY ARE ACTIVATED AND DEACTIVATED RESPECTIVELY-->
+    <form action="" id="tab-search">
+        <input id="search" type="text" name="search-voter" placeholder="Search a voter...">
+    </form>
 
     <!-- DESELECT-DELETE -->
-    <div id="deselect-delete">
-        <button id="deselect">Deselect All</button>
-        <button id="delete">Delete Selected Candidate(s)</button>
-    </div>
-
+    <!--<div id="deselect-delete">
+        <button id="deselect">Deselect All</button>-->
+    <button id="delete">Delete Selected Voter(s)</button>
+    <!--</div>-->
 </div>
 
 <!-- CONTAINER WHERE TABS WILL OCCUPY -->
@@ -51,34 +54,52 @@
 
     <!-- FIRST TAB -->
     <div id="All" class="tab-content">
-        <table>
-            <!-- FIRST ROW IS HEADER/TITLE ROW. DO NOT CHANGE!! -->
-            <tr class="row-0">
-                <td class="col-checkbox"><input type="checkbox"></td>
-                <td class="col-name">Full Name</td>
-                <td class="col-id">ID Number</td>
-                <td class="col-position">Has Voted</td>
-                <td class="col-status">Eligibility</td>
-            </tr>
+        <div id="table-container">
+            <!-- FIRST ROW IS HEADER/TITLE ROW. -->
+            <div class="table-row row-0">
+                <div class="col-checkbox"><input type="checkbox" id="toggle-all" onclick="toggle(this)"></div>
+                <div class="col-name">Full Name</div>
+                <div class="col-id">ID Number</div>
+                <div class="col-voted">Has Voted</div>
+                <div class="col-eligible">Eligibility</div>
+            </div>
 
-            {% for voter in voters %}
-                <tr class="{% cycle 'row-1' 'row-2' %}">
-                    <form action="" method="POST">
-                        {% csrf_token %}
+            <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
+            <form action="" method="POST">
+                {% csrf_token %}
+                <!-- EXPERIMENTAL!! DO NOT TOUCH TY
+                    <div class="table-row row-1" id="row-data-0">
+                    <div class="col-checkbox"><input type="checkbox" name="check" onclick="selected(this)"></div>
+                    <div class="col-name">
+                        <div class="name" data-value="0" onclick="edit(this)">
+                            Logan Paul
+                        </div>
+                    </div>
+                    <div class="col-id">17496849</div>
+                    <div class="col-voted">NO</div>
+                    <div class="col-eligible">Active</div>
+                </div>-->
+
+                {% for voter in voters %}
+                    <div class="table-row {% cycle 'row-1' 'row-2' %}">
                         <input type="hidden" name="form-type" value="save-status">
                         <input type="hidden" name="user" value="{{ voter.id }}">
                         <input type="hidden" name="page" value="{{ voters.number }}">
-                        <td class="col-checkbox"><input type="checkbox"></td>
-                        <td class="col-name">{{ voter.user.last_name }}, {{ voter.user.first_name }}</td>
-                        <td class="col-id">{{ voter.user.username }}</td>
-                        <td class="col-position">
+                        <div class="col-checkbox"><input type="checkbox" name="check" onclick="selected(this)"></div>
+                        <div class="col-name">
+                            <div class="name" onclick="edit(this)">
+                                {{ voter.user.last_name }}, {{ voter.user.first_name }}
+                            </div>
+                        </div>
+                        <div class="col-id">{{ voter.user.username }}</div>
+                        <div class="col-voted">
                             {% if voter.voting_status == 1 %}
                                 Yes
                             {% else %}
                                 No
                             {% endif %}
-                        </td>
-                        <td class="col-status">
+                        </div>
+                        <div class="col-eligible">
                             <select id="status-input" name="voter-eligibility-status" required="required">
                                 {% if voter.eligibility_status == 1 %}
                                     <option selected="selected">Eligible</option>
@@ -88,16 +109,15 @@
                                     <option selected="selected">Not eligible</option>
                                 {% endif %}
                             </select>
-                        </td>
-                        <td class="col-save">
+                        </div>
+                        <div class="col-save">
                             <input id="save" type="submit" value="Save">
-                        </td>
-                    </form>
-                </tr>
-            {% endfor %}
-        </table>
+                        </div>
+                    </div>
+                {% endfor %}
+            </form>
 
-        <div class="pagination">
+            <div class="pagination">
             <span class="step-links">
                 {% if voters.has_previous %}
                     <a href="?page=1">&laquo; first</a>
@@ -110,6 +130,7 @@
                     <a href="?page={{ voters.paginator.num_pages }}">last &raquo;</a>
                 {% endif %}
             </span>
+            </div>
         </div>
     </div>
 
@@ -195,6 +216,7 @@
                     <option>Not eligible</option>
                 </select>
             </div>
+
         </div>
 
         <div class="info-buttons-container">
@@ -202,7 +224,58 @@
             <!-- SUBMIT BUTTON FOR THE TAB -->
             <input class="button confirm" type="submit" value="Add new voters">
         </div>
+    </form>
 
+    <!-- THIRD HIDDEN TAB (EDIT TAB)-->
+    <form action="" id="Edit" class="tab-content">
+        <div class="info-fields-container">
+            <div class="info-container">
+                <div class="info-label"> Full Name</div>
+                <input type="text" class="info-input" name="cand-name" placeholder="ex. Logan Paul">
+            </div>
+
+            <div class="info-container">
+                <div class="info-label"> ID Number</div>
+                <input type="text" class="info-input" name="cand-id" placeholder="ex. 18002738255">
+            </div>
+
+            <div class="info-container">
+                <div class="info-label"> College</div>
+                <select class="info-input" name="cand-college">
+                    <option>CCS</option>
+                    <option>COB</option>
+                    <option>COE</option>
+                    <option>CLA</option>
+                    <option>COS</option>
+                </select>
+            </div>
+
+            <div class="info-container">
+                <div class="info-label"> Voting Status</div>
+                <select class="info-input" name="cand-status">
+                    <option>YES</option>
+                    <option>NO</option>
+                    <option>MAYBE</option>
+                    <option>PERHAPS</option>
+                    <option>POSSIBLY</option>
+                </select>
+            </div>
+
+            <div class="info-container">
+
+                <div class="info-label"> Eligibility Status</div>
+                <select class="info-input" name="cand-position">
+                    <option>Active</option>
+                    <option>Activen't</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="info-buttons-container">
+            <button class="button cancel">Cancel</button>
+            <!-- SUBMIT BUTTON FOR THE TAB -->
+            <input class="button confirm" type="submit" value="Save Changes">
+        </div>
     </form>
 </div>
 
@@ -212,11 +285,7 @@
 </body>
 
 <!-- JAVASCRIPT LINK-->
-<script src="{% static 'sysadmin/js/admin.js' %}">
-    //set default tab to "All" Tab by activating it on page load
-    document.getElementById("tab-all").click();
-</script>
-
+<script src="{% static 'sysadmin/js/admin.js' %}"></script>
 </html>
 
 

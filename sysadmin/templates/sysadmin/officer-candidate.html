@@ -1,0 +1,302 @@
+<html>
+	<head>
+		<title>Officer Dashboard</title>
+
+		<!-- CSS LINKS -->
+		<link rel="stylesheet" type="text/css" href="{% static 'sysadmin/css/components/officer.css' %}" />
+		<link rel="stylesheet" type="text/css" href="{% static 'sysadmin/css/components/officer-candidate.css' %}"/>
+
+	</head>
+	<body>
+		<!-- HEADER BAR THING -->
+		<div id="header-container">
+			<img id="header-ballot" src="{% static 'sysadmin/assets/svg/ballot-white.svg' %}">
+			<a href="officer-voter.html">Voter's List</a>
+			<a href="officer-candidate.html" id="selected">Candidate's List</a>
+			<a href="officer-results.html">Voting Results</a>
+			<div id="user-container">
+				<img id="user-icon" src="{% static 'sysadmin/assets/svg/user.svg' %}">
+				<div id="user-name"> Troy Bolton</div>
+				<a id="log-out">Log out</a>
+			</div>
+			<!--
+			<div id="user-container">
+				<button class="dropbtn">
+					
+				</button>
+				<div id="user-container-content">
+					<div> Profile</div>
+					<div> Log out </div>
+
+				</div>
+			</div> -->
+			
+		</div>
+
+		<!-- TABS BUTTONS TO TRAVERSE THE DIFF SECTIONS -->
+		<div id="tab-buttons-container">
+		  	<button class="tab-buttons" onclick="openTab(event, 'All')" id="tab-all">See all candidates</button>
+		 	<button class="tab-buttons" onclick="openTab(event, 'Add')"  id="tab-add">Add a candidate</button>
+			<button class="tab-buttons" onclick="openTab(event, 'Edit-Take')"  id="tab-edit-take">Edit takes</button>
+
+			<!-- SEARCH BAR AND DESELECT-DELETE TAKE UP THE SAME SPOT. THEY ARE ACTIVATED AND DEACTIVATED RESPECTIVELY-->
+
+			<!-- SEARCH BAR-->
+			<form action="" id="tab-search">
+				<input  id="search" type="text" name="search-cand" placeholder="Search a candidate...">
+			</form> 
+
+			<!-- DESELECT-DELETE -->
+			<!--<div id="deselect-delete">
+				<button id="deselect">Deselect All</button>-->
+				<button id="delete">Delete Selected Candidate(s)</button>
+			<!--</div>-->
+		</div>
+
+		<!-- CONTAINER WHERE TABS WILL OCCUPY -->
+		<div id="tab-container">
+
+			<!-- FIRST TAB -->
+			<div id="All" class="tab-content">
+
+				<div id="table-container">
+					<!-- FIRST ROW IS HEADER/TITLE ROW. -->
+					<div class="table-row row-0">
+						<div class="col-checkbox"><input type="checkbox"  id="toggle-all" onclick="toggle(this)"></div>
+						<div class="col-name">Full Name</div>
+						<div class="col-id">ID Number</div>
+						<div class="col-position">Position</div>
+						<div class="col-party">Political Party</div>
+						<div class="col-status">Has Voted</div>
+					</div>
+
+					<!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
+					<div class="table-row row-1">
+						<div class="col-checkbox"><input type="checkbox" name="check" onclick="selected(this)"></div>
+						<div class="col-name">
+							<div class="name" onclick="edit(this)">	
+								Logan Paul
+							</div>
+						</div>
+						<div class="col-id">17496849</div>
+						<div class="col-position">Youtuber</div>
+						<div class="col-party">PARTY TIME</div>
+						<div class="col-status">NO</div>
+					</div>
+
+					<div class="table-row row-2">
+						<div class="col-checkbox"><input type="checkbox" name="check" onclick="selected(this)"></div>
+						<div class="col-name">
+							<div class="name" onclick="edit(this)">	
+								Jake Paul
+							</div>
+						</div>
+						<div class="col-id">17496849</div>
+						<div class="col-position">Youtuber</div>
+						<div class="col-party">PARTY TIME</div>
+						<div class="col-status">YES</div>
+					</div>
+					
+					<div class="table-row row-1">
+						<div class="col-checkbox"><input type="checkbox" name="check" onclick="selected(this)"></div>
+						<div class="col-name">
+							<div class="name" onclick="edit(this)">	
+								Logan Paul
+							</div>
+						</div>
+						<div class="col-id">17496849</div>
+						<div class="col-position">Youtuber</div>
+						<div class="col-party">PARTY TIME</div>
+						<div class="col-status">NO</div>
+					</div>
+
+					<div class="table-row row-2">
+						<div class="col-checkbox"><input type="checkbox" name="check" onclick="selected(this)"></div>
+						<div class="col-name">
+							<div class="name" onclick="edit(this)">	
+								Jake Paul
+							</div>
+						</div>
+						<div class="col-id">17496849</div>
+						<div class="col-position">Youtuber</div>
+						<div class="col-party">PARTY TIME</div>
+						<div class="col-status">YES</div>
+					</div>
+				</div>
+
+			</div>
+
+			<!-- SECOND TAB (FORM TAB)-->
+			<form action="" id="Add" class="tab-content">
+				<div class="info-fields-container">
+					<div class="info-container">
+						<div class="info-label"> Full Name </div>
+						<input type="text" class="info-input" name="cand-name" placeholder="ex. Logan Paul">
+					</div>
+
+					<div class="info-container">
+						<div class="info-label"> ID Number</div>
+						<input type="text" class="info-input" name="cand-id" placeholder="ex. 18002738255">
+					</div>
+
+					<div class="info-container">
+						<div class="info-label"> College</div>
+						<select class="info-input" name="cand-college">
+							<option>CCS</option>
+							<option>COB</option>
+							<option>COE</option>
+							<option>CLA</option>
+							<option>COS</option>
+						</select>
+					</div>
+
+					<div class="info-container">
+						<div class="info-label"> Voting Status</div>
+						<select class="info-input" name="cand-status">
+							<option>YES</option>
+							<option>NO</option>
+							<option>MAYBE</option>
+							<option>PERHAPS</option>
+							<option>POSSIBLY</option>
+						</select>
+					</div>
+
+					<div class="info-container">
+						<div class="info-label"> Position</div>
+						<select class="info-input" name="cand-position">
+							<option>Janitor</option>
+							<option>USB PRESIDENT</option>
+						</select>
+					</div>
+
+					<div class="info-container">
+						<div class="info-label"> Political Party</div>
+						<select class="info-input" name="cand-status">
+							<option>Repelican</option>
+							<option>Democat</option>
+							<option>Dog</option>
+							<option>Santugon</option>
+							<option>Tapat</option>
+						</select>
+					</div>
+
+				</div>
+
+				<div class="info-buttons-container">
+					<button class="button cancel">Cancel</button>
+					<!-- SUBMIT BUTTON FOR THE TAB -->
+					<input class="button confirm" type="submit" value="Add new candidate">
+				</div>
+			</form>
+
+			<!-- THIRD TAB (FORM TAB)-->
+			<form action="" id="Edit-Take" class="tab-content">
+				<div class="takes-container">
+					
+					<div class="info-container">
+						<div class="info-label"> Select an Issue</div>
+						<select class="info-input" name="cand-college">
+							<option>Doktorr maymays, whynot?</option>
+							<option>Doktorr maymays, whynot?</option>
+							<option>Doktorr maymays, whynot?</option>
+						</select>
+					</div>
+
+					<div class="info-container">
+						<div class="info-label"> Select a candidate</div>
+						<select class="info-input" name="cand-status">
+							<option>Uson Mocha</option>
+							<option>Mocha Uson</option>	
+							<option>Mocha Uson</option>
+						</select>
+					</div>
+				</div>
+
+				<div class="response-container">
+					<div class="info-label"> Talk/Response to the Issue</div>
+					<textarea class="response-textarea">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam eget eros et ligula accumsan blandit sed vitae massa. Cras sit amet lacinia velit. Duis id risus quam. Fusce in lorem vitae lectus cursus condimentum. In hac habitasse platea dictumst. In ac purus consequat risus eleifend feugiat. Maecenas ornare nisi sed nulla blandit faucibus. Ut mattis diam felis. Vivamus convallis, massa sit amet iaculis aliquet, massa leo tincidunt neque, in iaculis nisl ligula in ligula. Suspendisse vestibulum, sem in luctus vulputate, sem orci lobortis dolor, eu vestibulum tellus nisi ac lacus. Nullam ultricies a elit ac aliquam. Nullam at tincidunt arcu. Sed eu ante semper, volutpat quam a, tincidunt dui. Vivamus sagittis a ipsum eu congue.
+					</textarea>
+				</div>
+
+				<div class="info-buttons-container">
+					<button class="button cancel">Cancel</button>
+					<!-- SUBMIT BUTTON FOR THE TAB -->
+					<input class="button confirm" type="submit" value="Save Changes">
+				</div>
+			</form>
+
+			<!-- THIRD HIDDEN TAB (EDIT TAB)-->
+			<form action="" id="Edit" class="tab-content">
+				<div class="info-fields-container">
+					<div class="info-container">
+						<div class="info-label"> Full Name </div>
+						<input type="text" class="info-input" name="cand-name" placeholder="ex. Logan Paul">
+					</div>
+
+					<div class="info-container">
+						<div class="info-label"> ID Number</div>
+						<input type="text" class="info-input" name="cand-id" placeholder="ex. 18002738255">
+					</div>
+
+					<div class="info-container">
+						<div class="info-label"> College</div>
+						<select class="info-input" name="cand-college">
+							<option>CCS</option>
+							<option>COB</option>
+							<option>COE</option>
+							<option>CLA</option>
+							<option>COS</option>
+						</select>
+					</div>
+
+					<div class="info-container">
+						<div class="info-label"> Voting Status</div>
+						<select class="info-input" name="cand-status">
+							<option>YES</option>
+							<option>NO</option>
+							<option>MAYBE</option>
+							<option>PERHAPS</option>
+							<option>POSSIBLY</option>
+						</select>
+					</div>
+
+					<div class="info-container">
+						<div class="info-label"> Position</div>
+						<select class="info-input" name="cand-position">
+							<option>Janitor</option>
+							<option>USB PRESIDENT</option>
+						</select>
+					</div>
+
+					<div class="info-container">
+						<div class="info-label"> Political Party</div>
+						<select class="info-input" name="cand-status">
+							<option>Repelican</option>
+							<option>Democat</option>
+							<option>Dog</option>
+							<option>Santugon</option>
+							<option>Tapat</option>
+						</select>
+					</div>
+
+				</div>
+
+				<div class="info-buttons-container">
+					<button class="button cancel">Cancel</button>
+					<!-- SUBMIT BUTTON FOR THE TAB -->
+					<input class="button confirm" type="submit" value="Save Changes">
+				</div>
+			</form>
+
+		</div>
+
+		<div id="logo">
+		    <img width=500 height=50 src="{% static 'sysadmin/assets/png/org-logos.png' %}">
+		</div>
+	</body>
+
+	<!-- JAVASCRIPT LINK-->
+	<script src="{% static 'sysadmin/js/admin.js' %}"></script>
+</html>
+
+

@@ -19,7 +19,8 @@
     <a href="{% url 'sysadmin:unit' %}" id="selected">Units</a>
     <div id="user-container">
         <img id="user-icon" src="{% static 'sysadmin/assets/svg/user.svg' %}">
-        <div id="user-name">{{ user.first_name }} {{ user.last_name }}</div>
+        <div id="user-name"> {{ user.first_name }} {{ user.last_name }}</div>
+        <a id="log-out">Log out</a>
     </div>
 
 </div>
@@ -30,13 +31,15 @@
     <button class="tab-buttons" onclick="openTab(event, 'Add')" id="tab-add">Add a unit</button>
 
     <!-- SEARCH BAR AND DESELECT-DELETE TAKE UP THE SAME SPOT. THEY ARE ACTIVATED AND DEACTIVATED RESPECTIVELY-->
+    <form action="" id="tab-search">
+        <input id="search" type="text" name="search-unit" placeholder="Search a unit...">
+    </form>
 
     <!-- DESELECT-DELETE -->
-    <div id="deselect-delete">
-        <button id="deselect">Deselect All</button>
-        <button id="delete">Delete Selected Candidate(s)</button>
-    </div>
-
+    <!--<div id="deselect-delete">
+        <button id="deselect">Deselect All</button>-->
+    <button id="delete">Delete Selected Unit(s)</button>
+    <!--</div>-->
 </div>
 
 <!-- CONTAINER WHERE TABS WILL OCCUPY -->
@@ -44,30 +47,33 @@
 
     <!-- FIRST TAB -->
     <div id="All" class="tab-content">
-        <table>
-            <!-- FIRST ROW IS HEADER/TITLE ROW. DO NOT CHANGE!! -->
-            <tr class="row-0">
-                <td class="col-checkbox"><input type="checkbox"></td>
-                <td class="col-name">College</td>
-                <td class="col-id">Batch</td>
-                <td class="col-unit">Unit Name</td>
-            </tr>
-        
+        <div id="table-container">
+            <!-- FIRST ROW IS HEADER/TITLE ROW. -->
+            <div class="table-row row-0">
+                <div class="col-checkbox"><input type="checkbox" id="toggle-all" onclick="toggle(this)"></div>
+                <div class="col-college">College</div>
+                <div class="col-batch">Batch</div>
+                <div class="col-unit">Unit Name</div>
+            </div>
+
+            <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
             {% for unit in units %}
-                <tr class="{% cycle 'row-1' 'row-2' %}">
-                    <td class="col-checkbox"><input type="checkbox"></td>
-                    <td class="col-name">
-                        {% if unit.college is None %}
-                            None
-                        {% else %}
-                            {{ unit.college.name }}
-                        {% endif %}
-                    </td>
-                    <td class="col-id">{{ unit.batch }}</td>
-                    <td class="col-unit">{{ unit.name }}</td>
-                </tr>
+                <div class="table-row {% cycle 'row-1' 'row-2' %}">
+                    <div class="col-checkbox"><input type="checkbox" name="check" onclick="selected(this)"></div>
+                    <div class="col-college">
+                        <div class="name" onclick="edit(this)">
+                            {% if unit.college is None %}
+                                None
+                            {% else %}
+                                {{ unit.college.name }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-batch">{{ unit.batch }}</div>
+                    <div class="col-unit">{{ unit.name }}</div>
+                </div>
             {% endfor %}
-        </table>
+        </div>
 
         <div class="pagination">
             <span class="step-links">
@@ -118,6 +124,40 @@
         </div>
     </form>
 
+    <!-- THIRD HIDDEN TAB (EDIT TAB)-->
+    <form action="" id="Edit" class="tab-content">
+        <div class="info-fields-container">
+            <div class="info-container">
+                <div class="info-label"> College</div>
+                <select class="info-input" name="cand-college">
+                    <option>CCS</option>
+                    <option>COB</option>
+                    <option>COE</option>
+                    <option>CLA</option>
+                    <option>COS</option>
+                </select>
+            </div>
+
+            <div class="info-container">
+                <div class="info-label"> Batch</div>
+                <input type="text" class="info-input" name="cand-id" placeholder="ex. 116">
+            </div>
+
+            <div class="info-container">
+                <div class="info-label"> Unit Name</div>
+                <input type="text" class="info-input" name="cand-id" placeholder="ex. ABSOLUTEUNIT">
+            </div>
+
+        </div>
+
+        <div class="info-buttons-container">
+            <button class="button cancel">Cancel</button>
+            <!-- SUBMIT BUTTON FOR THE TAB -->
+            <input class="button confirm" type="submit" value="Save Changes">
+        </div>
+    </form>
+
+
 </div>
 
 <div id="logo">
@@ -126,10 +166,7 @@
 </body>
 
 <!-- JAVASCRIPT LINK-->
-<script src="{% static 'sysadmin/js/admin.js' %}">
-    //set default tab to "All" Tab by activating it on page load
-    document.getElementById("tab-all").click();
-</script>
+<script src="{% static 'sysadmin/js/admin.js' %}"></script>
 </html>
 
 
