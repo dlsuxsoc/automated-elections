@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 
-from vote.models import Issue
+from vote.models import Issue, Unit
 
 
 class IssueForm(forms.ModelForm):
@@ -32,3 +32,19 @@ class OfficerForm(forms.ModelForm):
         }
 
         fields = ['username', 'first_name', 'last_name', 'email', 'password']
+
+
+class UnitForm(forms.ModelForm):
+    class Meta:
+        model = Unit
+
+        widgets = {
+            'college': forms.Select(
+                attrs={'class': 'info-input'}),
+            'batch': forms.TextInput(
+                attrs={'class': 'info-input', 'placeholder': 'Batch'}),
+            'name': forms.TextInput(
+                attrs={'class': 'info-input', 'placeholder': 'Unit name', 'required': 'required'}),
+        }
+
+        fields = '__all__'

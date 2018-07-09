@@ -146,7 +146,7 @@ function delete_candidates() {
     delete_form.submit();
 }
 
-function delete_officers()  {
+function delete_officers() {
     // Collect all checked checkboxes
     var array = [];
     var checkboxes = document.querySelectorAll("input[type=checkbox][name=check]:checked");
@@ -163,6 +163,32 @@ function delete_officers()  {
 
         hidden.setAttribute("type", "hidden");
         hidden.setAttribute("name", "officers");
+        hidden.setAttribute("value", array[i]);
+
+        delete_form.appendChild(hidden);
+    }
+
+    // Then activate that form
+    delete_form.submit();
+}
+
+function delete_units() {
+    // Collect all checked checkboxes
+    var array = [];
+    var checkboxes = document.querySelectorAll("input[type=checkbox][name=check]:checked");
+
+    for (var i = 0; i < checkboxes.length; i++) {
+        array.push(checkboxes[i].value);
+    }
+
+    // Delete all of them by adding them to a form
+    delete_form = document.getElementById("delete-units");
+
+    for (var i = 0; i < array.length; i++) {
+        hidden = document.createElement("input");
+
+        hidden.setAttribute("type", "hidden");
+        hidden.setAttribute("name", "units");
         hidden.setAttribute("value", array[i]);
 
         delete_form.appendChild(hidden);

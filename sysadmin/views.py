@@ -12,7 +12,7 @@ from django.shortcuts import render
 from django.views import View
 
 from passcode.views import generate_passcode
-from sysadmin.forms import IssueForm, OfficerForm
+from sysadmin.forms import IssueForm, OfficerForm, UnitForm
 from vote.models import Voter, College, Candidate, Position, Unit, Party, Issue, Take
 
 
@@ -112,7 +112,7 @@ class VotersView(SysadminView):
             voters = Voter.objects.all().order_by('user__username')
         else:
             voters = Voter.objects.filter(
-                Q(user__username__contains=query) |
+                Q(user__username__icontains=query) |
                 Q(user__first_name__icontains=query) |
                 Q(user__last_name__icontains=query)
             ) \
@@ -434,7 +434,7 @@ class CandidatesView(SysadminView):
             candidates = Candidate.objects.all().order_by('voter__user__username')
         else:
             candidates = Candidate.objects.filter(
-                Q(voter__user__username__contains=query) |
+                Q(voter__user__username__icontains=query) |
                 Q(voter__user__first_name__icontains=query) |
                 Q(voter__user__last_name__icontains=query) |
                 Q(party__name__icontains=query)
@@ -688,7 +688,7 @@ class OfficersView(SysadminView):
             officers = User.objects.all().order_by('username').filter(groups__name='comelec')
         else:
             officers = User.objects.filter(groups__name='comelec').filter(
-                Q(username__contains=query) |
+                Q(username__icontains=query) |
                 Q(first_name__icontains=query) |
                 Q(last_name__icontains=query) |
                 Q(email__icontains=query)
@@ -805,29 +805,126 @@ class OfficersView(SysadminView):
 class UnitView(SysadminView):
     template_name = 'sysadmin/admin-unit.html'
 
-    def display_objects(self, page):
-        units = Unit.objects.all().order_by('college', 'batch', 'name')
+    # A convenience function for deleting a unit
+    @staticmethod
+    def delete_unit(unit_id):
+        # Retrieve the unit
+        unit = Unit.objects.get(id=unit_id)
+
+        # Get rid of that unit
+        unit.delete()
+
+    def display_objects(self, page, query=False):
+        # Show everything if the query is empty
+        if query is False:
+            units = Unit.objects.all().order_by('college', 'batch', 'name')
+        else:
+            units = Unit.objects.filter(
+                Q(name__icontains=query) |
+                Q(college__name__icontains=query) |
+                Q(batch__icontains=query)
+            ) \
+                .order_by('college', 'batch', 'name')
+
         colleges = College.objects.all().order_by('name')
 
         paginator = Paginator(units, self.objects_per_page)
         paginated_units = paginator.get_page(page)
 
+        unit_form = UnitForm()
+
         context = {
             'units': paginated_units,
-            'colleges': colleges
+            'colleges': colleges,
+            'unit_form': unit_form
         }
 
         return context
 
     def get(self, request):
         page = request.GET.get('page', False)
+        query = request.GET.get('query', False)
 
-        context = self.display_objects(page if page is not False else 1)
+        context = self.display_objects(page if page is not False else 1, query)
 
         return render(request, self.template_name, context)
 
     def post(self, request):
-        return render(request, self.template_name)
+        form_type = request.POST.get('form-type', False)
+
+        unit_form = UnitForm(request.POST)
+
+        if form_type is not False:
+            if form_type == 'add-unit':
+                # The submitted form is for adding a unit
+                if unit_form.is_valid():
+                    with transaction.atomic():
+                        # Save the form to the database if it is valid
+                        unit_form.save()
+
+                        messages.success(request, 'Unit successfully added.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+                else:
+                    # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                    # message
+                    messages.error(request, 'Could not add this unit.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+            elif form_type == 'delete-unit':
+                # The submitted form is for deleting units
+                units_list = request.POST.getlist('units')
+
+                if units_list is not False and len(units_list) > 0:
+                    try:
+                        units_deleted = 0
+
+                        # Try to delete each unit in the list
+                        with transaction.atomic():
+                            for unit in units_list:
+                                self.delete_unit(unit)
+
+                                units_deleted += 1
+
+                            messages.success(request,
+                                             "All {0} unit(s) successfully deleted.".format(units_deleted))
+                    except Unit.DoesNotExist:
+                        # If the unit does not exist
+                        messages.error(request,
+                                       'One of the selected units do not exist in the first place. '
+                                       'No unit were deleted.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+                else:
+                    # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                    # message
+                    messages.error(request, 'Invalid request.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+            else:
+                # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                # message
+                messages.error(request, 'Invalid request.')
+
+                context = self.display_objects(1)
+
+                return render(request, self.template_name, context)
+        else:
+            # If no objects are received, it's an invalid request, so stay on the page and then show an error
+            # message
+            messages.error(request, 'Invalid request.')
+
+            context = self.display_objects(1)
+
+            return render(request, self.template_name, context)
 
 
 @user_passes_test(sysadmin_test_func)
