@@ -41,7 +41,7 @@
     <form action="" id="delete-voters" method="POST">
         {% csrf_token %}
         <input type="hidden" name="form-type" value="delete-voter">
-        <button type="button" onclick="delete_selected()" id="delete">Delete Selected Voter(s)</button>
+        <button type="button" onclick="delete_voters()" id="delete">Delete Selected Voter(s)</button>
     </form>
     <!--</div>-->
 </div>
@@ -89,7 +89,7 @@
                     <div class="col-checkbox"><input type="checkbox" name="check" value="{{ voter.user.id }}"
                                                      onclick="selected(this)"></div>
                     <div class="col-name">
-                        <div class="name" onclick="edit_voter(this, '{{ voter|escapejs }}', {{ voter.number }})">
+                        <div class="name" onclick="edit_voter(this, '{{ voter.json|escapejs }}', {{ voter.number }})">
                             {{ voter.user.last_name }}, {{ voter.user.first_name }}
                         </div>
                     </div>

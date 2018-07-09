@@ -1,19 +1,6 @@
 from django import forms
 
-from vote.models import Candidate, Issue
-
-
-class CandidateForm(forms.ModelForm):
-    class Meta:
-        model = Candidate
-
-        widgets = {
-            'voter': forms.Select(attrs={'class': 'info-input'}),
-            'position': forms.Select(attrs={'class': 'info-input'}),
-            'party': forms.Select(attrs={'class': 'info-input'}),
-        }
-
-        fields = '__all__'
+from vote.models import Issue
 
 
 class IssueForm(forms.ModelForm):

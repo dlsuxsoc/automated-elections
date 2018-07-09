@@ -1,31 +1,40 @@
 # Create your views here.
 
 from django.contrib import messages
+from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.contrib.auth.models import Group, User
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Q
+from django.http import JsonResponse
 from django.shortcuts import render
 from django.views import View
 
 from passcode.views import generate_passcode
-from sysadmin.forms import CandidateForm, IssueForm
-from vote.models import Voter, College, Candidate, Position, Unit
+from sysadmin.forms import IssueForm
+from vote.models import Voter, College, Candidate, Position, Unit, Party, Issue, Take
 
 
-class SysadminView(UserPassesTestMixin, View):
+# Test function for this view
+def sysadmin_test_func(user):
+    try:
+        return Group.objects.get(name='sysadmin') in user.groups.all()
+    except Group.DoesNotExist:
+        return False
+
+
+class RestrictedView(UserPassesTestMixin, View):
+    # Check whether the user accessing this page is a system administrator or not
+    def test_func(self):
+        return sysadmin_test_func(self.request.user)
+
+
+class SysadminView(RestrictedView):
     template_name = ''
 
     # Defines the number of objects shown in a page
-    objects_per_page = 6
-
-    # Check whether the user accessing this page is a system administrator or not
-    def test_func(self):
-        try:
-            return Group.objects.get(name='sysadmin') in self.request.user.groups.all()
-        except Group.DoesNotExist:
-            return False
+    objects_per_page = 5
 
     # Display the necessary objects for a specific context
     def display_objects(self, page, query=False):
@@ -69,9 +78,9 @@ class VotersView(SysadminView):
         # Retrieve the college using the name provided
         college = College.objects.get(name=college_name)
 
-        # Create and return the voter using the created user
-        return Voter.objects.create(user=user, college=college,
-                                    voting_status=voting_status, eligibility_status=eligibility_status)
+        # Create the voter using the created user
+        Voter.objects.create(user=user, college=college,
+                             voting_status=voting_status, eligibility_status=eligibility_status)
 
     # A convenience function for changing a voter
     @staticmethod
@@ -98,8 +107,7 @@ class VotersView(SysadminView):
         user.delete()
 
     def display_objects(self, page, query=False):
-        # Search for everything if the query is empty
-
+        # Show everything if the query is empty
         if query is False:
             voters = Voter.objects.all().order_by('user__username')
         else:
@@ -310,8 +318,6 @@ class VotersView(SysadminView):
                     return render(request, self.template_name, context)
             elif form_type == 'delete-voter':
                 # The submitted form is for deleting voters
-                print(request.POST)
-
                 voters_list = request.POST.getlist('voters')
 
                 if voters_list is not False and len(voters_list) > 0:
@@ -364,46 +370,155 @@ class VotersView(SysadminView):
 class CandidatesView(SysadminView):
     template_name = 'sysadmin/admin-candidate.html'
 
-    def display_objects(self, page):
-        candidates = Candidate.objects.all().order_by('voter__user__username')
-        positions = Position.objects.all().order_by('name')
+    # A convenience function for adding a candidate
+    @staticmethod
+    def add_candidate(voter_id, position_unit, position_name, party):
+        # Retrieve the voter
+        voter = Voter.objects.get(user__username=voter_id)
+
+        # Retrieve the position
+        position = Position.objects.get(unit__name=position_unit, name=position_name)
+
+        # Retrieve the party
+        if party == 'Independent':
+            party = None
+        else:
+            party = Party.objects.get(name=party)
+
+        # Create the candidate
+        Candidate.objects.create(voter=voter, position=position, party=party)
+
+    # A convenience function for adding a take
+    @staticmethod
+    def add_or_edit_take(candidate_id, issue, response):
+        # Retrieve the candidate
+        candidate = Candidate.objects.get(voter__user__username=candidate_id)
+
+        # Retrieve the issue
+        issue = Issue.objects.get(name=issue)
+
+        # If a candidate's take on an issue already exists, edit it instead
+        take, created = Take.objects.get_or_create(candidate=candidate, issue=issue, defaults={'response': response})
+
+        if not created:
+            take.response = response
+
+            take.save()
+
+    # A convenience function for deleting a candidate
+    @staticmethod
+    def delete_candidate(candidate_id):
+        # Retrieve the candidate
+        candidate = Candidate.objects.get(id=candidate_id)
+
+        # Get rid of that candidate
+        candidate.delete()
+
+    # A convenience function for deleting a take
+    @staticmethod
+    def delete_take(candidate_id, issue):
+        # Retrieve the candidate
+        candidate = Candidate.objects.get(voter__user__username=candidate_id)
+
+        # Retrieve the issue
+        issue = Issue.objects.get(name=issue)
+
+        # If a candidate's take on an issue already exists, delete it
+        take = Take.objects.get(candidate=candidate, issue=issue)
+
+        take.delete()
+
+    def display_objects(self, page, query=False):
+        # Show everything if the query is empty
+        if query is False:
+            candidates = Candidate.objects.all().order_by('voter__user__username')
+        else:
+            candidates = Candidate.objects.filter(
+                Q(voter__user__username__contains=query) |
+                Q(voter__user__first_name__icontains=query) |
+                Q(voter__user__last_name__icontains=query)
+            ) \
+                .order_by('voter__user__username')
+
+        voters = Voter.objects.all().order_by('user__username')
+        positions = Position.objects.all().order_by('unit__name', 'name')
+        parties = Party.objects.all().order_by('name')
+        issues = Issue.objects.all().order_by('name')
 
         paginator = Paginator(candidates, self.objects_per_page)
         paginated_candidates = paginator.get_page(page)
 
-        candidate_form = CandidateForm()
         issue_form = IssueForm()
 
         context = {
             'candidates': paginated_candidates,
+            'voters': voters,
             'positions': positions,
-            'candidate_form': candidate_form,
-            'issue_form': issue_form
+            'parties': parties,
+            'issues': issues,
+            'issue_form': issue_form,
+            'candidates_all': candidates
         }
 
         return context
 
     def get(self, request):
         page = request.GET.get('page', False)
+        query = request.GET.get('query', False)
 
-        context = self.display_objects(page if page is not False else 1)
+        context = self.display_objects(page if page is not False else 1, query)
 
         return render(request, self.template_name, context)
 
     def post(self, request):
         form_type = request.POST.get('form-type', False)
 
-        candidate_form = CandidateForm(request.POST)
         issue_form = IssueForm(request.POST)
 
         if form_type is not False:
             # The submitted form is for adding a candidate
             if form_type == 'add-candidate':
-                if candidate_form.is_valid():
-                    # Save the form to the database if it is valid
-                    candidate_form.save()
+                candidate = request.POST.get('cand-voter', False)
+                position = request.POST.get('cand-position', False)
+                party = request.POST.get('cand-party', False)
 
-                    messages.success(request, 'Candidate successfully added.')
+                if candidate is not False and position is not False and party is not False:
+                    # Check for missing rows
+                    try:
+                        # Clean the input
+                        candidate_details = candidate.split(":", 2)
+                        position_details = position.split(":", 2)
+
+                        if len(position_details) != 2 or len(candidate_details) != 2:
+                            raise ValueError
+
+                        candidate = candidate_details[0].strip()
+
+                        position_unit = position_details[0].strip()
+                        position_name = position_details[1].strip()
+                    except ValueError:
+                        messages.error(request,
+                                       'Invalid position or candidate details.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+
+                    # Try to create the candidate
+                    try:
+                        with transaction.atomic():
+                            self.add_candidate(candidate, position_unit, position_name, party)
+
+                            messages.success(request, 'Candidate successfully added.')
+                    except IntegrityError:
+                        messages.error(request,
+                                       'A candidate with the same name or position and party has already been added.')
+                    except Voter.DoesNotExist:
+                        messages.error(request, 'That student does not exist or has not yet been registered in here.')
+                    except Position.DoesNotExist:
+                        messages.error(request, 'That position does not exist.')
+                    except Party.DoesNotExist:
+                        messages.error(request, 'That party does not exist.')
 
                     context = self.display_objects(1)
 
@@ -411,7 +526,41 @@ class CandidatesView(SysadminView):
                 else:
                     # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
                     # message
-                    messages.error(request, 'Could not add this candidate.')
+                    messages.error(request, 'Invalid request.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+            elif form_type == 'delete-candidate':
+                # The submitted form is for deleting voters
+                candidates_list = request.POST.getlist('candidates')
+
+                if candidates_list is not False and len(candidates_list) > 0:
+                    try:
+                        candidates_deleted = 0
+
+                        # Try to delete each candidate in the list
+                        with transaction.atomic():
+                            for candidate in candidates_list:
+                                self.delete_candidate(candidate)
+
+                                candidates_deleted += 1
+
+                            messages.success(request,
+                                             "All {0} candidate(s) successfully deleted.".format(candidates_deleted))
+                    except User.DoesNotExist:
+                        # If the user does not exist
+                        messages.error(request,
+                                       'One of the selected candidates do not exist in the first place. '
+                                       'No candidates were deleted.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+                else:
+                    # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                    # message
+                    messages.error(request, 'Invalid request.')
 
                     context = self.display_objects(1)
 
@@ -431,6 +580,73 @@ class CandidatesView(SysadminView):
                     # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
                     # message
                     messages.error(request, 'Could not add this issue.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+            elif form_type == 'change-take':
+                action = request.POST.get('action', False)
+                issue = request.POST.get('take-issue', False)
+                candidate = request.POST.get('take-candidate', False)
+                response = request.POST.get('take-response', False)
+
+                if action is not False and issue is not False and candidate is not False and response is not False:
+                    # Check for missing data
+                    try:
+                        # Clean the input
+                        candidate_details = candidate.split(":", 2)
+
+                        if len(candidate_details) != 2:
+                            raise ValueError
+
+                        candidate = candidate_details[0].strip()
+                    except ValueError:
+                        messages.error(request,
+                                       'Invalid candidate details.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                    if action == 'Save changes':
+                        # Try to add or edit the take
+                        try:
+                            with transaction.atomic():
+                                self.add_or_edit_take(candidate, issue, response)
+
+                                messages.success(request, 'Take successfully updated.')
+                        except IntegrityError:
+                            messages.error(request,
+                                           'That candidate already has a take on that issue.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                    elif action == 'Delete this Take':
+                        # Try to delete this take
+                        try:
+                            with transaction.atomic():
+                                self.delete_take(candidate, issue)
+
+                                messages.success(request, 'Take successfully deleted.')
+                        except Take.DoesNotExist:
+                            messages.error(request,
+                                           'That take does not exist.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                    else:
+                        # If the action for this form is unknown, it's an invalid request, so stay on the page and then
+                        # show an error  message
+                        messages.error(request, 'Invalid request.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                else:
+                    # If the form type is unknown, it's an invalid request, so stay on the page and then show an
+                    # error message
+                    messages.error(request, 'Invalid request.')
 
                     context = self.display_objects(1)
 
@@ -507,3 +723,15 @@ class UnitView(SysadminView):
 
     def post(self, request):
         return render(request, self.template_name)
+
+
+@user_passes_test(sysadmin_test_func)
+def json_take(request, candidate_id, issue):
+    # Get the take
+    try:
+        take = Take.objects.get(candidate__voter__user__username=candidate_id, issue__name=issue)
+    except Take.DoesNotExist:
+        return JsonResponse({'response': "(This candidate doesn't have a take on this issue yet)"})
+
+    # Then return its response
+    return JsonResponse({'response': take.response})

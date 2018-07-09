@@ -459,6 +459,17 @@ select {
     background-color: #6BE772;
 }
 
+.confirm-negative {
+    background-color: #ee4245;
+    color: white;
+    border-radius: 5px;
+    transition: background-color .2s ease-out;
+}
+
+.confirm-negative:hover {
+    background-color: #e79340;
+}
+
 #logo {
     text-align: center;
     margin-top: 200px;

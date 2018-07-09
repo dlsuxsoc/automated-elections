@@ -108,7 +108,7 @@ function edit_voter(src, voter, page) {
 
 }
 
-function delete_selected() {
+function delete_voters() {
     // Collect all checked checkboxes
     var array = [];
     var checkboxes = document.querySelectorAll("input[type=checkbox][name=check]:checked");
@@ -134,3 +134,82 @@ function delete_selected() {
     delete_form.submit();
 }
 
+function delete_candidates() {
+    // Collect all checked checkboxes
+    var array = [];
+    var checkboxes = document.querySelectorAll("input[type=checkbox][name=check]:checked");
+
+    for (var i = 0; i < checkboxes.length; i++) {
+        array.push(checkboxes[i].value);
+    }
+
+    // Delete all of them by adding them to a form
+    delete_form = document.getElementById("delete-candidates");
+
+    for (var i = 0; i < array.length; i++) {
+        hidden = document.createElement("input");
+
+        hidden.setAttribute("type", "hidden");
+        hidden.setAttribute("name", "candidates");
+        hidden.setAttribute("value", array[i]);
+
+        delete_form.appendChild(hidden);
+    }
+
+    // Then activate that form
+    delete_form.submit();
+}
+
+function set_take(csrf_token) {
+    // Get the candidate dropdown
+    var candidateDropdown = document.getElementById("candidate-dropdown");
+
+    // Get the selected candidate
+    var user = candidateDropdown.options[candidateDropdown.selectedIndex];
+
+    // Get the username of the candidate
+    var username = user.innerText.split(":")[0];
+
+    // Get the issue dropdown
+    var issueDropdown = document.getElementById("issue-dropdown");
+
+    // Get the selected issue
+    var issue = issueDropdown.options[issueDropdown.selectedIndex];
+    issue = issue.text;
+
+    // Get the take form
+    var takeForm = document.getElementById("take");
+
+    // Retrieve the response using AJAX
+    ajaxTake(csrf_token, username, issue, takeForm);
+}
+
+function ajaxTake(csrf_token, candidate, issue, takeForm) {
+    var xmlhttp = new XMLHttpRequest();
+
+    xmlhttp.onreadystatechange = function () {
+        if (xmlhttp.readyState === XMLHttpRequest.DONE) {   // XMLHttpRequest.DONE == 4
+            if (xmlhttp.status === 200) {
+                callback(takeForm, xmlhttp.responseText);
+            }
+            else if (xmlhttp.status === 400) {
+                callback(takeForm, "(Unable to retrieve this candidate's take from the server)")
+            }
+            else {
+                callback(takeForm, "(Unable to retrieve this candidate's take from the server)")
+            }
+        }
+    };
+
+    xmlhttp.open("POST", "/sysadmin/candidates/takes/" + candidate + "/" + issue, true);
+    xmlhttp.setRequestHeader("X-CSRFToken", csrf_token);
+    xmlhttp.send();
+}
+
+function callback(takeForm, response) {
+    // Parse into JSON
+    raw_response = JSON.parse(response)
+
+    // Change the take form text
+    takeForm.value = raw_response['response']
+}

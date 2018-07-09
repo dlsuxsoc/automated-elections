@@ -9,7 +9,7 @@
     <link rel="stylesheet" type="text/css" href="{% static 'sysadmin/css/components/admin-candidate.css' %}"/>
 
 </head>
-<body>
+<body onload="set_take('{{ csrf_token }}')">
 <!-- HEADER BAR THING -->
 <div id="header-container">
     <img id="header-ballot" src="{% static 'sysadmin/assets/svg/ballot-white.svg' %}">
@@ -32,14 +32,18 @@
     <button class="tab-buttons" onclick="openTab(event, 'Edit')" id="tab-edit-take">Edit takes</button>
 
     <!-- SEARCH BAR AND DESELECT-DELETE TAKE UP THE SAME SPOT. THEY ARE ACTIVATED AND DEACTIVATED RESPECTIVELY-->
-    <form action="" id="tab-search">
-        <input id="search" type="text" name="search-cand" placeholder="Search a candidate...">
+    <form action="" id="tab-search" method="GET">
+        <input id="search" type="text" name="query" placeholder="Search a candidate...">
     </form>
 
     <!-- DESELECT-DELETE -->
     <!--<div id="deselect-delete">
         <button id="deselect">Deselect All</button>-->
-    <button id="delete">Delete Selected Candidate(s)</button>
+    <form action="" id="delete-candidates" method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="form-type" value="delete-candidate">
+        <button type="button" onclick="delete_candidates()" id="delete">Delete Selected Candidate(s)</button>
+    </form>
     <!--</div>-->
 </div>
 
@@ -67,15 +71,22 @@
             <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
             {% for candidate in candidates %}
                 <div class="table-row {% cycle 'row-1' 'row-2' %}">
-                    <div class="col-checkbox"><input type="checkbox" name="check" onclick="selected(this)"></div>
+                    <div class="col-checkbox"><input type="checkbox" name="check" value="{{ candidate.id }}"
+                                                     onclick="selected(this)"></div>
                     <div class="col-name">
-                        <div class="name" onclick="edit(this)">
+                        <div class="name">
                             {{ candidate.voter.user.last_name }}, {{ candidate.voter.user.first_name }}
                         </div>
                     </div>
                     <div class="col-id">{{ candidate.voter.user.username }}</div>
                     <div class="col-position">{{ candidate.position.name }} ({{ candidate.position.unit.name }})</div>
-                    <div class="col-party">{{ candidate.party.name }}</div>
+                    <div class="col-party">
+                        {% if candidate.party %}
+                            {{ candidate.party.name }}
+                        {% else %}
+                            Independent
+                        {% endif %}
+                    </div>
                     <div class="col-status">
                         {% if candidate.voter.voting_status == 1 %}
                             Yes
@@ -105,44 +116,38 @@
 
     <!-- SECOND TAB (FORM TAB)-->
     <form action="" id="Add" class="tab-content" method="POST">
+        {% csrf_token %}
         <div class="info-fields-container">
+            <input type="hidden" name="form-type" value="add-candidate">
             <div class="info-container">
-                <div class="info-label"> Full Name</div>
-                <input type="text" class="info-input" name="cand-name" placeholder="ex. Logan Paul">
-            </div>
-
-            <div class="info-container">
-                <div class="info-label"> ID Number</div>
-                <input type="text" class="info-input" name="cand-id" placeholder="ex. 18002738255">
-            </div>
-
-            <div class="info-container">
-                <div class="info-label"> College</div>
-                <select class="info-input" name="cand-college">
-                    <option>CCS</option>
-                    <option>COB</option>
-                    <option>COE</option>
-                    <option>CLA</option>
-                    <option>COS</option>
-                </select>
-            </div>
-
-            <div class="info-container">
-                <div class="info-label"> Voting Status</div>
-                <select class="info-input" name="cand-status">
-                    <option>YES</option>
-                    <option>NO</option>
-                    <option>MAYBE</option>
-                    <option>PERHAPS</option>
-                    <option>POSSIBLY</option>
-                </select>
+                <div class="info-label"> Student</div>
+                <input type="text" class="info-input" list="voters" name="cand-voter"
+                       placeholder="Candidate" required="required">
+                <datalist id="voters">
+                    {% for voter in voters %}
+                        <option value="{{ voter.user.username }}: {{ voter.user.last_name }}, {{ voter.user.first_name }}">
+                    {% endfor %}
+                </datalist>
             </div>
 
             <div class="info-container">
                 <div class="info-label"> Position</div>
-                <select class="info-input" name="cand-position">
-                    <option>Janitor</option>
-                    <option>USB PRESIDENT</option>
+                <input type="text" class="info-input" list="positions" name="cand-position" placeholder="Position"
+                       required="required">
+                <datalist id="positions">
+                    {% for position in positions %}
+                        <option value="{{ position.unit.name }}: {{ position.name }}">
+                    {% endfor %}
+                </datalist>
+            </div>
+
+            <div class="info-container">
+                <div class="info-label"> Party</div>
+                <select class="info-input" name="cand-party" required="required">
+                    <option>Independent</option>
+                    {% for party in parties %}
+                        <option>{{ party.name }}</option>
+                    {% endfor %}
                 </select>
             </div>
         </div>
@@ -175,99 +180,42 @@
         </div>
     </form>
     <!-- FOURTH TAB (FORM TAB)-->
-    <form action="" id="Edit" class="tab-content">
+    <form action="" id="Edit" class="tab-content" method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="form-type" value="change-take">
         <div class="takes-container">
             <div class="info-container">
                 <div class="info-label"> Select an Issue</div>
-                <select class="info-input" name="cand-college">
-                    <option>Doktorr maymays, whynot?</option>
-                    <option>Doktorr maymays, whynot?</option>
-                    <option>Doktorr maymays, whynot?</option>
+                <select class="info-input" name="take-issue" id="issue-dropdown"
+                        onchange="set_take('{{ csrf_token }}')">
+                    {% for issue in issues %}
+                        <option>{{ issue.name }}</option>
+                    {% endfor %}
                 </select>
             </div>
 
             <div class="info-container">
                 <div class="info-label"> Select a candidate</div>
-                <select class="info-input" name="cand-status">
-                    <option>Uson Mocha</option>
-                    <option>Mocha Uson</option>
-                    <option>Mocha Uson</option>
+                <select class="info-input" name="take-candidate" id="candidate-dropdown"
+                        onchange="set_take('{{ csrf_token }}')">
+                    {% for candidate in candidates_all %}
+                        <option>{{ candidate.voter.user.username }}: {{ candidate.voter.user.last_name }}, {{ candidate.voter.user.first_name }}</option>
+                    {% endfor %}
                 </select>
             </div>
         </div>
 
         <div class="response-container">
             <div class="info-label"> Talk/Response to the Issue</div>
-            <textarea class="response-textarea">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam eget eros et ligula accumsan blandit sed vitae massa. Cras sit amet lacinia velit. Duis id risus quam. Fusce in lorem vitae lectus cursus condimentum. In hac habitasse platea dictumst. In ac purus consequat risus eleifend feugiat. Maecenas ornare nisi sed nulla blandit faucibus. Ut mattis diam felis. Vivamus convallis, massa sit amet iaculis aliquet, massa leo tincidunt neque, in iaculis nisl ligula in ligula. Suspendisse vestibulum, sem in luctus vulputate, sem orci lobortis dolor, eu vestibulum tellus nisi ac lacus. Nullam ultricies a elit ac aliquam. Nullam at tincidunt arcu. Sed eu ante semper, volutpat quam a, tincidunt dui. Vivamus sagittis a ipsum eu congue.
-					</textarea>
+            <textarea name="take-response" form="Edit" id="take" class="response-textarea">
+            </textarea>
         </div>
 
         <div class="info-buttons-container">
             <button class="button cancel">Cancel</button>
+            <input class="button confirm-negative" name="action" type="submit" value="Delete this Take">
             <!-- SUBMIT BUTTON FOR THE TAB -->
-            <input class="button confirm" type="submit" value="Save Changes">
-        </div>
-    </form>
-
-    <!-- FOURTH HIDDEN TAB (EDIT TAB)-->
-    <form action="" id="Edit" class="tab-content">
-        <div class="info-fields-container">
-            <div class="info-container">
-                <div class="info-label"> Full Name</div>
-                <input type="text" class="info-input" name="cand-name" placeholder="ex. Logan Paul">
-            </div>
-
-            <div class="info-container">
-                <div class="info-label"> ID Number</div>
-                <input type="text" class="info-input" name="cand-id" placeholder="ex. 18002738255">
-            </div>
-
-            <div class="info-container">
-                <div class="info-label"> College</div>
-                <select class="info-input" name="cand-college">
-                    <option>CCS</option>
-                    <option>COB</option>
-                    <option>COE</option>
-                    <option>CLA</option>
-                    <option>COS</option>
-                </select>
-            </div>
-
-            <div class="info-container">
-                <div class="info-label"> Voting Status</div>
-                <select class="info-input" name="cand-status">
-                    <option>YES</option>
-                    <option>NO</option>
-                    <option>MAYBE</option>
-                    <option>PERHAPS</option>
-                    <option>POSSIBLY</option>
-                </select>
-            </div>
-
-            <div class="info-container">
-                <div class="info-label"> Position</div>
-                <select class="info-input" name="cand-position">
-                    <option>Janitor</option>
-                    <option>USB PRESIDENT</option>
-                </select>
-            </div>
-
-            <div class="info-container">
-                <div class="info-label"> Political Party</div>
-                <select class="info-input" name="cand-status">
-                    <option>Repelican</option>
-                    <option>Democat</option>
-                    <option>Dog</option>
-                    <option>Santugon</option>
-                    <option>Tapat</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="info-buttons-container">
-            <button class="button cancel">Cancel</button>
-            <!-- SUBMIT BUTTON FOR THE TAB -->
-            <input class="button confirm" type="submit" value="Save Changes">
+            <input class="button confirm" name="action" type="submit" value="Save Changes">
         </div>
     </form>
 </div>
