@@ -13,13 +13,14 @@
 <!-- HEADER BAR THING -->
 <div id="header-container">
     <img id="header-ballot" src="{% static 'sysadmin/assets/svg/ballot-white.svg' %}">
-    <a href="{% url 'sysadmin:voters' %}">Voter's List</a>
-    <a href="{% url 'sysadmin:candidates' %}" id="selected">Candidate's List</a>
+    <a href="{% url 'sysadmin:voters' %}">Voters List</a>
+    <a href="{% url 'sysadmin:candidates' %}">Candidates List</a>
     <a href="{% url 'sysadmin:officers' %}">Comelec Officers</a>
-    <a href="{% url 'sysadmin:unit' %}" id="selected">Unit</a>
+    <a href="{% url 'sysadmin:unit' %}" id="selected">Units</a>
     <div id="user-container">
         <img id="user-icon" src="{% static 'sysadmin/assets/svg/user.svg' %}">
-        <div id="user-name"> Troy Bolton</div>
+        <div id="user-name"> {{ user.first_name }} {{ user.last_name }}</div>
+        <a id="log-out" href="{% url 'logout:logout' %}">Logout</a>
     </div>
 
 </div>
@@ -30,88 +31,91 @@
     <button class="tab-buttons" onclick="openTab(event, 'Add')" id="tab-add">Add a unit</button>
 
     <!-- SEARCH BAR AND DESELECT-DELETE TAKE UP THE SAME SPOT. THEY ARE ACTIVATED AND DEACTIVATED RESPECTIVELY-->
-
-    <!-- SEARCH BAR
     <form action="" id="tab-search">
-        <input  id="search" type="text" name="search-unit" placeholder="Search a unit...">
-    </form> -->
+        <input id="search" type="text" name="query" placeholder="Search a unit...">
+    </form>
 
     <!-- DESELECT-DELETE -->
-    <div id="deselect-delete">
-        <button id="deselect">Deselect All</button>
-        <button id="delete">Delete Selected Candidate(s)</button>
-    </div>
-
+    <!--<div id="deselect-delete">
+        <button id="deselect">Deselect All</button>-->
+    <form action="" id="delete-units" method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="form-type" value="delete-unit">
+        <button type="button" onclick="delete_units()" id="delete">Delete Selected Unit(s)</button>
+    </form>
+    <!--</div>-->
 </div>
 
 <!-- CONTAINER WHERE TABS WILL OCCUPY -->
 <div id="tab-container">
-
+    {% if messages %}
+        <div>
+            {% for message in messages %}
+                <p {% if message.tags %}id="{{ message.tags }}"{% endif %}>{{ message }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
     <!-- FIRST TAB -->
     <div id="All" class="tab-content">
-        <table>
-            <!-- FIRST ROW IS HEADER/TITLE ROW. DO NOT CHANGE!! -->
-            <tr class="row-0">
-                <td class="col-checkbox"><input type="checkbox"></td>
-                <td class="col-name">College</td>
-                <td class="col-id">Batch</td>
-                <td class="col-unit">Unit Name</td>
-            </tr>
+        <div id="table-container">
+            <!-- FIRST ROW IS HEADER/TITLE ROW. -->
+            <div class="table-row row-0">
+                <div class="col-checkbox"><input type="checkbox" id="toggle-all" onclick="toggle(this)"></div>
+                <div class="col-college">College</div>
+                <div class="col-batch">Batch</div>
+                <div class="col-unit">Unit Name</div>
+            </div>
 
             <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
-            <tr class="row-1">
-                <td class="col-checkbox"><input type="checkbox"></td>
-                <td class="col-name">COB</td>
-                <td class="col-id">115</td>
-                <td class="col-unit">BLAZEIT420</td>
-            </tr>
-            <tr class="row-2">
-                <td class="col-checkbox"><input type="checkbox"></td>
-                <td class="col-name">COS</td>
-                <td class="col-id">113</td>
-                <td class="col-unit">Unit Name</td>
-            </tr>
+            {% for unit in units %}
+                <div class="table-row {% cycle 'row-1' 'row-2' %}">
+                    <div class="col-checkbox"><input type="checkbox" name="check" value="{{ unit.id }}"
+                                                     onclick="selected(this)"></div>
+                    <div class="col-college">
+                        <div class="name">
+                            {% if unit.college is None %}
+                                None
+                            {% else %}
+                                {{ unit.college.name }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-batch">{{ unit.batch }}</div>
+                    <div class="col-unit">{{ unit.name }}</div>
+                </div>
+            {% endfor %}
+        </div>
 
-            <tr class="row-1">
-                <td class="col-checkbox"><input type="checkbox"></td>
-                <td class="col-name">COB</td>
-                <td class="col-id">115</td>
-                <td class="col-unit">BLAZEIT420</td>
-            </tr>
-            <tr class="row-2">
-                <td class="col-checkbox"><input type="checkbox"></td>
-                <td class="col-name">COS</td>
-                <td class="col-id">113</td>
-                <td class="col-unit">Unit Name</td>
-            </tr>
+        <div class="pagination">
+            <span class="step-links">
+                {% if units.has_previous %}
+                    <a href="?page=1{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">&laquo; first</a>
+                    <a href="?page={{ units.previous_page_number }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">previous</a>
+                {% endif %}
+                <span class="current">Page {{ units.number }} of {{ units.paginator.num_pages }}.</span>
 
-        </table>
+                {% if units.has_next %}
+                    <a href="?page={{ units.next_page_number }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">next</a>
+                    <a href="?page={{ units.paginator.num_pages }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">last &raquo;</a>
+                {% endif %}
+            </span>
+        </div>
     </div>
 
     <!-- SECOND TAB (FORM TAB)-->
-    <form action="" id="Add" class="tab-content">
+    <form action="" id="Add" class="tab-content" method="POST">
+
         <div class="info-fields-container">
-            <div class="info-container">
-                <div class="info-label"> College</div>
-                <select class="info-input" name="cand-college">
-                    <option>CCS</option>
-                    <option>COB</option>
-                    <option>COE</option>
-                    <option>CLA</option>
-                    <option>COS</option>
-                </select>
-            </div>
-
-            <div class="info-container">
-                <div class="info-label"> Batch</div>
-                <input type="text" class="info-input" name="cand-id" placeholder="ex. 116">
-            </div>
-
-            <div class="info-container">
-                <div class="info-label"> Unit Name</div>
-                <input type="text" class="info-input" name="cand-id" placeholder="ex. ABSOLUTEUNIT">
-            </div>
-
+            {% csrf_token %}
+            <input type="hidden" name="form-type" value="add-unit">
+            {% if unit_form %}
+                {% for field in unit_form %}
+                    <div class="info-container">
+                        <div class="info-label">{{ field.label }}</div>
+                        {{ field }}
+                    </div>
+                {% endfor %}
+            {% endif %}
         </div>
 
         <div class="info-buttons-container">
@@ -129,10 +133,7 @@
 </body>
 
 <!-- JAVASCRIPT LINK-->
-<script src="{% static 'sysadmin/js/admin.js' %}">
-    //set default tab to "All" Tab by activating it on page load
-    document.getElementById("tab-all").click();
-</script>
+<script src="{% static 'sysadmin/js/admin.js' %}"></script>
 </html>
 
 

@@ -49,7 +49,7 @@ class VoteView(UserPassesTestMixin, View):
         # Save voter submission
 
         # Send email receipt
-        send_email_receipt(request.user, request.POST)
+        #send_email_receipt(request.user, request.POST)
 
         # Log the user out
         logout(request)

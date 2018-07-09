@@ -1,11 +1,9 @@
-table tr td.col-name {
-    width: 15%;
+.col-name{
+	flex-basis: 25%;
 }
-
-table tr td.col-id {
-    width: 10%;
+.col-id{
+	flex-basis: 20%;
 }
-
-table tr td.col-address {
-    width: 20%;
+.col-address{
+	flex-basis: 40%;
 }

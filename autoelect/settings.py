@@ -138,4 +138,9 @@ EMAIL_USE_TLS = True
 
 # Session expiry settings
 # Voting session expires in 10 minutes
-SESSION_COOKIE_AGE = 60 * 10
+# SESSION_COOKIE_AGE = 60 * 10
+
+# Media settings
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+MEDIA_URL = '/media/'
