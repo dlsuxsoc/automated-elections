@@ -1,0 +1,9 @@
+.col-name{
+	flex-basis: 25%;
+}
+.col-id{
+	flex-basis: 20%;
+}
+.col-address{
+	flex-basis: 40%;
+}

@@ -1,0 +1,9 @@
+.col-college{
+	flex-basis: 25%;
+}
+.col-batch{
+	flex-basis: 20%;
+}
+.col-unit{
+	flex-basis: 40%;
+}

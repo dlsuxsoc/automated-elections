@@ -1,0 +1,15 @@
+.col-name{
+	flex-basis: 25%;
+}
+.col-id{
+	flex-basis: 15%;
+}
+.col-position{
+	flex-basis: 15%;
+}
+.col-party{
+	flex-basis: 15%;
+}
+.col-status{
+	flex-basis: 15%;
+}

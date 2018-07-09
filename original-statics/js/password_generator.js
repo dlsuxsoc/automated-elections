@@ -1,15 +1,13 @@
-
-
 var input = document.getElementById("pass-gen");
 
-input.addEventListener("keyup", function(event) {
+input.addEventListener("keyup", function (event) {
     event.preventDefault();
     if (event.keyCode === 13) {
         var input_value = parseInt(input.value);
 
-        if (!isNaN(input_value)){
-            document.getElementById('result').innerHTML = 'your passcode: <b>'+ generatePassword() +'</b>';
-        }else {
+        if (!isNaN(input_value)) {
+            document.getElementById('result').innerHTML = 'your passcode: <b>' + generatePassword() + '</b>';
+        } else {
             document.getElementById('result').innerHTML = '<b>Oops!</b> There is no password for that.';
         }
     }

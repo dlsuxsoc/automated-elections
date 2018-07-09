@@ -22,11 +22,20 @@
 </head>
 <body>
 <img src="{% static 'login/assets/png/uxsoc-logo.png' %}" id="uxsoc-logo"/>
+<img src="{% static 'login/assets/png/lscs.png' %}" id="lscs-logo"/>
 <div id="landing-container">
     <div id="landing-child">
         <div id="title">Welcome to the Elections</div>
 
         <div id="login-label">Ready to vote? Sign in here!</div>
+        {% if messages %}
+            <div>
+                {% for message in messages %}
+                    <p id="error">{{ message }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
         <form id="landing-form" method="POST" action="">
             {% csrf_token %}
             <div class="input-field">

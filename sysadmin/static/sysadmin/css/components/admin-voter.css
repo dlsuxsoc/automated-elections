@@ -1,0 +1,23 @@
+.col-name {
+    flex-basis: 25%;
+}
+
+.col-id {
+    flex-basis: 20%;
+}
+
+table tr td.col-position {
+    width: 10%;
+}
+
+.col-voted {
+    flex-basis: 20%;
+}
+
+.col-eligible {
+    flex-basis: 20%;
+}
+
+table tr td.col-save {
+    width: 10%;
+}
