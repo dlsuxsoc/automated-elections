@@ -15,7 +15,7 @@ from django.utils import timezone
 from django.views import View
 
 # Test function for this view
-from vote.models import Voter, College
+from vote.models import Voter, College, Candidate
 
 
 def officer_test_func(user):
@@ -388,28 +388,24 @@ class CandidatesView(OfficerView):
     template_name = 'passcode/officer-candidate.html'
 
     def display_objects(self, page, query=False):
-        # # Show everything if the query is empty
-        # if query is False:
-        #     voters = Voter.objects.all().order_by('user__username')
-        # else:
-        #     voters = Voter.objects.filter(
-        #         Q(user__username__icontains=query) |
-        #         Q(user__first_name__icontains=query) |
-        #         Q(user__last_name__icontains=query)
-        #     ) \
-        #         .order_by('user__username')
-        #
-        # colleges = College.objects.all().order_by('name')
-        #
-        # paginator = Paginator(voters, self.objects_per_page)
-        # paginated_voters = paginator.get_page(page)
-        #
-        # context = {
-        #     'voters': paginated_voters,
-        #     'colleges': colleges,
-        # }
+        # Show everything if the query is empty
+        if query is False:
+            candidates = Candidate.objects.all().order_by('voter__user__username')
+        else:
+            candidates = Candidate.objects.filter(
+                Q(voter__user__username__icontains=query) |
+                Q(voter__user__first_name__icontains=query) |
+                Q(voter__user__last_name__icontains=query) |
+                Q(party__name__icontains=query)
+            ) \
+                .order_by('voter__user__username')
 
-        context = {}
+        paginator = Paginator(candidates, self.objects_per_page)
+        paginated_candidates = paginator.get_page(page)
+
+        context = {
+            'candidates': paginated_candidates,
+        }
 
         return context
 
@@ -422,7 +418,7 @@ class CandidatesView(OfficerView):
         return render(request, self.template_name, context)
 
     def post(self, request):
-        pass
+        self.get(request)
 
 
 class ResultsView(OfficerView):
@@ -562,8 +558,8 @@ def json_details(request, voter_id):
         return JsonResponse({'response': "(This voter does not exist)"})
 
     print({'first_names': voter.user.first_name, 'last_name': voter.user.last_name,
-                         'id_number': voter.user.username, 'college': voter.college.name,
-                         'voting_status': voter.voting_status, 'eligibility_status': voter.eligibility_status})
+           'id_number': voter.user.username, 'college': voter.college.name,
+           'voting_status': voter.voting_status, 'eligibility_status': voter.eligibility_status})
 
     # Then return its details
     return JsonResponse({'first_names': voter.user.first_name, 'last_name': voter.user.last_name,
