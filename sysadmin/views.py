@@ -11,7 +11,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views import View
 
-from passcode.views import generate_passcode
+from passcode.views import PasscodeView
 from sysadmin.forms import IssueForm, OfficerForm, UnitForm
 from vote.models import Voter, College, Candidate, Position, Unit, Party, Issue, Take
 
@@ -57,7 +57,7 @@ class VotersView(SysadminView):
         email = username + '@dlsu.edu.ph'
 
         # Set an initial password
-        password = generate_passcode()
+        password = PasscodeView.generate_passcode()
 
         # Retrieve the voting and eligibility statuses using the name provided
         voting_status = True if voting_status_name == 'Has already voted' else False
