@@ -125,7 +125,7 @@ class VotersView(SysadminView):
 
         context = {
             'voters': paginated_voters,
-            'colleges': colleges
+            'colleges': colleges,
         }
 
         return context
@@ -730,6 +730,9 @@ class OfficersView(SysadminView):
                     with transaction.atomic():
                         # Save the form to the database if it is valid
                         officer = officer_form.save()
+
+                        # Set the correctly hashed password
+                        officer.set_password(officer_form.cleaned_data['password'])
 
                         # Add the officer to the COMELEC officer group
                         group = Group.objects.get(name='comelec')

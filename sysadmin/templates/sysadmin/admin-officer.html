@@ -20,7 +20,7 @@
     <div id="user-container">
         <img id="user-icon" src="{% static 'sysadmin/assets/svg/user.svg' %}">
         <div id="user-name"> {{ user.first_name }} {{ user.last_name }}</div>
-        <a id="log-out">Log out</a>
+        <a id="log-out" href="{% url 'logout:logout' %}">Logout</a>
     </div>
 
 </div>
@@ -81,14 +81,14 @@
         <div class="pagination">
             <span class="step-links">
                 {% if officers.has_previous %}
-                    <a href="?page=1">&laquo; first</a>
-                    <a href="?page={{ officers.previous_page_number }}">previous</a>
+                    <a href="?page=1{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">&laquo; first</a>
+                    <a href="?page={{ officers.previous_page_number }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">previous</a>
                 {% endif %}
                 <span class="current">Page {{ officers.number }} of {{ officers.paginator.num_pages }}.</span>
 
                 {% if officers.has_next %}
-                    <a href="?page={{ officers.next_page_number }}">next</a>
-                    <a href="?page={{ officers.paginator.num_pages }}">last &raquo;</a>
+                    <a href="?page={{ officers.next_page_number }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">next</a>
+                    <a href="?page={{ officers.paginator.num_pages }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">last &raquo;</a>
                 {% endif %}
             </span>
         </div>
