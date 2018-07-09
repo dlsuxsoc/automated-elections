@@ -12,7 +12,7 @@ from django.shortcuts import render
 from django.views import View
 
 from passcode.views import generate_passcode
-from sysadmin.forms import IssueForm
+from sysadmin.forms import IssueForm, OfficerForm
 from vote.models import Voter, College, Candidate, Position, Unit, Party, Issue, Take
 
 
@@ -86,7 +86,7 @@ class VotersView(SysadminView):
     @staticmethod
     def change_voter_eligibility(voter_id, eligibility_status_name):
         # Retrieve the voter in question
-        voter = Voter.objects.get(id=voter_id)
+        voter = Voter.objects.get(user__username=voter_id)
 
         # Resolve the input
         eligibility_status = True if eligibility_status_name == 'Eligible' else False
@@ -436,7 +436,8 @@ class CandidatesView(SysadminView):
             candidates = Candidate.objects.filter(
                 Q(voter__user__username__contains=query) |
                 Q(voter__user__first_name__icontains=query) |
-                Q(voter__user__last_name__icontains=query)
+                Q(voter__user__last_name__icontains=query) |
+                Q(party__name__icontains=query)
             ) \
                 .order_by('voter__user__username')
 
@@ -672,29 +673,133 @@ class CandidatesView(SysadminView):
 class OfficersView(SysadminView):
     template_name = 'sysadmin/admin-officer.html'
 
-    def display_objects(self, page):
-        officers = User.objects.all().order_by('username').filter(groups__name='comelec')
+    # A convenience function for deleting an officer
+    @staticmethod
+    def delete_officer(officer_id):
+        # Retrieve the officer
+        officer = User.objects.get(id=officer_id)
+
+        # Get rid of that user
+        officer.delete()
+
+    def display_objects(self, page, query=False):
+        # Show everything if the query is empty
+        if query is False:
+            officers = User.objects.all().order_by('username').filter(groups__name='comelec')
+        else:
+            officers = User.objects.filter(groups__name='comelec').filter(
+                Q(username__contains=query) |
+                Q(first_name__icontains=query) |
+                Q(last_name__icontains=query) |
+                Q(email__icontains=query)
+            ) \
+                .order_by('username')
+
         colleges = College.objects.all().order_by('name')
 
         paginator = Paginator(officers, self.objects_per_page)
         paginated_officers = paginator.get_page(page)
 
+        officer_form = OfficerForm()
+
         context = {
             'officers': paginated_officers,
-            'colleges': colleges
+            'colleges': colleges,
+            'officer_form': officer_form
         }
 
         return context
 
     def get(self, request):
         page = request.GET.get('page', False)
+        query = request.GET.get('query', False)
 
-        context = self.display_objects(page if page is not False else 1)
+        context = self.display_objects(page if page is not False else 1, query)
 
         return render(request, self.template_name, context)
 
     def post(self, request):
-        return render(request, self.template_name)
+        form_type = request.POST.get('form-type', False)
+
+        officer_form = OfficerForm(request.POST)
+
+        if form_type is not False:
+            if form_type == 'add-officer':
+                # The submitted form is for adding an officer
+                if officer_form.is_valid():
+                    with transaction.atomic():
+                        # Save the form to the database if it is valid
+                        officer = officer_form.save()
+
+                        # Add the officer to the COMELEC officer group
+                        group = Group.objects.get(name='comelec')
+                        group.user_set.add(officer)
+
+                        officer.save()
+
+                        messages.success(request, 'Officer successfully added.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+                else:
+                    # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                    # message
+                    messages.error(request, 'Could not add this officer.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+            elif form_type == 'delete-officer':
+                # The submitted form is for deleting officers
+                officers_list = request.POST.getlist('officers')
+
+                if officers_list is not False and len(officers_list) > 0:
+                    try:
+                        officers_deleted = 0
+
+                        # Try to delete each voter in the list
+                        with transaction.atomic():
+                            for officer in officers_list:
+                                self.delete_officer(officer)
+
+                                officers_deleted += 1
+
+                            messages.success(request,
+                                             "All {0} officer(s) successfully deleted.".format(officers_deleted))
+                    except User.DoesNotExist:
+                        # If the user does not exist
+                        messages.error(request,
+                                       'One of the selected users do not exist in the first place. '
+                                       'No officers were deleted.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+                else:
+                    # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                    # message
+                    messages.error(request, 'Invalid request.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+            else:
+                # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                # message
+                messages.error(request, 'Invalid request.')
+
+                context = self.display_objects(1)
+
+                return render(request, self.template_name, context)
+        else:
+            # If no objects are received, it's an invalid request, so stay on the page and then show an error
+            # message
+            messages.error(request, 'Invalid request.')
+
+            context = self.display_objects(1)
+
+            return render(request, self.template_name, context)
 
 
 class UnitView(SysadminView):
@@ -723,6 +828,20 @@ class UnitView(SysadminView):
 
     def post(self, request):
         return render(request, self.template_name)
+
+
+@user_passes_test(sysadmin_test_func)
+def json_details(request, voter_id):
+    # Get the voter
+    try:
+        voter = Voter.objects.get(user__username=voter_id)
+    except Voter.DoesNotExist:
+        return JsonResponse({'response': "(This voter does not exist)"})
+
+    # Then return its details
+    return JsonResponse({'first_names': voter.user.first_name, 'last_name': voter.user.last_name,
+                         'id_number': voter.user.username, 'college': voter.college.name,
+                         'voting_status': voter.voting_status, 'eligibility_status': voter.eligibility_status})
 
 
 @user_passes_test(sysadmin_test_func)

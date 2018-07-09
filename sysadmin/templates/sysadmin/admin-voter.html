@@ -85,11 +85,11 @@
             {% for voter in voters %}
                 <div class="table-row {% cycle 'row-1' 'row-2' %}">
                     <input type="hidden" name="form-type" value="save-status">
-                    <input type="hidden" name="user" value="{{ voter.id }}">
                     <div class="col-checkbox"><input type="checkbox" name="check" value="{{ voter.user.id }}"
                                                      onclick="selected(this)"></div>
                     <div class="col-name">
-                        <div class="name" onclick="edit_voter(this, '{{ voter.json|escapejs }}', {{ voter.number }})">
+                        <div class="name"
+                             onclick="edit_voter(this, '{{ csrf_token }}', {{ voter.user.username }}, {{ voters.number }})">
                             {{ voter.user.last_name }}, {{ voter.user.first_name }}
                         </div>
                     </div>
@@ -224,8 +224,8 @@
         {% csrf_token %}
         <div class="info-fields-container">
             <input type="hidden" name="form-type" value="edit-voter">
-            <input type="hidden" name="page" value="{{ voters.number }}">
             <input type="hidden" name="edit-id" value="">
+            <input type="hidden" name="page" value="">
             <div class="info-container">
                 <div class="info-label"> First Names (w/ second & middle names)</div>
                 <input type="text" class="info-input" name="voter-firstnames" id="edit-firstnames"

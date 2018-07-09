@@ -1,9 +1,7 @@
 # Create your models here.
-import json
 
 from django.contrib.auth.models import User
 from django.db import models
-from django.forms import model_to_dict
 
 
 class College(models.Model):
@@ -38,12 +36,6 @@ class Voter(models.Model):
     college = models.ForeignKey(College, on_delete=models.CASCADE)
     voting_status = models.BooleanField(default=True)
     eligibility_status = models.BooleanField(default=True)
-
-    @property
-    def json(self):
-        return json.dumps(
-            [{"first_name": self.user.first_name, "last_name": self.user.last_name, "college": self.college.name},
-             model_to_dict(self)])
 
     def __str__(self):
         return "(" + self.user.username + ") " + self.user.first_name + " " + self.user.last_name
@@ -80,10 +72,6 @@ class Take(models.Model):
     candidate = models.ForeignKey(Candidate, on_delete=models.CASCADE)
     issue = models.ForeignKey(Issue, on_delete=models.CASCADE)
     response = models.TextField(default='No take.')
-
-    @property
-    def json(self):
-        return json.dumps([model_to_dict(self)])
 
     def __str__(self):
         return self.response + \

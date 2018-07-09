@@ -32,19 +32,29 @@
 
     <!-- SEARCH BAR AND DESELECT-DELETE TAKE UP THE SAME SPOT. THEY ARE ACTIVATED AND DEACTIVATED RESPECTIVELY-->
     <form action="" id="tab-search">
-        <input id="search" type="text" name="search-officer" placeholder="Search an officer...">
+        <input id="search" type="text" name="query" placeholder="Search an officer...">
     </form>
 
     <!-- DESELECT-DELETE -->
     <!--<div id="deselect-delete">
         <button id="deselect">Deselect All</button>-->
-    <button id="delete">Delete Selected Officer(s)</button>
+    <form action="" id="delete-officers" method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="form-type" value="delete-officer">
+        <button type="button" onclick="delete_officers()" id="delete">Delete Selected Officer(s)</button>
+    </form>
     <!--</div>-->
 </div>
 
 <!-- CONTAINER WHERE TABS WILL OCCUPY -->
 <div id="tab-container">
-
+    {% if messages %}
+        <div>
+            {% for message in messages %}
+                <p {% if message.tags %}id="{{ message.tags }}"{% endif %}>{{ message }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
     <!-- FIRST TAB -->
     <div id="All" class="tab-content">
         <div id="table-container">
@@ -52,14 +62,15 @@
             <div class="table-row row-0">
                 <div class="col-checkbox"><input type="checkbox" id="toggle-all" onclick="toggle(this)"></div>
                 <div class="col-name">Full Name</div>
-                <div class="col-id">ID Number</div>
+                <div class="col-id">Username</div>
                 <div class="col-address">Email Address</div>
             </div>
 
             <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
             {% for officer in officers %}
                 <div class="table-row {% cycle 'row-1' 'row-2' %}">
-                    <div class="col-checkbox"><input type="checkbox" name="check" onclick="selected(this)"></div>
+                    <div class="col-checkbox"><input type="checkbox" name="check" value="{{ officer.id }}"
+                                                     onclick="selected(this)"></div>
                     <div class="col-name">{{ officer.last_name }}, {{ officer.first_name }}</div>
                     <div class="col-id">{{ officer.username }}</div>
                     <div class="col-address">{{ officer.email }}</div>
@@ -84,23 +95,18 @@
     </div>
 
     <!-- SECOND TAB (FORM TAB)-->
-    <form action="" id="Add" class="tab-content">
+    <form action="" id="Add" class="tab-content" method="POST">
         <div class="info-fields-container">
-            <div class="info-container">
-                <div class="info-label"> Full Name</div>
-                <input type="text" class="info-input" name="cand-name" placeholder="ex. Logan Paul">
-            </div>
-
-            <div class="info-container">
-                <div class="info-label"> ID Number</div>
-                <input type="text" class="info-input" name="cand-id" placeholder="ex. 18002738255">
-            </div>
-
-            <div class="info-container">
-                <div class="info-label"> Email Address</div>
-                <input type="text" class="info-input" name="cand-id" placeholder="ex. jake_paul@youtube.com">
-            </div>
-
+            {% csrf_token %}
+            <input type="hidden" name="form-type" value="add-officer">
+            {% if officer_form %}
+                {% for field in officer_form %}
+                    <div class="info-container">
+                        <div class="info-label">{{ field.label }}</div>
+                        {{ field }}
+                    </div>
+                {% endfor %}
+            {% endif %}
         </div>
 
 
@@ -111,59 +117,6 @@
             <input class="button confirm" type="submit" value="Add new officer">
         </div>
     </form>
-
-    <!-- THIRD HIDDEN TAB (EDIT TAB)-->
-    <form action="" id="Edit" class="tab-content">
-        <div class="info-fields-container">
-            <div class="info-container">
-                <div class="info-label"> Full Name</div>
-                <input type="text" class="info-input" name="cand-name" placeholder="ex. Logan Paul">
-            </div>
-
-            <div class="info-container">
-                <div class="info-label"> ID Number</div>
-                <input type="text" class="info-input" name="cand-id" placeholder="ex. 18002738255">
-            </div>
-
-            <div class="info-container">
-                <div class="info-label"> College</div>
-                <select class="info-input" name="cand-college">
-                    <option>CCS</option>
-                    <option>COB</option>
-                    <option>COE</option>
-                    <option>CLA</option>
-                    <option>COS</option>
-                </select>
-            </div>
-
-            <div class="info-container">
-                <div class="info-label"> Voting Status</div>
-                <select class="info-input" name="cand-status">
-                    <option>YES</option>
-                    <option>NO</option>
-                    <option>MAYBE</option>
-                    <option>PERHAPS</option>
-                    <option>POSSIBLY</option>
-                </select>
-            </div>
-
-            <div class="info-container">
-                <div class="info-label"> Eligibility Status</div>
-                <select class="info-input" name="cand-position">
-                    <option>Active</option>
-                    <option>Activen't</option>
-                </select>
-            </div>
-
-        </div>
-
-        <div class="info-buttons-container">
-            <button class="button cancel">Cancel</button>
-            <!-- SUBMIT BUTTON FOR THE TAB -->
-            <input class="button confirm" type="submit" value="Save Changes">
-        </div>
-    </form>
-
 </div>
 
 <div id="logo">
