@@ -5,6 +5,8 @@ from django.contrib.auth.models import Group
 from django.shortcuts import render, redirect
 from django.views import View
 
+from vote.models import Voter
+
 
 class VoterLoginView(View):
     template_name = 'login/login.html'
@@ -45,15 +47,27 @@ class VoterLoginView(View):
                 try:
                     # If the user is a voter, log the user in
                     if Group.objects.get(name='voter') in user.groups.all():
-                        login(request, user)
+                        print(user.username)
 
-                        return redirect('vote:vote')
+                        # Get the current voter from the current user
+                        voter = Voter.objects.get(user__username=user.username)
+
+                        # Check if the user is eligible for voting and hasn't already voted
+                        # If either is true, then the user is allowed to log in
+                        if voter.eligibility_status is True and voter.voting_status is False:
+                            login(request, user)
+
+                            return redirect('vote:vote')
+                        else:
+                            messages.error(request, 'You are not eligible for voting.')
+
+                            return render(request, self.template_name)
                     else:
                         # If the user is not a voter, stay on the login page and then show an error message
                         messages.error(request, 'You are not allowed to log in here.')
 
                         return render(request, self.template_name)
-                except Group.DoesNotExist:
+                except (Group.DoesNotExist, Voter.DoesNotExist):
                     # If the group does not exist, stay on the login page and then show an error message
                     messages.error(request, 'Internal server error.')
 

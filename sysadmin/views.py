@@ -608,7 +608,7 @@ class CandidatesView(SysadminView):
                         context = self.display_objects(1)
 
                         return render(request, self.template_name, context)
-                    if action == 'Save changes':
+                    if action == 'Save Changes':
                         # Try to add or edit the take
                         try:
                             with transaction.atomic():

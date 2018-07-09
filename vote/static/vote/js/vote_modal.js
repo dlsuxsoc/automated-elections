@@ -12,15 +12,51 @@ function showVote() {
     let secretary = document.querySelector('input[name="secretary"]:checked');
     let treasurer = document.querySelector('input[name="treasurer"]:checked');
 
-    document.getElementById("batch-president-summary").innerHTML = batchPresident == null ? 'Abstained' : batchPresident.value;
-    document.getElementById("batch-vice-president-summary").innerHTML = batchVicePresident == null ? 'Abstained' : batchVicePresident.value;
-    document.getElementById("legislative-assembly-representative-summary").innerHTML = laRepresentative == null ? 'Abstained' : laRepresentative.value;
-    document.getElementById("college-president-summary").innerHTML = collegePresident == null ? 'Abstained' : collegePresident.value;
-    document.getElementById("president-summary").innerHTML = president == null ? 'Abstained' : president.value;
-    document.getElementById("vice-president-internal-summary").innerHTML = vicePresidentInternal == null ? 'Abstained' : vicePresidentInternal.value;
-    document.getElementById("vice-president-external-summary").innerHTML = vicePresidentExternal == null ? 'Abstained' : vicePresidentExternal.value;
-    document.getElementById("secretary-summary").innerHTML = secretary == null ? 'Abstained' : secretary.value;
-    document.getElementById("treasurer-summary").innerHTML = treasurer == null ? 'Abstained' : treasurer.value;
+    let batchPresidentText = document.getElementById("batch-president-summary");
+    let batchVicePresidentText = document.getElementById("batch-vice-president-summary");
+    let laRepresentativeText = document.getElementById("legislative-assembly-representative-summary");
+    let collegePresidentText = document.getElementById("college-president-summary");
+    let presidentText = document.getElementById("president-summary");
+    let vicePresidentInternalText = document.getElementById("vice-president-internal-summary");
+    let vicePresidentExternalText = document.getElementById("vice-president-external-summary");
+    let secretaryText = document.getElementById("secretary-summary");
+    let treasurerText = document.getElementById("treasurer-summary");
+
+    if (batchPresidentText != null) {
+        batchPresidentText.innerHTML = batchPresident == null ? 'Abstained' : batchPresident.value.split(":")[1];
+    }
+
+    if (batchVicePresidentText != null) {
+        batchVicePresidentText.innerHTML = batchVicePresident == null ? 'Abstained' : batchVicePresident.value.split(":")[1];
+    }
+
+    if (laRepresentativeText != null) {
+        laRepresentativeText.laRepresentativeTextinnerHTML = laRepresentative == null ? 'Abstained' : laRepresentative.value.split(":")[1];
+    }
+
+    if (collegePresidentText != null) {
+        collegePresidentText.innerHTML = collegePresident == null ? 'Abstained' : collegePresident.value.split(":")[1];
+    }
+
+    if (presidentText != null) {
+        presidentText.innerHTML = president == null ? 'Abstained' : president.value.split(":")[1];
+    }
+
+    if (vicePresidentInternalText != null) {
+        vicePresidentInternalText.innerHTML = vicePresidentInternal == null ? 'Abstained' : vicePresidentInternal.value.split(":")[1];
+    }
+
+    if (vicePresidentExternalText != null) {
+        vicePresidentExternalText.innerHTML = vicePresidentExternal == null ? 'Abstained' : vicePresidentExternal.value.split(":")[1];
+    }
+
+    if (secretaryText != null) {
+        secretaryText.innerHTML = secretary == null ? 'Abstained' : secretary.value.split(":")[1];
+    }
+
+    if (treasurerText != null) {
+        treasurerText.innerHTML = treasurer == null ? 'Abstained' : treasurer.value.split(":")[1];
+    }
 }
 
 function closeModal() {

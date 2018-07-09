@@ -1,7 +1,7 @@
 @import url(https://fonts.googleapis.com/css?family=Roboto:500);
 
 #modal-read {
-    position: absolute;
+    position: fixed;
     top: 25%;
     left: 25%;
     right: 0;
@@ -9,7 +9,7 @@
     background: #36A472;
     width: 50%;
     height: 50%;
-    clip-path: polygon(calc(50% - 0em) calc(50% - 0em), calc(50% + 0em) calc(50% - 0em), calc(50% + 0em) calc(50% + 0em), calc(50% - 0em) calc( 50% + 0em));
+    clip-path: polygon(calc(50% - 0em) calc(50% - 0em), calc(50% + 0em) calc(50% - 0em), calc(50% + 0em) calc(50% + 0em), calc(50% - 0em) calc(50% + 0em));
     transition: clip-path 0.4s cubic-bezier(0, 0.58, 0.36, 1), -webkit-clip-path 0.4s cubic-bezier(0, 0.58, 0.36, 1);
     display: flex;
     justify-content: center;
@@ -28,12 +28,12 @@
     color: #fff;
 }
 
-.button-read:focus~#modal-read {
+.button-read:focus ~ #modal-read {
     -webkit-clip-path: polygon(0 0, 100% 0%, 100% 100%, 0% 100%);
     clip-path: polygon(0 0, 100% 0%, 100% 100%, 0% 100%);
 }
 
-.button-read:focus~#modal-read #modal__content-read {
+.button-read:focus ~ #modal-read #modal__content-read {
     opacity: 1;
     -webkit-transform: translate3D(0, 1em, 0);
     transform: translate3D(0, 1em, 0);
@@ -105,4 +105,37 @@ blockquote cite:before {
     bottom: 0;
     left: 0;
     right: 0;
+}
+
+.info-container {
+    width: 40%;
+    height: 75px;
+    display: flex;
+    flex-direction: column;
+
+    margin: 50px 0px 10px 20px;
+}
+
+.info-label {
+    width: 100%;
+    height: 50px;
+    font-size: 12px;
+    font-weight: bold;
+    color: #ffffff;
+    margin-bottom: 10px;
+}
+
+.info-input {
+    width: 100%;
+    height: 50px;
+    font-size: 20px;
+
+    border: none;
+    border-bottom: 1px solid #36A472;
+
+    outline: none;
+}
+
+.takes-container {
+    display: block;
 }
