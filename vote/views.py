@@ -1,6 +1,6 @@
 # Create your views here.
 from django.conf import settings
-# Send an email receipt containing the candidates the voter voted for
+from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.mixins import UserPassesTestMixin
@@ -84,19 +84,31 @@ class VoteView(UserPassesTestMixin, View):
 
     @staticmethod
     def post(request):
-        # Check if the user has already voted
+        voter = request.user.voter
 
-        # Submit voting results
+        # Check if the voter has already voted
+        # If not yet...
+        if not voter.voting_status:
+            # Submit voting results
 
-        # Save voter submission
+            # Save voter submission
 
-        # Send email receipt
-        # self.send_email_receipt(request.user, request.POST)
+            # Send email receipt
+            # self.send_email_receipt(request.user, request.POST)
 
-        # Log the user out
-        logout(request)
+            # Mark the voter as already voted
+            voter.voting_status = True
+            voter.save()
 
-        return redirect('logout:logout_voter')
+            # Log the user out
+            logout(request)
+
+            return redirect('logout:logout_voter')
+        else:
+            # But if the voter already did...
+            messages.error(request, 'You have already voted. You may only vote once.')
+
+            return redirect('logout:logout_fail')
 
 
 @user_passes_test(vote_test_func)
