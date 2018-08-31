@@ -407,6 +407,13 @@ select {
     border-radius: 5px;
 }
 
+.confirm-negative {
+    background-color: #ee4245;
+    color: white;
+    border-radius: 5px;
+    transition: background-color .2s ease-out;
+}
+
 .confirm {
     background-color: #36A472;
     color: white;

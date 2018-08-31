@@ -11,6 +11,14 @@ class College(models.Model):
         return self.name
 
 
+class ElectionStatus(models.Model):
+    batch = models.CharField(max_length=4)
+    college = models.ForeignKey(College, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.college.name + "," + self.batch
+
+
 class Unit(models.Model):
     college = models.ForeignKey(College, on_delete=models.CASCADE, null=True, blank=True)
     batch = models.CharField(max_length=4, null=True, blank=True)

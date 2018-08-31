@@ -53,6 +53,10 @@ class VotersView(SysadminView):
     # A convenience function for creating a voter
     @staticmethod
     def create_voter(first_name, last_name, username, college_name, voting_status_name, eligibility_status_name):
+        # Save the names in title case
+        first_name = first_name.title()
+        last_name = last_name.title()
+
         # Derive the email from the username (the ID number)
         email = username + '@dlsu.edu.ph'
 

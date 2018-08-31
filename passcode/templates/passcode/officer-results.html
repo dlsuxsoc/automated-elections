@@ -14,18 +14,19 @@
     <img id="header-ballot" src="{% static 'passcode/assets/svg/ballot-white.svg' %}">
     <a href="{% url 'passcode:voters' %}">Voters List</a>
     <a href="{% url 'passcode:candidates' %}">Candidates List</a>
-    <a href="{% url 'passcode:results' %}" id="selected">Voting Results</a>
-    <a href="{% url 'passcode:passcode' %}">Passcode generator</a>
+    <a href="{% url 'passcode:results' %}" id="selected">Election Dashboard</a>
+    <a href="{% url 'passcode:passcode' %}">Passcode Generator</a>
     <div id="user-container">
         <img id="user-icon" src="{% static 'passcode/assets/svg/user.svg' %}">
-        <div id="user-name"> Troy Bolton</div>
-        <a id="log-out">Log out</a>
+        <div id="user-name"> {{ user.first_name }} {{ user.last_name }}</div>
+        <a id="log-out" href="{% url 'logout:logout' %}">Logout</a>
     </div>
 
 </div>
 
 <!-- TABS BUTTONS TO TRAVERSE THE DIFF SECTIONS -->
 <div id="tab-buttons-container">
+    <button class="tab-buttons" onclick="openTab(event, 'Controls')" id="tab-controls">Election controls</button>
     <button class="tab-buttons" onclick="openTab(event, 'Overview')" id="tab-overview">Overview of votes</button>
     <button class="tab-buttons" onclick="openTab(event, 'Underview')" id="tab-underview">Votes per candidate</button>
 
@@ -33,6 +34,87 @@
 
 <!-- CONTAINER WHERE TABS WILL OCCUPY -->
 <div id="tab-container">
+    {% if messages %}
+        <div>
+            {% for message in messages %}
+                <p {% if message.tags %}id="{{ message.tags }}"{% endif %}>{{ message }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div id="Controls" class="tab-content">
+        <div class="controls-instruction">
+            {% if election_ongoing is False %}
+                Select which batches under certain colleges will be eligible for the next elections.
+                <br>
+                Make sure you've covered <b>all the eligible batches</b>, you won't be able to change them after you've
+                started
+                the elections.
+                <br>
+                Also make sure that you've actually <b>added candidates</b> to run for the pertinent batches.
+            {% else %}
+                Elections are currently ongoing.
+            {% endif %}
+        </div>
+        <div class="controls-container">
+            <form action="" method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="form-type"
+                       value="{% if election_ongoing is False %}start-elections{% else %}end-elections{% endif %}">
+
+                {% for college in colleges %}
+                    <div class="controls-header">
+                        {{ college.name }}
+                    </div>
+                    <div class="controls">
+                        {% if election_ongoing is False %}
+                            {% for batch in batches %}
+                                <li class="batch-checkboxes">
+                                    <input id="{{ college.name }}-{{ batch }}" name="{{ college.name }}-batch"
+                                           type="checkbox" value="{{ batch }}">
+                                    <label for="{{ college.name }}-{{ batch }}">{{ batch }}</label>
+                                </li>
+                            {% endfor %}
+                        {% else %}
+                            <b>Batches eligible for this election:</b>
+                            {% for college_key, batch_val in college_batch_dict.items %}
+                                {% if college_key == college.name %}
+                                    {% for batch in batch_val %}
+                                        <li class="batch-checkboxes">
+                                            {{ batch }}{% if not forloop.last %},{% endif %}</li>
+                                    {% endfor %}
+                                {% endif %}
+                            {% empty %}
+                                No batches under this college are eligible for this election.
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                {% endfor %}
+                <div class="controls-instruction">
+                    {% if election_ongoing is False %}
+                        Once you're done, <b>reenter your password</b>, then click the <b>start
+                        elections</b> button to commence the elections.
+                        <br>
+                    {% else %}
+                        Reenter your password, then click the <b>stop elections</b> button to end the elections.
+                        Only stop the elections when you're sure that you will, because this cannot be undone.
+                    {% endif %}
+                </div>
+                <div class="controls">
+                    <label class="info-label" for="reauth">Reenter your password</label>
+                    <br>
+                    <input id="reauth" class="password-reauth" type="password" name="reauth" required="required">
+                    <br>
+                    <input class="button {% if election_ongoing is False %}confirm{% else %}confirm-negative{% endif %}"
+                           type="submit"
+                           value="{% if election_ongoing is False %}Start elections{% else %}Stop elections{% endif %}">
+                </div>
+            </form>
+        </div>
+        <div id="logo">
+            <img width=500 height=50 src="{% static 'passcode/assets/svg/org-logos.svg' %}">
+        </div>
+    </div>
 
     <!-- FIRST TAB -->
     <div id="Overview" class="tab-content">

@@ -28,4 +28,4 @@ function openTab(evt, tab) {
     document.getElementById("college-ccs").click();
 }
 
-document.getElementById("tab-overview").click();
+document.getElementById("tab-controls").click();

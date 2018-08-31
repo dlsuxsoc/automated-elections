@@ -1,7 +1,9 @@
 # Create your views here.
+import datetime
 from random import randint
 
 from django.contrib import messages
+from django.contrib.auth import authenticate
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.contrib.auth.models import Group, User
@@ -15,7 +17,7 @@ from django.utils import timezone
 from django.views import View
 
 # Test function for this view
-from vote.models import Voter, College, Candidate
+from vote.models import Voter, College, Candidate, ElectionStatus
 
 
 def officer_test_func(user):
@@ -70,6 +72,10 @@ class VotersView(OfficerView):
     # A convenience function for creating a voter
     @staticmethod
     def create_voter(first_name, last_name, username, college_name, voting_status_name, eligibility_status_name):
+        # Save the names in title case
+        first_name = first_name.title()
+        last_name = last_name.title()
+
         # Derive the email from the username (the ID number)
         email = username + '@dlsu.edu.ph'
 
@@ -445,10 +451,48 @@ class ResultsView(OfficerView):
         #     'voters': paginated_voters,
         #     'colleges': colleges,
         # }
+        colleges = College.objects.all().order_by('name')
 
-        context = {}
+        # Set a flag indicating whether elections have started or not
+        election_ongoing = self.is_election_ongoing()
+
+        # Show the checkbox page when the elections aren't on, and show the eligible batches when the elections are on
+        if not election_ongoing:
+            # Get all batches from the batch of the current year until the batch of the year six years from the current
+            # year
+            current_year = datetime.datetime.now().year
+
+            batches = ['1' + str(year)[2:] for year in range(current_year, current_year - 6, -1)]
+            batches[-1] = batches[-1] + ' and below'
+
+            context = {
+                'election_ongoing': election_ongoing,
+                'colleges': colleges,
+                'batches': batches
+            }
+        else:
+            college_batch_dict = {}
+
+            college_batches = ElectionStatus.objects.all().order_by('college__name', '-batch')
+
+            for college_batch in college_batches:
+                if college_batch.college.name not in college_batch_dict.keys():
+                    college_batch_dict[college_batch.college.name] = []
+
+                college_batch_dict[college_batch.college.name].append(college_batch.batch)
+
+            context = {
+                'election_ongoing': election_ongoing,
+                'colleges': colleges,
+                'college_batch_dict': college_batch_dict
+            }
 
         return context
+
+    @staticmethod
+    def is_election_ongoing():
+        print(ElectionStatus.objects.all().exists())
+        return ElectionStatus.objects.all().exists()
 
     def get(self, request):
         page = request.GET.get('page', False)
@@ -459,7 +503,97 @@ class ResultsView(OfficerView):
         return render(request, self.template_name, context)
 
     def post(self, request):
-        pass
+        form_type = request.POST.get('form-type', False)
+
+        if form_type is not False:
+            # The submitted form is for starting the elections
+            if form_type == 'start-elections':
+                # If the elections have already started, it can't be started again!
+                if not self.is_election_ongoing():
+                    # Only continue if the re-authentication password indeed matches the password of the current
+                    # COMELEC officer
+                    reauth_password = request.POST.get('reauth', False)
+
+                    if reauth_password is False \
+                            or authenticate(username=request.user.username, password=reauth_password) is None:
+                        messages.error(request,
+                                       'The elections weren\'t started because the password was incorrect. Try again.')
+                    else:
+                        college_batches = {}
+
+                        # Collect all batches per college
+                        for college in College.objects.all().order_by('name'):
+                            college_batches[college.name] = request.POST.getlist(college.name + '-batch')
+
+                        # Keep track of whether no checkboxes where checked
+                        empty = True
+
+                        # Add each into the database
+                        for college, batches in college_batches.items():
+                            # Get the college object from the name
+                            try:
+                                college_object = College.objects.get(name=college)
+
+                                # Then use that object to create the an election status value for these specific batches
+                                for batch in batches:
+                                    empty = False
+
+                                    ElectionStatus.objects.create(college=college_object, batch=batch)
+                            except College.DoesNotExist:
+                                # If the college does not exist
+                                messages.error(request, 'Internal server error.')
+
+                        # Check whether batches were actually selected in the first place
+                        if not empty:
+                            messages.success(request, 'The elections have now started.')
+                        else:
+                            messages.error(request,
+                                           'The elections weren\'t started because there were no batches selected at'
+                                           ' all.')
+                else:
+                    messages.error(request, 'The elections have already been started.')
+
+                context = self.display_objects(1)
+
+                return render(request, self.template_name, context)
+            elif form_type == 'end-elections':
+                # If the elections have already ended, it can't be ended again!
+                if self.is_election_ongoing():
+                    # Only continue if the re-authentication password indeed matches the password of the current
+                    # COMELEC officer
+                    reauth_password = request.POST.get('reauth', False)
+
+                    if reauth_password is False \
+                            or authenticate(username=request.user.username, password=reauth_password) is None:
+                        messages.error(request,
+                                       'The elections weren\'t ended because the password was incorrect. Try again.')
+                    else:
+                        # Clear the entire election status table
+                        ElectionStatus.objects.all().delete()
+
+                        messages.success(request, 'The elections have now ended.')
+                else:
+                    messages.error(request, 'The elections have already been ended.')
+
+                context = self.display_objects(1)
+
+                return render(request, self.template_name, context)
+            else:
+                # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                # message
+                messages.error(request, 'Invalid request.')
+
+                context = self.display_objects(1)
+
+                return render(request, self.template_name, context)
+        else:
+            # If no objects are received, it's an invalid request, so stay on the page and then show an error
+            # message
+            messages.error(request, 'Invalid request.')
+
+            context = self.display_objects(1)
+
+            return render(request, self.template_name, context)
 
 
 class PasscodeView(UserPassesTestMixin, View):

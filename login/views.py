@@ -52,14 +52,19 @@ class VoterLoginView(View):
                         # Get the current voter from the current user
                         voter = Voter.objects.get(user__username=user.username)
 
-                        # Check if the user is eligible for voting and hasn't already voted
-                        # If either is true, then the user is allowed to log in
+                        # Get the batch of the current voter
+                        batch = voter.user.username[:3]
+
                         if voter.eligibility_status is True and voter.voting_status is False:
+                            # Check if the user is eligible for voting and hasn't already voted
+                            # If either is true, then the user is allowed to log in
                             login(request, user)
 
                             return redirect('vote:vote')
                         else:
-                            messages.error(request, 'You are not eligible for voting.')
+                            messages.error(request,
+                                           'You are not eligible for voting.'
+                                           + ' You may have already voted.' if voter.voting_status is True else '')
 
                             return render(request, self.template_name)
                     else:
