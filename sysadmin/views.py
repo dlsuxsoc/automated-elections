@@ -456,7 +456,7 @@ class CandidatesView(SysadminView):
                 .order_by('voter__user__username')
 
         voters = Voter.objects.all().order_by('user__username')
-        positions = Position.objects.all().order_by('unit__name', 'name')
+        positions = Position.objects.all().order_by('unit__name', 'base_position__name')
         parties = Party.objects.all().order_by('name')
         issues = Issue.objects.all().order_by('name')
 
