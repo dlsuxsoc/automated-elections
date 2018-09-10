@@ -9,6 +9,6 @@ urlpatterns = [
     path('', VoteView.as_view(), name='vote'),
 
     # AJAX handlers
-    # takes/<candidate_id>/<issue>/
-    path('takes/<int:candidate_id>/<str:issue>/', json_take, name='candidate_takes'),
+    # takes/<candidate_identifier>/<issue>/
+    path('takes/<uuid:candidate_identifier>/<str:issue>/', json_take, name='candidate_takes'),
 ]

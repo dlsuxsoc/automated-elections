@@ -11,8 +11,8 @@ urlpatterns = [
     # /officer/candidates/
     path('candidates/', CandidatesView.as_view(), name='candidates'),
 
-    # /officer/results/
-    path('results/', ResultsView.as_view(), name='results'),
+    # /officer/elections/
+    path('elections/', ResultsView.as_view(), name='elections'),
 
     # /officer/passcode/
     path('passcode/', PasscodeView.as_view(), name='passcode'),

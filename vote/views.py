@@ -1,17 +1,23 @@
 # Create your views here.
+import json
+import traceback
+from smtplib import SMTPException
+
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import logout
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.contrib.auth.models import Group
+from django.contrib.auth.views import logout
 from django.core.mail import send_mail
+from django.db import transaction, IntegrityError
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
+from django.utils.text import slugify
 from django.views import View
 
 # Sends an email receipt containing the voted candidates to the voter
-from vote.models import Issue, Candidate, Voter, Take
+from vote.models import Issue, Candidate, Voter, Take, Vote, VoteSet, BasePosition
 
 
 # Test function for this view
@@ -28,18 +34,52 @@ def vote_test_func(user):
 class VoteView(UserPassesTestMixin, View):
     template_name = 'vote/voting.html'
 
+    # Check for duplicate votes in a voteset
+    @staticmethod
+    def contains_duplicates(votes):
+        votes = list(filter(lambda vote: vote is not False, votes))
+
+        return len(votes) == len(list(set(votes)))
+
+    # Generate a serial number
+    @staticmethod
+    def generate_serial_number(id):
+        # The serial number is simply the vote id padded so it fits a ten-digit space
+        LEN_SERIAL_NUMBER = 10
+
+        return str(id).rjust(LEN_SERIAL_NUMBER, '0')
+
     # Sends an email receipt to the voter
     @staticmethod
-    def send_email_receipt(user, voted):
+    def send_email_receipt(user, voted, serial_number):
         from_email = settings.EMAIL_HOST_USER
         to_email = [user.email]
-        subject = '[COMELEC] Voter\'s receipt'
-        message = '''Good day, {0} {1}!,\n\nThank you for voting! You have voted for the following candidates:\n\n{2}''' \
-            .format(
-            user.first_name, user.last_name,
-            voted)
+        subject = '[COMELEC] Voter\'s receipt for ' + user.first_name + ' ' + user.last_name
 
-        send_mail(subject=subject, from_email=from_email, recipient_list=to_email, message=message, fail_silently=False)
+        candidates_voted = ''
+
+        # Generate message for the candidates voted
+        for position, candidate in voted.items():
+            candidates_voted += position + ": " + (candidate.__str__() if candidate is not False else 'Abstained') + '\n'
+
+        # Append the serial number
+        candidates_voted += '\nYour serial number is ' + serial_number + '.\n'
+
+        message \
+            = '''Good day, {0},\n\nThank you for voting! You have voted for the following candidates:\n\n{1}''' \
+            .format(
+            user.first_name,
+            candidates_voted)
+
+        # Send an email, but fail silently (accept exception, bust just show message)
+        try:
+            send_mail(subject=subject, from_email=from_email, recipient_list=to_email, message=message,
+                      fail_silently=False)
+        except SMTPException:
+            # Show the exception in the server, but mask it from the user
+            print("Email send failure.")
+
+            traceback.print_exc()
 
     # Check whether the user accessing this page is a voter or not
     def test_func(self):
@@ -55,69 +95,190 @@ class VoteView(UserPassesTestMixin, View):
         # Get the batch of the current voter
         batch = voter.user.username[:3]
 
-        # Get all executive board candidates
-        executive_board = Candidate.objects.filter(position__unit__batch__isnull=True,
-                                                   position__unit__college__isnull=True)
+        # # Check if there are executive candidates
+        # executive_board = Candidate.objects.filter(position__unit__batch__isnull=True,
+        #                                            position__unit__college__isnull=True).exists()
+        #
+        # # Check if there are college candidates
+        # college_board = Candidate.objects.filter(position__unit__batch__isnull=True,
+        #                                          position__unit__college__isnull=False,
+        #                                          position__unit__college__name=college).exists()
+        #
+        # # Check if there are batch candidates
+        # batch_board = Candidate.objects.filter(position__unit__batch__isnull=False,
+        #                                        position__unit__college__isnull=False,
+        #                                        position__unit__batch=batch).exists()
 
-        # Get all college board candidates
-        college_board = Candidate.objects.filter(position__unit__batch__isnull=True,
-                                                 position__unit__college__isnull=False,
-                                                 position__unit__college__name=college)
+        # Get all candidates
+        candidates = {}
 
-        # Get all batch board candidates
-        batch_board = Candidate.objects.filter(position__unit__batch__isnull=False,
-                                               position__unit__college__isnull=False,
-                                               position__unit__batch=batch)
+        # And remember all "voteable" positions
+        positions = []
+        positions_json = []
+
+        # Partition the candidates into their position's types
+        base_positions = BasePosition.objects.values('type').distinct()
+
+        for base_position in base_positions:
+            # Take note of the position type
+            position_type = base_position['type']
+
+            # Create a partition for that position type
+            candidates[position_type] = {}
+
+            # Then try to fill that partition with candidates running for that position type
+            candidates_type = Candidate.objects.filter(position__base_position__type=position_type).order_by(
+                'party__name')
+
+            if candidates_type.count() != 0:
+                for candidate in candidates_type:
+                    # If the position is of type college, the position's college must match the voter's college
+                    # If the position is of type batch, that position's batch must match the voter's batch
+                    if position_type == BasePosition.COLLEGE and candidate.position.unit.college.name != college \
+                            or position_type == BasePosition.BATCH and candidate.position.unit.batch != batch:
+                        continue
+                    else:
+                        # Only add the candidate if all the conditions above have been satisfied
+                        position = candidate.position.base_position.name
+
+                        if position not in candidates[position_type]:
+                            candidates[position_type][position] = []
+
+                        candidates[position_type][position].append(candidate)
+
+                        # Remember the positions, if it's not already there
+                        if position not in positions:
+                            positions.append(position)
+                            positions_json.append(slugify(position))
+
+                # If there turned out to be no candidates running for this position type relevant to the voter, just
+                # forget about that position type and move on
+                if not candidates[position_type]:
+                    candidates.pop(position_type)
+            else:
+                # If there are no candidates running for this position type, just forget about that position type and
+                # move on
+                candidates.pop(position_type)
+
+        # Dump the slugified positions into JSON
+        positions_json = json.dumps(list(positions_json))
 
         # Get all issues
         issues = Issue.objects.all().order_by('name')
 
         context = {
-            'executive_board': executive_board,
-            'college_board': college_board,
-            'batch_board': batch_board,
+            'candidates': candidates,
+            'positions': positions,
+            'positions_json': positions_json,
             'issues': issues
         }
 
         # Get this page
         return render(request, self.template_name, context)
 
-    @staticmethod
-    def post(request):
+    def post(self, request):
         voter = request.user.voter
 
         # Check if the voter has already voted
         # If not yet...
         if not voter.voting_status:
-            # Submit voting results
+            # Take note of the voter's votes
+            votes = {}
 
-            # Save voter submission
+            # Collect all "voteable" positions
+            positions = request.POST.getlist('position')
 
-            # Send email receipt
-            # self.send_email_receipt(request.user, request.POST)
+            if positions is not False and len(positions) > 0:
+                for position in positions:
+                    # For each position, get the voter's pick through its identifier
+                    # It should return False when the voter abstained for that position (picked no one)
+                    position_key = position.replace('-', ' ').upper()
+                    votes[position_key] = request.POST.get(position, False)
 
-            # Mark the voter as already voted
-            voter.voting_status = True
-            voter.save()
+            # Proceed only when there are no duplicate votes
+            if self.contains_duplicates(votes.values()):
+                try:
+                    # Change the identifiers to the actual candidates they represent
+                    for position, candidate in votes.items():
+                        if candidate is not False:
+                            votes[position] = Candidate.objects.get(identifier=candidate)
 
-            # Log the user out
-            logout(request)
+                    with transaction.atomic():
+                        # Create a vote object to represent a single vote of a user
+                        vote = Vote(voter_id_number=voter.user.username, voter_college=voter.college.name)
+                        vote.save()
 
-            return redirect('logout:logout_voter')
+                        # Generate its serial number
+                        serial_number = self.generate_serial_number(vote.id)
+
+                        vote.serial_number = serial_number
+                        vote.save()
+
+                        # Create a vote set array representing the individual votes to be saved in the database
+                        actual_votes = [VoteSet(vote=vote, candidate=(candidate if candidate is not False else None))
+                                        for candidate in votes.values()]
+
+                        # Save all votes into the database
+                        for actual_vote in actual_votes:
+                            actual_vote.save()
+
+                        # Send email receipt
+                        self.send_email_receipt(request.user, votes, serial_number)
+
+                        # Mark the voter as already voted
+                        voter.voting_status = True
+                        voter.save()
+
+                    # Log the user out
+                    logout(request)
+
+                    return redirect('logout:logout_voter')
+                except Candidate.DoesNotExist:
+                    # One of the votes do not represent a candidate
+                    messages.error(request, 'One of your voted candidates do not exist.')
+
+                    return self.get(request)
+                except IntegrityError:
+                    # A vote has already been created to the voter's name, meaning he has already voted
+                    messages.error(request, 'You may have already voted before.')
+
+                    voter.voting_status = True
+                    voter.save()
+
+                    # Log the user out
+                    logout(request)
+
+                    return redirect('logout:logout_fail')
+                # except SMTPException:
+                #     # Could not send an email receipt
+                #     messages.error(request, 'Could not send an email receipt to your email address.')
+                #
+                #     return self.get(request)
+            else:
+                # If there are duplicate votes
+                messages.error(request, 'There are duplicate votes in your submission.')
+
+                return self.get(request)
         else:
             # But if the voter already did...
             messages.error(request, 'You have already voted. You may only vote once.')
+
+            # Log the user out
+            logout(request)
 
             return redirect('logout:logout_fail')
 
 
 @user_passes_test(vote_test_func)
-def json_take(request, candidate_id, issue):
+def json_take(request, candidate_identifier, issue):
     # Get the take
     try:
-        take = Take.objects.get(candidate__id=candidate_id, issue__name=issue)
+        # Then use that identifier to retrieve the candidate's take
+        take = Take.objects.get(candidate__identifier=candidate_identifier, issue__name=issue)
     except Take.DoesNotExist:
-        return JsonResponse({'response': "This candidate doesn't have a take on this issue yet."})
+        return JsonResponse({'response': "(no takes on this issue given)"})
+    except (Candidate.MultipleObjectsReturned, Candidate.DoesNotExist):
+        return JsonResponse({'response': '(that candidate does not exist)'})
 
     # Then return its response
     return JsonResponse({'response': take.response})

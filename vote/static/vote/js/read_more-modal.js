@@ -4,7 +4,7 @@ var modal;
 
 window.onload = function () {
     modal = document.getElementById('modal-read');
-}
+};
 
 function hintBrowser(csrf_token, candidate_id) {
     // The optimizable properties that are going to change
@@ -64,10 +64,10 @@ function ajaxTake(csrf_token, candidate, issue, responseContainer) {
                 callbackTake(responseContainer, xmlhttp.responseText);
             }
             else if (xmlhttp.status === 400) {
-                callbackTake(responseContainer, "(Unable to retrieve this candidate's take from the server)")
+                callbackTake(responseContainer, JSON.stringify({'response': 'Unable to retrieve this candidate\'s take from the server'}))
             }
             else {
-                callbackTake(responseContainer, "(Unable to retrieve this candidate's take from the server)")
+                callbackTake(responseContainer, JSON.stringify({'response': 'Unable to retrieve this candidate\'s take from the server'}))
             }
         }
     };
@@ -80,8 +80,6 @@ function ajaxTake(csrf_token, candidate, issue, responseContainer) {
 function callbackTake(responseContainer, response) {
     // Parse from JSON
     raw_response = JSON.parse(response);
-
-    console.log(responseContainer);
 
     // Change the take form text
     responseContainer.innerText = "\n\n" + raw_response['response'] + "\n\n\n";

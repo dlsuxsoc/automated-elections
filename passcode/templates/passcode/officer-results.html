@@ -14,7 +14,7 @@
     <img id="header-ballot" src="{% static 'passcode/assets/svg/ballot-white.svg' %}">
     <a href="{% url 'passcode:voters' %}">Voters List</a>
     <a href="{% url 'passcode:candidates' %}">Candidates List</a>
-    <a href="{% url 'passcode:results' %}" id="selected">Election Dashboard</a>
+    <a href="{% url 'passcode:elections' %}" id="selected">Election Dashboard</a>
     <a href="{% url 'passcode:passcode' %}">Passcode Generator</a>
     <div id="user-container">
         <img id="user-icon" src="{% static 'passcode/assets/svg/user.svg' %}">
@@ -76,16 +76,18 @@
                                 </li>
                             {% endfor %}
                         {% else %}
-                            <b>Batches eligible for this election:</b>
+                            <b>Batches eligible for this college:</b>
                             {% for college_key, batch_val in college_batch_dict.items %}
                                 {% if college_key == college.name %}
                                     {% for batch in batch_val %}
                                         <li class="batch-checkboxes">
                                             {{ batch }}{% if not forloop.last %},{% endif %}</li>
                                     {% endfor %}
+                                {% else %}
+                                    {% if college.name not in college_batch_dict.keys and forloop.last %}
+                                        <li class="batch-checkboxes">None.</li>
+                                    {% endif %}
                                 {% endif %}
-                            {% empty %}
-                                No batches under this college are eligible for this election.
                             {% endfor %}
                         {% endif %}
                     </div>
@@ -120,21 +122,43 @@
     <div id="Overview" class="tab-content">
         <div class="today-container">
             <div class="today-stats">
+                <div class="today-votes">
+                    Total votes as of now
+                    <div class="bold">
+                        {% if overall_votes or overall_votes == 0 %}
+                            {{ overall_votes }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </div>
+                </div>
+
+                <br>
 
                 <div class="today-votes">
-                    Today's Votes (July 1, 2018)
+                    Today's votes ({% now 'F d, Y' %})
                 </div>
 
                 <div class="today-overall">
-                    Overall Vote Count:
-                    <div class="bold"> 420 Votes</div>
+                    Overall votes today:
+                    <div class="bold">
+                        {% if overall_votes_today or overall_votes_today == 0 %}
+                            {{ overall_votes_today }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </div>
                 </div>
 
                 <div class="as-ofs">
                     <div class="time 12nn">
                         <div class="bold">As of 12nn</div>
                         <div class="big-vote">
-                            42
+                            {% if votes_today_12 or votes_today_12 == 0 %}
+                                {{ votes_today_12 }}
+                            {% else %}
+                                N/A
+                            {% endif %}
                         </div>
                         <div class="votes">
                             votes
@@ -144,7 +168,11 @@
                     <div class="time 3pm">
                         <div class="bold">As of 3pm</div>
                         <div class="big-vote">
-                            69
+                            {% if votes_today_15 or votes_today_15 == 0 %}
+                                {{ votes_today_15 }}
+                            {% else %}
+                                N/A
+                            {% endif %}
                         </div>
                         <div class="votes">
                             votes
@@ -154,7 +182,11 @@
                     <div class="time 6pm">
                         <div class="bold">As of 6pm</div>
                         <div class="big-vote">
-                            N/A
+                            {% if votes_today_18 or votes_today_18 == 0 %}
+                                {{ votes_today_18 }}
+                            {% else %}
+                                N/A
+                            {% endif %}
                         </div>
                         <div class="votes">
                             votes
@@ -165,6 +197,7 @@
                 <div id="table-container">
                     <div class="table-row row-0">
                         <div class="col-date">Date</div>
+                        <div class="col-batch">Batch</div>
                         <div class="col-votes">Total Votes</div>
                         <div class="col-12nn">As of 12nn</div>
                         <div class="col-3pm">As of 3pm</div>
@@ -172,435 +205,66 @@
                     </div>
 
                     <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
-                    <div class="table-row row-1">
-                        <div class="col-date">6-30-19</div>
-                        <div class="col-votes">3</div>
-                        <div class="col-12nn">1</div>
-                        <div class="col-3pm">2</div>
-                        <div class="col-6pm">3</div>
-                    </div>
-
-                    <div class="table-row row-2">
-                        <div class="col-date">6-29-19</div>
-                        <div class="col-votes">6</div>
-                        <div class="col-12nn">5</div>
-                        <div class="col-3pm">4</div>
-                        <div class="col-6pm">6</div>
-                    </div>
-
-                    <div class="table-row row-1">
-                        <div class="col-date">6-30-19</div>
-                        <div class="col-votes">3</div>
-                        <div class="col-12nn">1</div>
-                        <div class="col-3pm">2</div>
-                        <div class="col-6pm">3</div>
-                    </div>
-
-                    <div class="table-row row-2">
-                        <div class="col-date">6-29-19</div>
-                        <div class="col-votes">6</div>
-                        <div class="col-12nn">5</div>
-                        <div class="col-3pm">4</div>
-                        <div class="col-6pm">6</div>
-                    </div>
-
+                    {% for batch_result in batch_results.0 %}
+                        <div class="table-row {% cycle 'row-1' 'row-2' %}">
+                            <div class="col-date">{{ batch_result.0 }}</div>
+                            <div class="col-batch">{{ batch_result.1 }}</div>
+                            <div class="col-votes">{{ batch_result.2 }}</div>
+                            <div class="col-12nn">{{ batch_result.3 }}</div>
+                            <div class="col-3pm">{{ batch_result.4 }}</div>
+                            <div class="col-6pm">{{ batch_result.5 }}</div>
+                        </div>
+                    {% endfor %}
                 </div>
             </div>
 
             <div class="today-votes">
-                Total Votes per College
+                Total votes per college
             </div>
             <div id="college-buttons-container">
-                <button class="college-buttons" onclick="selectCollege(event, 'CCS')" id="college-ccs">
-                    <div class="bold" style="font-size: 25px">CCS</div>
-                    <div class="big-vote">12</div>
-                    <div class="votes"> votes</div>
-                </button>
-
-                <button class="college-buttons" onclick="selectCollege(event, 'CLA')" id="college-cla">
-                    <div class="bold" style="font-size: 25px">CLA</div>
-                    <div class="big-vote">23</div>
-                    <div class="votes"> votes</div>
-                </button>
-
-                <button class="college-buttons" onclick="selectCollege(event, 'COS')" id="college-cos">
-                    <div class="bold" style="font-size: 25px">COS</div>
-                    <div class="big-vote">45</div>
-                    <div class="votes"> votes</div>
-                </button>
-
-                <button class="college-buttons" onclick="selectCollege(event, 'SOE')" id="college-soe">
-                    <div class="bold" style="font-size: 25px">SOE</div>
-                    <div class="big-vote">56</div>
-                    <div class="votes"> votes</div>
-                </button>
-
-                <button class="college-buttons" onclick="selectCollege(event, 'GCOE')" id="college-gcoe">
-                    <div class="bold" style="font-size: 25px">GCOE</div>
-                    <div class="big-vote">67</div>
-                    <div class="votes"> votes</div>
-                </button>
-
-                <button class="college-buttons" onclick="selectCollege(event, 'COE')" id="college-coe">
-                    <div class="bold" style="font-size: 25px">coe</div>
-                    <div class="big-vote">78</div>
-                    <div class="votes"> votes</div>
-                </button>
-
-                <button class="college-buttons" onclick="selectCollege(event, 'COB')" id="college-cob">
-                    <div class="bold" style="font-size: 25px">COB</div>
-                    <div class="big-vote">89</div>
-                    <div class="votes"> votes</div>
-                </button>
+                {% for college, count in overall_votes_college.items %}
+                    <button class="college-buttons" onclick="selectCollege(event, '{{ college }}')"
+                            id="college-{{ college|lower }}">
+                        <div class="bold" style="font-size: 25px">{{ college }}</div>
+                        <div class="big-vote">{{ count }}</div>
+                        <div class="votes"> votes</div>
+                    </button>
+                {% empty %}
+                    No votes yet.
+                {% endfor %}
             </div>
 
             <div id="college-tab-container">
-                <div id="CCS" class="college-content">
-                    <div class="college-name">
-                        College of Computer Studies
-                    </div>
-                    <div id="table-container">
-                        <div class="table-row row-0">
-                            <div class="col-date">Date</div>
-                            <div class="col-votes">Total Votes</div>
-                            <div class="col-12nn">As of 12nn</div>
-                            <div class="col-3pm">As of 3pm</div>
-                            <div class="col-6pm">As of 6pm</div>
+                {% for college, results in college_batch_results.items %}
+                    <div id="{{ college }}" class="college-content">
+                        <div class="college-name">
+                            {{ college }}
                         </div>
+                        <div id="table-container">
+                            <div class="table-row row-0">
+                                <div class="col-date">Date</div>
+                                <div class="col-batch">Batch</div>
+                                <div class="col-votes">Total Votes</div>
+                                <div class="col-12nn">As of 12nn</div>
+                                <div class="col-3pm">As of 3pm</div>
+                                <div class="col-6pm">As of 6pm</div>
+                            </div>
 
-                        <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
-                        <div class="table-row row-1">
-                            <div class="col-date">6-30-19</div>
-                            <div class="col-votes">3</div>
-                            <div class="col-12nn">1</div>
-                            <div class="col-3pm">2</div>
-                            <div class="col-6pm">3</div>
-                        </div>
-
-                    </div>
-                </div>
-
-                <div id="CLA" class="college-content">
-                    <div class="college-name">
-                        College of Liberal Arts
-                    </div>
-                    <div id="table-container">
-                        <div class="table-row row-0">
-                            <div class="col-date">Date</div>
-                            <div class="col-votes">Total Votes</div>
-                            <div class="col-12nn">As of 12nn</div>
-                            <div class="col-3pm">As of 3pm</div>
-                            <div class="col-6pm">As of 6pm</div>
-                        </div>
-
-                        <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
-                        <div class="table-row row-1">
-                            <div class="col-date">6-30-19</div>
-                            <div class="col-votes">3</div>
-                            <div class="col-12nn">1</div>
-                            <div class="col-3pm">2</div>
-                            <div class="col-6pm">3</div>
-                        </div>
-
-                        <div class="table-row row-2">
-                            <div class="col-date">6-29-19</div>
-                            <div class="col-votes">6</div>
-                            <div class="col-12nn">5</div>
-                            <div class="col-3pm">4</div>
-                            <div class="col-6pm">6</div>
-                        </div>
-
-                    </div>
-                </div>
-
-                <div id="COS" class="college-content">
-                    <div class="college-name">
-                        College of Science
-                    </div>
-                    <div id="table-container">
-                        <div class="table-row row-0">
-                            <div class="col-date">Date</div>
-                            <div class="col-votes">Total Votes</div>
-                            <div class="col-12nn">As of 12nn</div>
-                            <div class="col-3pm">As of 3pm</div>
-                            <div class="col-6pm">As of 6pm</div>
-                        </div>
-
-                        <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
-                        <div class="table-row row-1">
-                            <div class="col-date">6-30-19</div>
-                            <div class="col-votes">3</div>
-                            <div class="col-12nn">1</div>
-                            <div class="col-3pm">2</div>
-                            <div class="col-6pm">3</div>
-                        </div>
-
-                        <div class="table-row row-2">
-                            <div class="col-date">6-29-19</div>
-                            <div class="col-votes">6</div>
-                            <div class="col-12nn">5</div>
-                            <div class="col-3pm">4</div>
-                            <div class="col-6pm">6</div>
-                        </div>
-
-                        <div class="table-row row-1">
-                            <div class="col-date">6-30-19</div>
-                            <div class="col-votes">3</div>
-                            <div class="col-12nn">1</div>
-                            <div class="col-3pm">2</div>
-                            <div class="col-6pm">3</div>
-                        </div>
-
-
-                    </div>
-                </div>
-
-                <div id="SOE" class="college-content">
-                    <div class="college-name">
-                        School of Economics
-                    </div>
-                    <div id="table-container">
-                        <div class="table-row row-0">
-                            <div class="col-date">Date</div>
-                            <div class="col-votes">Total Votes</div>
-                            <div class="col-12nn">As of 12nn</div>
-                            <div class="col-3pm">As of 3pm</div>
-                            <div class="col-6pm">As of 6pm</div>
-                        </div>
-
-                        <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
-                        <div class="table-row row-1">
-                            <div class="col-date">6-30-19</div>
-                            <div class="col-votes">3</div>
-                            <div class="col-12nn">1</div>
-                            <div class="col-3pm">2</div>
-                            <div class="col-6pm">3</div>
-                        </div>
-
-                        <div class="table-row row-2">
-                            <div class="col-date">6-29-19</div>
-                            <div class="col-votes">6</div>
-                            <div class="col-12nn">5</div>
-                            <div class="col-3pm">4</div>
-                            <div class="col-6pm">6</div>
-                        </div>
-
-                        <div class="table-row row-1">
-                            <div class="col-date">6-30-19</div>
-                            <div class="col-votes">3</div>
-                            <div class="col-12nn">1</div>
-                            <div class="col-3pm">2</div>
-                            <div class="col-6pm">3</div>
-                        </div>
-
-                        <div class="table-row row-2">
-                            <div class="col-date">6-29-19</div>
-                            <div class="col-votes">6</div>
-                            <div class="col-12nn">5</div>
-                            <div class="col-3pm">4</div>
-                            <div class="col-6pm">6</div>
-                        </div>
-
-                    </div>
-                </div>
-
-                <div id="GCOE" class="college-content">
-                    <div class="college-name">
-                        Gokongwei College of Engineering
-                    </div>
-                    <div id="table-container">
-                        <div class="table-row row-0">
-                            <div class="col-date">Date</div>
-                            <div class="col-votes">Total Votes</div>
-                            <div class="col-12nn">As of 12nn</div>
-                            <div class="col-3pm">As of 3pm</div>
-                            <div class="col-6pm">As of 6pm</div>
-                        </div>
-
-                        <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
-                        <div class="table-row row-1">
-                            <div class="col-date">6-30-19</div>
-                            <div class="col-votes">3</div>
-                            <div class="col-12nn">1</div>
-                            <div class="col-3pm">2</div>
-                            <div class="col-6pm">3</div>
-                        </div>
-
-                        <div class="table-row row-2">
-                            <div class="col-date">6-29-19</div>
-                            <div class="col-votes">6</div>
-                            <div class="col-12nn">5</div>
-                            <div class="col-3pm">4</div>
-                            <div class="col-6pm">6</div>
-                        </div>
-
-                        <div class="table-row row-1">
-                            <div class="col-date">6-30-19</div>
-                            <div class="col-votes">3</div>
-                            <div class="col-12nn">1</div>
-                            <div class="col-3pm">2</div>
-                            <div class="col-6pm">3</div>
-                        </div>
-
-                        <div class="table-row row-2">
-                            <div class="col-date">6-29-19</div>
-                            <div class="col-votes">6</div>
-                            <div class="col-12nn">5</div>
-                            <div class="col-3pm">4</div>
-                            <div class="col-6pm">6</div>
-                        </div>
-
-                        <div class="table-row row-1">
-                            <div class="col-date">6-30-19</div>
-                            <div class="col-votes">3</div>
-                            <div class="col-12nn">1</div>
-                            <div class="col-3pm">2</div>
-                            <div class="col-6pm">3</div>
-                        </div>
-
-
-                    </div>
-                </div>
-
-                <div id="COE" class="college-content">
-                    <div class="college-name">
-                        College of Education
-                    </div>
-                    <div id="table-container">
-                        <div class="table-row row-0">
-                            <div class="col-date">Date</div>
-                            <div class="col-votes">Total Votes</div>
-                            <div class="col-12nn">As of 12nn</div>
-                            <div class="col-3pm">As of 3pm</div>
-                            <div class="col-6pm">As of 6pm</div>
-                        </div>
-
-                        <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
-                        <div class="table-row row-1">
-                            <div class="col-date">6-30-19</div>
-                            <div class="col-votes">3</div>
-                            <div class="col-12nn">1</div>
-                            <div class="col-3pm">2</div>
-                            <div class="col-6pm">3</div>
-                        </div>
-
-                        <div class="table-row row-2">
-                            <div class="col-date">6-29-19</div>
-                            <div class="col-votes">6</div>
-                            <div class="col-12nn">5</div>
-                            <div class="col-3pm">4</div>
-                            <div class="col-6pm">6</div>
-                        </div>
-
-                        <div class="table-row row-1">
-                            <div class="col-date">6-30-19</div>
-                            <div class="col-votes">3</div>
-                            <div class="col-12nn">1</div>
-                            <div class="col-3pm">2</div>
-                            <div class="col-6pm">3</div>
-                        </div>
-
-                        <div class="table-row row-2">
-                            <div class="col-date">6-29-19</div>
-                            <div class="col-votes">6</div>
-                            <div class="col-12nn">5</div>
-                            <div class="col-3pm">4</div>
-                            <div class="col-6pm">6</div>
-                        </div>
-
-                        <div class="table-row row-1">
-                            <div class="col-date">6-30-19</div>
-                            <div class="col-votes">3</div>
-                            <div class="col-12nn">1</div>
-                            <div class="col-3pm">2</div>
-                            <div class="col-6pm">3</div>
-                        </div>
-
-                        <div class="table-row row-2">
-                            <div class="col-date">6-29-19</div>
-                            <div class="col-votes">6</div>
-                            <div class="col-12nn">5</div>
-                            <div class="col-3pm">4</div>
-                            <div class="col-6pm">6</div>
-                        </div>
-
-                    </div>
-                </div>
-
-                <div id="COB" class="college-content">
-                    <div class="college-name">
-                        College of Business
-                    </div>
-                    <div id="table-container">
-                        <div class="table-row row-0">
-                            <div class="col-date">Date</div>
-                            <div class="col-votes">Total Votes</div>
-                            <div class="col-12nn">As of 12nn</div>
-                            <div class="col-3pm">As of 3pm</div>
-                            <div class="col-6pm">As of 6pm</div>
-                        </div>
-
-                        <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
-                        <div class="table-row row-1">
-                            <div class="col-date">6-30-19</div>
-                            <div class="col-votes">3</div>
-                            <div class="col-12nn">1</div>
-                            <div class="col-3pm">2</div>
-                            <div class="col-6pm">3</div>
-                        </div>
-
-                        <div class="table-row row-2">
-                            <div class="col-date">6-29-19</div>
-                            <div class="col-votes">6</div>
-                            <div class="col-12nn">5</div>
-                            <div class="col-3pm">4</div>
-                            <div class="col-6pm">6</div>
-                        </div>
-
-                        <div class="table-row row-1">
-                            <div class="col-date">6-30-19</div>
-                            <div class="col-votes">3</div>
-                            <div class="col-12nn">1</div>
-                            <div class="col-3pm">2</div>
-                            <div class="col-6pm">3</div>
-                        </div>
-
-                        <div class="table-row row-2">
-                            <div class="col-date">6-29-19</div>
-                            <div class="col-votes">6</div>
-                            <div class="col-12nn">5</div>
-                            <div class="col-3pm">4</div>
-                            <div class="col-6pm">6</div>
-                        </div>
-
-                        <div class="table-row row-1">
-                            <div class="col-date">6-30-19</div>
-                            <div class="col-votes">3</div>
-                            <div class="col-12nn">1</div>
-                            <div class="col-3pm">2</div>
-                            <div class="col-6pm">3</div>
-                        </div>
-
-                        <div class="table-row row-2">
-                            <div class="col-date">6-29-19</div>
-                            <div class="col-votes">6</div>
-                            <div class="col-12nn">5</div>
-                            <div class="col-3pm">4</div>
-                            <div class="col-6pm">6</div>
-                        </div>
-
-                        <div class="table-row row-1">
-                            <div class="col-date">6-30-19</div>
-                            <div class="col-votes">3</div>
-                            <div class="col-12nn">1</div>
-                            <div class="col-3pm">2</div>
-                            <div class="col-6pm">3</div>
+                            <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
+                            {% for result in results %}
+                                <div class="table-row {% cycle 'row-1' 'row-2' %}">
+                                    <div class="col-date">{{ result.0 }}</div>
+                                    <div class="col-batch">{{ result.1 }}</div>
+                                    <div class="col-votes">{{ result.2 }}</div>
+                                    <div class="col-12nn">{{ result.3 }}</div>
+                                    <div class="col-3pm">{{ result.4 }}</div>
+                                    <div class="col-6pm">{{ result.5 }}</div>
+                                </div>
+                            {% endfor %}
                         </div>
                     </div>
-                </div>
-
+                {% endfor %}
             </div>
-
         </div>
         <div id="logo">
             <img width=500 height=50 src="{% static 'passcode/assets/svg/org-logos.svg' %}">
@@ -608,56 +272,15 @@
     </div>
 
     <div id="Underview" class="tab-content">
-        <img id="stop" src="{% static 'passcode/assets/svg/stop.svg' %}">
-        <header>Woah there!</header>
-        <div class="prohibited">
-            Seems like you're prohibited by the admin from viewing this.
-        </div>
-
+        {% if election_ongoing is True %}
+            <img id="stop" src="{% static 'passcode/assets/svg/stop.svg' %}">
+            <header>Woah there!</header>
+            <div class="prohibited">
+                You may not view the results until the elections are done.
+            </div>
+        {% endif %}
         <div class="today-container">
             <div class="today-stats">
-
-                <div class="today-votes">
-                    Today's Votes (July 1, 2018)
-                </div>
-
-                <div class="today-overall">
-                    Overall Vote Count:
-                    <div class="bold"> 420 Votes</div>
-                </div>
-
-                <div class="as-ofs">
-                    <div class="time 12nn">
-                        <div class="bold">As of 12nn</div>
-                        <div class="big-vote">
-                            42
-                        </div>
-                        <div class="votes">
-                            votes
-                        </div>
-                    </div>
-
-                    <div class="time 3pm">
-                        <div class="bold">As of 3pm</div>
-                        <div class="big-vote">
-                            69
-                        </div>
-                        <div class="votes">
-                            votes
-                        </div>
-                    </div>
-
-                    <div class="time 6pm">
-                        <div class="bold">As of 6pm</div>
-                        <div class="big-vote">
-                            N/A
-                        </div>
-                        <div class="votes">
-                            votes
-                        </div>
-                    </div>
-                </div>
-
                 <div id="table-container">
                     <div class="table-row row-0">
                         <div class="col-party">Government</div>

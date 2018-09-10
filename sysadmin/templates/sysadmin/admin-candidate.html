@@ -74,12 +74,10 @@
                     <div class="col-checkbox"><input type="checkbox" name="check" value="{{ candidate.id }}"
                                                      onclick="selected(this)"></div>
                     <div class="col-name">
-                        <div class="name">
-                            {{ candidate.voter.user.last_name }}, {{ candidate.voter.user.first_name }}
-                        </div>
+                        {{ candidate.voter.user.last_name }}, {{ candidate.voter.user.first_name }}
                     </div>
                     <div class="col-id">{{ candidate.voter.user.username }}</div>
-                    <div class="col-position">{{ candidate.position.name }} ({{ candidate.position.unit.name }})</div>
+                    <div class="col-position">{{ candidate.position.base_position.name }} ({{ candidate.position.unit.name }})</div>
                     <div class="col-party">
                         {% if candidate.party %}
                             {{ candidate.party.name }}
@@ -105,7 +103,6 @@
                     <a href="?page={{ candidates.previous_page_number }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">previous</a>
                 {% endif %}
                 <span class="current">Page {{ candidates.number }} of {{ candidates.paginator.num_pages }}.</span>
-
                 {% if candidates.has_next %}
                     <a href="?page={{ candidates.next_page_number }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">next</a>
                     <a href="?page={{ candidates.paginator.num_pages }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">last &raquo;</a>
@@ -136,7 +133,7 @@
                        required="required">
                 <datalist id="positions">
                     {% for position in positions %}
-                        <option value="{{ position.unit.name }}: {{ position.name }}">
+                        <option value="{{ position.unit.name }}: {{ position.base_position.name }}">
                     {% endfor %}
                 </datalist>
             </div>
@@ -185,7 +182,7 @@
         <input type="hidden" name="form-type" value="change-take">
         <div class="takes-container">
             <div class="info-container">
-                <div class="info-label"> Select an Issue</div>
+                <div class="info-label"> Select an issue</div>
                 <select class="info-input" name="take-issue" id="issue-dropdown"
                         onchange="set_take('{{ csrf_token }}')">
                     {% for issue in issues %}
@@ -198,24 +195,28 @@
                 <div class="info-label"> Select a candidate</div>
                 <select class="info-input" name="take-candidate" id="candidate-dropdown"
                         onchange="set_take('{{ csrf_token }}')">
+
                     {% for candidate in candidates_all %}
-                        <option>{{ candidate.voter.user.username }}: {{ candidate.voter.user.last_name }}, {{ candidate.voter.user.first_name }}</option>
+                        <option>
+                            {{ candidate.voter.user.username }}: {{ candidate.voter.user.last_name }}, {{ candidate.voter.user.first_name }}
+                        </option>
                     {% endfor %}
                 </select>
             </div>
         </div>
 
         <div class="response-container">
-            <div class="info-label"> Talk/Response to the Issue</div>
-            <textarea name="take-response" form="Edit" id="take" class="response-textarea">
-            </textarea>
+            <div class="info-label">Response to the Issue</div>
+            <textarea name="take-response" form="Edit" id="take" class="response-textarea"></textarea>
         </div>
 
         <div class="info-buttons-container">
-            <button class="button cancel">Cancel</button>
-            <input class="button confirm-negative" name="action" type="submit" value="Delete this Take">
-            <!-- SUBMIT BUTTON FOR THE TAB -->
-            <input class="button confirm" name="action" type="submit" value="Save Changes">
+            {% if candidates_all %}
+                <button class="button cancel">Cancel</button>
+                <input class="button confirm-negative" name="action" type="submit" value="Delete this Take">
+                <!-- SUBMIT BUTTON FOR THE TAB -->
+                <input class="button confirm" name="action" type="submit" value="Save Changes">
+            {% endif %}
         </div>
     </form>
 </div>

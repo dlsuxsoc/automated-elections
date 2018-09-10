@@ -206,20 +206,23 @@ function set_take(csrf_token) {
     var user = candidateDropdown.options[candidateDropdown.selectedIndex];
 
     // Get the username of the candidate
-    var username = user.innerText.split(":")[0];
+    if (user !== undefined) {
+        var username = user.innerText.split(":")[0];
+        username = username.trim();
 
-    // Get the issue dropdown
-    var issueDropdown = document.getElementById("issue-dropdown");
+        // Get the issue dropdown
+        var issueDropdown = document.getElementById("issue-dropdown");
 
-    // Get the selected issue
-    var issue = issueDropdown.options[issueDropdown.selectedIndex];
-    issue = issue.text;
+        // Get the selected issue
+        var issue = issueDropdown.options[issueDropdown.selectedIndex];
+        issue = issue.text;
 
-    // Get the take form
-    var takeForm = document.getElementById("take");
+        // Get the take form
+        var takeForm = document.getElementById("take");
 
-    // Retrieve the response using AJAX
-    ajaxTake(csrf_token, username, issue, takeForm);
+        // Retrieve the response using AJAX
+        ajaxTake(csrf_token, username, issue, takeForm);
+    }
 }
 
 function ajaxTake(csrf_token, candidate, issue, takeForm) {
@@ -231,10 +234,10 @@ function ajaxTake(csrf_token, candidate, issue, takeForm) {
                 callbackTake(takeForm, xmlhttp.responseText);
             }
             else if (xmlhttp.status === 400) {
-                callbackTake(takeForm, "(Unable to retrieve this candidate's take from the server)")
+                callbackTake(takeForm, "(unable to retrieve this candidate's take from the server)")
             }
             else {
-                callbackTake(takeForm, "(Unable to retrieve this candidate's take from the server)")
+                callbackTake(takeForm, "(unable to retrieve this candidate's take from the server)")
             }
         }
     };

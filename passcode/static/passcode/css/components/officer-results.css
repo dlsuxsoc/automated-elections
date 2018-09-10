@@ -11,6 +11,10 @@
     flex-basis: 20%;
 }
 
+.col-batch {
+    flex-basis: 20%;
+}
+
 .col-votes {
     flex-basis: 20%;
     font-weight: bold;

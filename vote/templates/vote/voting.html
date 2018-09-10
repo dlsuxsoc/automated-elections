@@ -29,6 +29,13 @@
 </head>
 <body>
 <div id="voting-container">
+    {% if messages %}
+        <div>
+            {% for message in messages %}
+                <p {% if message.tags %}id="{{ message.tags }}"{% endif %}>{{ message }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
     <div id="voter-column">
         <div class="voter-label">
             Name
@@ -43,286 +50,51 @@
         <div class="voter-info" id="voter-od">
             {{ user.username }}
         </div>
-
-        {% comment %}        <div class="voter-label">
-            Your Votes
-        </div>
-        <div class="voter-info" id="voter-progress">
-            1/3
-        </div>{% endcomment %}
     </div>
     <div id="candidates-column">
-        {# TODO: Revise once voting is available #}
         <form id="vote" method="POST" action="">
             {% csrf_token %}
-            {% if batch_board %}
-                <div class="candidate-category">
-                    BATCH
-                </div>
-                <div class="candidates-row clearfix">
-                    <div class="candidate-position">
-                        Batch President
-                        <button type="button" id="abstain-1" class="abstain" onclick="abstain(1)">Abstain</button>
+            {% for position_type, candidates_per_position in candidates.items %}
+                {% if position_type %}
+                    <div class="candidate-category">
+                        {{ position_type|upper }}
                     </div>
-                    {% for candidate in batch_board %}
-                        {% if candidate.position.name|lower == 'batch president' %}
-                            <div class="candidate">
-                                <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
-                                <div class="candidate-name">{{ candidate.voter.user.first_name }} {{ candidate.voter.user.last_name }}</div>
-                                <div class="candidate-party">
-                                    {% if candidate.party %}{{ candidate.party.name }}{% else %}
-                                        Independent{% endif %}</div>
-                                <div class="candidate-response">
-                                    <a id="response-{{ forloop.counter }}"
-                                       onclick="hintBrowser('{{ csrf_token }}', {{ candidate.id }})"
-                                       class="response-link button-read">Read the
-                                        response
-                                        >></a>
-                                </div>
-                                <input type="radio" name="batch-president"
-                                       value="{{ candidate.id }}:{{ candidate.voter.user.first_name }} {{ candidate.voter.user.last_name }}"
-                                       id="batch-president-{{ forloop.counter }}">
-                                <label for="batch-president-{{ forloop.counter }}"></label>
+                    {% for position, each_candidate in candidates_per_position.items %}
+                        <div class="candidates-row clearfix">
+                            <div class="candidate-position">
+                                {{ position|upper }}
+                                <button type="button" id="abstain" class="abstain"
+                                        onclick="abstain_candidate('{{ position|slugify }}')">
+                                    Abstain
+                                </button>
+                                <input type="hidden" name="position" value="{{ position|slugify }}">
                             </div>
-                        {% endif %}
-                    {% endfor %}
-                </div>
-                <div class="candidates-row clearfix">
-                    <div class="candidate-position">
-                        Batch Vice President
-                        <button type="button" id="abstain-1" class="abstain" onclick="abstain(2)">Abstain</button>
-                    </div>
-                    {% for candidate in batch_board %}
-                        {% if candidate.position.name|lower == 'batch vice president' %}
-                            <div class="candidate">
-                                <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
-                                <div class="candidate-name">{{ candidate.voter.user.first_name }} {{ candidate.voter.user.last_name }}</div>
-                                <div class="candidate-party">
-                                    {% if candidate.party %}{{ candidate.party.name }}{% else %}
-                                        Independent{% endif %}</div>
-                                <div class="candidate-response">
-                                    <a id="response-{{ forloop.counter }}"
-                                       onclick="hintBrowser('{{ csrf_token }}', {{ candidate.id }})"
-                                       class="response-link button-read">Read the
-                                        response
-                                        >></a>
+                            {% for candidate in each_candidate %}
+                                <div class="candidate">
+                                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
+                                    <div class="candidate-name">{{ candidate.voter.user.first_name }} {{ candidate.voter.user.last_name }}</div>
+                                    <div class="candidate-party">
+                                        {% if candidate.party %}{{ candidate.party.name }}{% else %}
+                                            Independent{% endif %}</div>
+                                    <div class="candidate-response">
+                                        <a id="response"
+                                           onclick="hintBrowser('{{ csrf_token }}', '{{ candidate.identifier }}')"
+                                           class="response-link button-read">Read the
+                                            response
+                                            >></a>
+                                    </div>
+                                    <input type="radio" name="{{ position|slugify }}"
+                                           value="{{ candidate.identifier }}"
+                                           id="{{ candidate.identifier }}">
+                                    <label for="{{ candidate.identifier }}"></label>
                                 </div>
-                                <input type="radio" name="batch-vice-president"
-                                       value="{{ candidate.id }}:{{ candidate.voter.user.first_name }} {{ candidate.voter.user.last_name }}"
-                                       id="batch-vice-president-{{ forloop.counter }}">
-                                <label for="batch-vice-president-{{ forloop.counter }}"></label>
-                            </div>
-                        {% endif %}
+                            {% endfor %}
+                        </div>
                     {% endfor %}
-                </div>
-                <div class="candidates-row clearfix">
-                    <div class="candidate-position">
-                        Legislative Assembly Representative
-                        <button type="button" id="abstain-1" class="abstain" onclick="abstain(3)">Abstain</button>
-                    </div>
-                    {% for candidate in batch_board %}
-                        {% if candidate.position.name|lower == 'la representative' %}
-                            <div class="candidate">
-                                <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
-                                <div class="candidate-name">{{ candidate.voter.user.first_name }} {{ candidate.voter.user.last_name }}</div>
-                                <div class="candidate-party">
-                                    {% if candidate.party %}{{ candidate.party.name }}{% else %}
-                                        Independent{% endif %}</div>
-                                <div class="candidate-response">
-                                    <a id="response-{{ forloop.counter }}"
-                                       onclick="hintBrowser('{{ csrf_token }}', {{ candidate.id }})"
-                                       class="response-link button-read">Read the
-                                        response
-                                        >></a>
-                                </div>
-                                <input type="radio" name="legislative-assembly-representative"
-                                       value="{{ candidate.id }}:{{ candidate.voter.user.first_name }} {{ candidate.voter.user.last_name }}"
-                                       id="legislative-assembly-representative-{{ forloop.counter }}">
-                                <label for="legislative-assembly-representative-{{ forloop.counter }}"></label>
-                            </div>
-                        {% endif %}
-                    {% endfor %}
-                </div>
-            {% endif %}
-            {% if college_board %}
-                <div class="candidate-category">
-                    COLLEGE
-                </div>
-                <div class="candidates-row clearfix">
-                    <div class="candidate-position">
-                        College President
-                        <button type="button" id="abstain-1" class="abstain" onclick="abstain(4)">Abstain</button>
-                    </div>
-                    {% for candidate in college_board %}
-                        {% if candidate.position.name|lower == 'college president' %}
-                            <div class="candidate">
-                                <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
-                                <div class="candidate-name">{{ candidate.voter.user.first_name }} {{ candidate.voter.user.last_name }}</div>
-                                <div class="candidate-party">
-                                    {% if candidate.party %}{{ candidate.party.name }}{% else %}
-                                        Independent{% endif %}</div>
-                                <div class="candidate-response">
-                                    <a id="response-{{ forloop.counter }}"
-                                       onclick="hintBrowser('{{ csrf_token }}', {{ candidate.id }})"
-                                       class="response-link button-read">Read the
-                                        response
-                                        >></a>
-                                </div>
-                                <input type="radio" name="college-president"
-                                       value="{{ candidate.id }}:{{ candidate.voter.user.first_name }} {{ candidate.voter.user.last_name }}"
-                                       id="college-president-{{ forloop.counter }}">
-                                <label for="college-president-{{ forloop.counter }}"></label>
-                            </div>
-                        {% endif %}
-                    {% endfor %}
-                </div>
-            {% endif %}
-            {% if executive_board %}
-                <div class="candidate-category">
-                    EXECUTIVE BOARD
-                </div>
-                <div class="candidates-row clearfix">
-                    <div class="candidate-position">
-                        President
-                        <button type="button" id="abstain-1" class="abstain" onclick="abstain(5)">Abstain</button>
-                    </div>
-                    {% for candidate in executive_board %}
-                        {% if candidate.position.name|lower == 'president' %}
-                            <div class="candidate">
-                                <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
-                                <div class="candidate-name">{{ candidate.voter.user.first_name }} {{ candidate.voter.user.last_name }}</div>
-                                <div class="candidate-party">
-                                    {% if candidate.party %}{{ candidate.party.name }}{% else %}
-                                        Independent{% endif %}</div>
-                                <div class="candidate-response">
-                                    <a id="response-{{ forloop.counter }}"
-                                       onclick="hintBrowser('{{ csrf_token }}', {{ candidate.id }})"
-                                       class="response-link button-read">Read the
-                                        response
-                                        >></a>
-                                </div>
-                                <input type="radio" name="president"
-                                       value="{{ candidate.id }}:{{ candidate.voter.user.first_name }} {{ candidate.voter.user.last_name }}"
-                                       id="president-{{ forloop.counter }}">
-                                <label for="president-{{ forloop.counter }}"></label>
-                            </div>
-                        {% endif %}
-                    {% endfor %}
-                </div>
-                <div class="candidates-row clearfix">
-                    <div class="candidate-position">
-                        Vice President for Internal Affairs
-                        <button type="button" id="abstain-1" class="abstain" onclick="abstain(6)">Abstain</button>
-                    </div>
-                    {% for candidate in executive_board %}
-                        {% if candidate.position.name|lower == 'vice president for internal affairs' %}
-                            <div class="candidate">
-                                <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
-                                <div class="candidate-name">{{ candidate.voter.user.first_name }} {{ candidate.voter.user.last_name }}</div>
-                                <div class="candidate-party">
-                                    {% if candidate.party %}{{ candidate.party.name }}{% else %}
-                                        Independent{% endif %}</div>
-                                <div class="candidate-response">
-                                    <a id="response-{{ forloop.counter }}"
-                                       onclick="hintBrowser('{{ csrf_token }}', {{ candidate.id }})"
-                                       class="response-link button-read">Read the
-                                        response
-                                        >></a>
-                                </div>
-                                <input type="radio" name="vice-president-internal"
-                                       value="{{ candidate.id }}:{{ candidate.voter.user.first_name }} {{ candidate.voter.user.last_name }}"
-                                       id="vice-president-internal-{{ forloop.counter }}">
-                                <label for="vice-president-internal-{{ forloop.counter }}"></label>
-                            </div>
-                        {% endif %}
-                    {% endfor %}
-                </div>
-                <div class="candidates-row clearfix">
-                    <div class="candidate-position">
-                        Vice President for External Affairs
-                        <button type="button" id="abstain-1" class="abstain" onclick="abstain(7)">Abstain</button>
-                    </div>
-                    {% for candidate in executive_board %}
-                        {% if candidate.position.name|lower == 'vice president for external affairs' %}
-                            <div class="candidate">
-                                <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
-                                <div class="candidate-name">{{ candidate.voter.user.first_name }} {{ candidate.voter.user.last_name }}</div>
-                                <div class="candidate-party">
-                                    {% if candidate.party %}{{ candidate.party.name }}{% else %}
-                                        Independent{% endif %}</div>
-                                <div class="candidate-response">
-                                    <a id="response-{{ forloop.counter }}"
-                                       onclick="hintBrowser('{{ csrf_token }}', {{ candidate.id }})"
-                                       class="response-link button-read">Read the
-                                        response
-                                        >></a>
-                                </div>
-                                <input type="radio" name="vice-president-external"
-                                       value="{{ candidate.id }}:{{ candidate.voter.user.first_name }} {{ candidate.voter.user.last_name }}"
-                                       id="vice-president-external-{{ forloop.counter }}">
-                                <label for="vice-president-external-{{ forloop.counter }}"></label>
-                            </div>
-                        {% endif %}
-                    {% endfor %}
-                </div>
-                <div class="candidates-row clearfix">
-                    <div class="candidate-position">
-                        Secretary
-                        <button type="button" id="abstain-1" class="abstain" onclick="abstain(8)">Abstain</button>
-                    </div>
-                    {% for candidate in executive_board %}
-                        {% if candidate.position.name|lower == 'secretary' %}
-                            <div class="candidate">
-                                <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
-                                <div class="candidate-name">{{ candidate.voter.user.first_name }} {{ candidate.voter.user.last_name }}</div>
-                                <div class="candidate-party">
-                                    {% if candidate.party %}{{ candidate.party.name }}{% else %}
-                                        Independent{% endif %}</div>
-                                <div class="candidate-response">
-                                    <a id="response-{{ forloop.counter }}"
-                                       onclick="hintBrowser('{{ csrf_token }}', {{ candidate.id }})"
-                                       class="response-link button-read">Read the
-                                        response
-                                        >></a>
-                                </div>
-                                <input type="radio" name="secretary"
-                                       value="{{ candidate.id }}:{{ candidate.voter.user.first_name }} {{ candidate.voter.user.last_name }}"
-                                       id="secretary-{{ forloop.counter }}">
-                                <label for="secretary-{{ forloop.counter }}"></label>
-                            </div>
-                        {% endif %}
-                    {% endfor %}
-                </div>
-                <div class="candidates-row clearfix">
-                    <div class="candidate-position">
-                        Treasurer
-                        <button type="button" id="abstain-1" class="abstain" onclick="abstain(9)">Abstain</button>
-                    </div>
-                    {% for candidate in executive_board %}
-                        {% if candidate.position.name|lower == 'treasurer' %}
-                            <div class="candidate">
-                                <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
-                                <div class="candidate-name">{{ candidate.voter.user.first_name }} {{ candidate.voter.user.last_name }}</div>
-                                <div class="candidate-party">
-                                    {% if candidate.party %}{{ candidate.party.name }}{% else %}
-                                        Independent{% endif %}</div>
-                                <div class="candidate-response">
-                                    <a id="response-{{ forloop.counter }}"
-                                       onclick="hintBrowser('{{ csrf_token }}', {{ candidate.id }})"
-                                       class="response-link button-read">Read the
-                                        response
-                                        >></a>
-                                </div>
-                                <input type="radio" name="treasurer"
-                                       value="{{ candidate.id }}:{{ candidate.voter.user.first_name }} {{ candidate.voter.user.last_name }}"
-                                       id="treasurer-{{ forloop.counter }}">
-                                <label for="treasurer-{{ forloop.counter }}"></label>
-                            </div>
-                        {% endif %}
-                    {% endfor %}
-                </div>
-            {% endif %}
-            <button id="voting-submit" type="button" onclick="showVote()">Submit my vote</button>
+                {% endif %}
+            {% endfor %}
+
+            <button id="voting-submit" type="button" onclick="showVote('{{ positions_json }}')">Submit my vote</button>
 
             <div id="overlay" onclick="removeHint()">
             </div>
@@ -349,47 +121,13 @@
 
             <div id="vote-modal">
                 <div id="vote-summary">
-                    {% if batch_board %}
+                    {% for position in positions %}
                         <div class="candidate-row">
-                            <div class="candidate-position">Batch President</div>
-                            <div class="candidate-person" id="batch-president-summary"></div>
+                            <div class="candidate-position">{{ position }}</div>
+                            <div class="candidate-person" id="{{ position|slugify }}-summary"></div>
                         </div>
-                        <div class="candidate-row">
-                            <div class="candidate-position">Batch Vice President</div>
-                            <div class="candidate-person" id="batch-vice-president-summary"></div>
-                        </div>
-                        <div class="candidate-row">
-                            <div class="candidate-position">LA Representative</div>
-                            <div class="candidate-person" id="legislative-assembly-representative-summary"></div>
-                        </div>
-                    {% endif %}
-                    {% if college_board %}
-                        <div class="candidate-row">
-                            <div class="candidate-position">College President</div>
-                            <div class="candidate-person" id="college-president-summary"></div>
-                        </div>
-                    {% endif %}
-                    {% if executive_board %}
-                        <div class="candidate-row">
-                            <div class="candidate-position">President</div>
-                            <div class="candidate-person" id="president-summary"></div>
-                        </div>
-                        <div class="candidate-row">
-                            <div class="candidate-position">Vice President for Internal Affairs</div>
-                            <div class="candidate-person" id="vice-president-internal-summary"></div>
-                        </div>
-                        <div class="candidate-row">
-                            <div class="candidate-position">Vice President for External Affairs</div>
-                            <div class="candidate-person" id="vice-president-external-summary"></div>
-                        </div>
-                        <div class="candidate-row">
-                            <div class="candidate-position">Secretary</div>
-                            <div class="candidate-person" id="secretary-summary"></div>
-                        </div>
-                        <div class="candidate-row">
-                            <div class="candidate-position">Treasurer</div>
-                            <div class="candidate-person" id="treasurer-summary"></div>
-                        </div>
+                    {% endfor %}
+                    {% if positions %}
                         <div id="summary-confirm" class="clearfix">
                             <button type="button" id="cancel" onclick="closeModal(event)">Revise my votes</button>
                             <input type="submit" id="confirm" value="Confirm my submission"/>

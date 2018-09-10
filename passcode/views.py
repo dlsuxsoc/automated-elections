@@ -9,7 +9,7 @@ from django.contrib.auth.mixins import UserPassesTestMixin
 from django.contrib.auth.models import Group, User
 from django.contrib.sessions.models import Session
 from django.core.paginator import Paginator
-from django.db import transaction, IntegrityError
+from django.db import transaction, IntegrityError, connection
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -17,7 +17,7 @@ from django.utils import timezone
 from django.views import View
 
 # Test function for this view
-from vote.models import Voter, College, Candidate, ElectionStatus
+from vote.models import Voter, College, Candidate, ElectionStatus, Vote
 
 
 def officer_test_func(user):
@@ -164,206 +164,218 @@ class VotersView(OfficerView):
     def post(self, request):
         form_type = request.POST.get('form-type', False)
 
-        if form_type is not False:
-            # The submitted form is for adding a voter
-            if form_type == 'add-voter':
-                first_name = request.POST.get('voter-firstnames', False)
-                last_name = request.POST.get('voter-lastname', False)
-                username = request.POST.get('voter-id', False)
-                college_name = request.POST.get('voter-college', False)
-                voting_status_name = request.POST.get('voter-voting-status', False)
-                eligibility_status_name = request.POST.get('voter-eligibility-status', False)
+        # Only allow editing while there are no elections ongoing
+        if not ResultsView.is_election_ongoing():
+            if form_type is not False:
+                # The submitted form is for adding a voter
+                if form_type == 'add-voter':
+                    first_name = request.POST.get('voter-firstnames', False)
+                    last_name = request.POST.get('voter-lastname', False)
+                    username = request.POST.get('voter-id', False)
+                    college_name = request.POST.get('voter-college', False)
+                    voting_status_name = request.POST.get('voter-voting-status', False)
+                    eligibility_status_name = request.POST.get('voter-eligibility-status', False)
 
-                if first_name is not False and last_name is not False and username is not False \
-                        and college_name is not False \
-                        and voting_status_name is not False and eligibility_status_name is not False:
-                    try:
-                        with transaction.atomic():
-                            # Create the voter
-                            self.create_voter(first_name, last_name, username, college_name, voting_status_name,
-                                              eligibility_status_name)
-
-                            # Display a success message
-                            messages.success(request, 'Voter successfully created.')
-                    except IntegrityError:
-                        messages.error(request, 'A voter with that ID number already exists.')
-                    except College.DoesNotExist:
-                        messages.error(request, 'That college does not exist.')
-
-                    context = self.display_objects(1)
-
-                    return render(request, self.template_name, context)
-                else:
-                    # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
-                    # message
-                    messages.error(request, 'Invalid request.')
-
-                    context = self.display_objects(1)
-
-                    return render(request, self.template_name, context)
-            elif form_type == 'edit-voter':
-                # The submitted form is for editing a voter
-                page = request.POST.get('page', False)
-                voter_id = request.POST.get('edit-id', False)
-                eligibility_status_name = request.POST.get('voter-eligibility-status', False)
-
-                if page is not False and voter_id is not False and eligibility_status_name is not False:
-                    try:
-                        with transaction.atomic():
-                            # Edit the voter
-                            self.change_voter_eligibility(voter_id, eligibility_status_name)
-
-                            # Display a success message
-                            messages.success(request, 'Voter successfully edited.')
-                    except Voter.DoesNotExist:
-                        messages.error(request, 'No such voter exists.')
-
-                    context = self.display_objects(page)
-
-                    return render(request, self.template_name, context)
-                else:
-                    # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
-                    # message
-                    messages.error(request, 'Invalid request.')
-
-                    context = self.display_objects(1)
-
-                    return render(request, self.template_name, context)
-            elif form_type == 'add-bulk-voter':
-                # The submitted form is for adding voters in bulk
-                voting_status_name = request.POST.get('voter-voting-status', False)
-                eligibility_status_name = request.POST.get('voter-eligibility-status', False)
-
-                if request.FILES['voters-list'] is not None \
-                        and voting_status_name is not None \
-                        and eligibility_status_name is not None:
-                    # Get the file from the request object
-                    file = request.FILES['voters-list']
-
-                    # Load all rows from the uploaded file
-                    num_voters_added = 0
-                    has_passed_header = False
-
-                    # List of all voter information to be added
-                    voter_info = []
-
-                    # Either all voters are added, or none at all
-                    # Iterate all rows
-                    for row in file:
-                        # Convert the row to string
-                        row_str = row.decode('utf-8').strip()
-
-                        # Skip the first row (the header)
-                        if not has_passed_header:
-                            has_passed_header = True
-
-                            continue
-
-                        # Check for missing rows
+                    if first_name is not False and last_name is not False and username is not False \
+                            and college_name is not False \
+                            and voting_status_name is not False and eligibility_status_name is not False:
                         try:
-                            voter_data_split = row_str.split(',', 4)
-
-                            if len(voter_data_split) != 4:
-                                raise ValueError
-                        except ValueError:
-                            messages.error(request,
-                                           'There were missing fields in the uploaded list. No voters were'
-                                           ' added.')
-
-                            context = self.display_objects(1)
-
-                            return render(request, self.template_name, context)
-
-                        # Get specific values
-                        id_number = voter_data_split[0].strip()
-                        last_name = voter_data_split[1].strip()
-                        first_names = voter_data_split[2].strip()
-                        college = voter_data_split[3].strip()
-
-                        # If the inputs contain invalid data, stop processing immediately
-                        if User.objects.filter(username=id_number).count() > 0 \
-                                or College.objects.filter(name=college).count() == 0:
-                            messages.error(request,
-                                           'The uploaded list contained invalid voter data or voters who were already'
-                                           ' added previously. No further voters were added.')
-
-                            context = self.display_objects(1)
-
-                            return render(request, self.template_name, context)
-
-                        # Add them to the list
-                        voter_info.append(
-                            {
-                                'id_number': id_number,
-                                'last_name': last_name,
-                                'first_names': first_names,
-                                'college': college,
-                            }
-                        )
-
-                        # Increment the added voter count
-                        num_voters_added += 1
-
-                    # If the file uploaded was empty
-                    if num_voters_added == 0:
-                        messages.error(request,
-                                       'The uploaded list did not contain any voters.')
-                    try:
-                        for voter in voter_info:
                             with transaction.atomic():
-                                # Try to create the voter
-                                self.create_voter(
-                                    voter['first_names'],
-                                    voter['last_name'],
-                                    voter['id_number'],
-                                    voter['college'],
-                                    voting_status_name,
-                                    eligibility_status_name
-                                )
+                                # Create the voter
+                                self.create_voter(first_name, last_name, username, college_name, voting_status_name,
+                                                  eligibility_status_name)
 
-                        # Display a success message after all voters have been successfully added
-                        messages.success(request, 'All {0} voter(s) successfully added.'.format(num_voters_added))
-                    except IntegrityError:
-                        messages.error(request, 'A voter with that ID number already exists.')
-                    except College.DoesNotExist:
-                        messages.error(request, 'The uploaded list contained invalid voter data. No voters were added')
+                                # Display a success message
+                                messages.success(request, 'Voter successfully created.')
+                        except IntegrityError:
+                            messages.error(request, 'A voter with that ID number already exists.')
+                        except College.DoesNotExist:
+                            messages.error(request, 'That college does not exist.')
 
-                    context = self.display_objects(1)
+                        context = self.display_objects(1)
 
-                    return render(request, self.template_name, context)
-                else:
-                    # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
-                    # message
-                    messages.error(request, 'Invalid request.')
+                        return render(request, self.template_name, context)
+                    else:
+                        # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                        # message
+                        messages.error(request, 'Invalid request.')
 
-                    context = self.display_objects(1)
+                        context = self.display_objects(1)
 
-                    return render(request, self.template_name, context)
-            elif form_type == 'delete-voter':
-                # The submitted form is for deleting voters
-                voters_list = request.POST.getlist('voters')
+                        return render(request, self.template_name, context)
+                elif form_type == 'edit-voter':
+                    # The submitted form is for editing a voter
+                    page = request.POST.get('page', False)
+                    voter_id = request.POST.get('edit-id', False)
+                    eligibility_status_name = request.POST.get('voter-eligibility-status', False)
 
-                if voters_list is not False and len(voters_list) > 0:
-                    try:
-                        voters_deleted = 0
+                    if page is not False and voter_id is not False and eligibility_status_name is not False:
+                        try:
+                            with transaction.atomic():
+                                # Edit the voter
+                                self.change_voter_eligibility(voter_id, eligibility_status_name)
 
-                        # Try to delete each voter in the list
-                        with transaction.atomic():
-                            for voter in voters_list:
-                                self.delete_voter(voter)
+                                # Display a success message
+                                messages.success(request, 'Voter successfully edited.')
+                        except Voter.DoesNotExist:
+                            messages.error(request, 'No such voter exists.')
 
-                                voters_deleted += 1
+                        context = self.display_objects(page)
 
-                            messages.success(request, "All {0} voter(s) successfully deleted.".format(voters_deleted))
-                    except User.DoesNotExist:
-                        # If the user does not exist
-                        messages.error(request,
-                                       'One of the selected users do not exist in the first place. '
-                                       'No voters were deleted.')
+                        return render(request, self.template_name, context)
+                    else:
+                        # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                        # message
+                        messages.error(request, 'Invalid request.')
 
-                    context = self.display_objects(1)
+                        context = self.display_objects(1)
 
-                    return render(request, self.template_name, context)
+                        return render(request, self.template_name, context)
+                elif form_type == 'add-bulk-voter':
+                    # The submitted form is for adding voters in bulk
+                    voting_status_name = request.POST.get('voter-voting-status', False)
+                    eligibility_status_name = request.POST.get('voter-eligibility-status', False)
+
+                    if request.FILES['voters-list'] is not None \
+                            and voting_status_name is not None \
+                            and eligibility_status_name is not None:
+                        # Get the file from the request object
+                        file = request.FILES['voters-list']
+
+                        # Load all rows from the uploaded file
+                        num_voters_added = 0
+                        has_passed_header = False
+
+                        # List of all voter information to be added
+                        voter_info = []
+
+                        # Either all voters are added, or none at all
+                        # Iterate all rows
+                        for row in file:
+                            # Convert the row to string
+                            row_str = row.decode('utf-8').strip()
+
+                            # Skip the first row (the header)
+                            if not has_passed_header:
+                                has_passed_header = True
+
+                                continue
+
+                            # Check for missing rows
+                            try:
+                                voter_data_split = row_str.split(',', 4)
+
+                                if len(voter_data_split) != 4:
+                                    raise ValueError
+                            except ValueError:
+                                messages.error(request,
+                                               'There were missing fields in the uploaded list. No voters were'
+                                               ' added.')
+
+                                context = self.display_objects(1)
+
+                                return render(request, self.template_name, context)
+
+                            # Get specific values
+                            id_number = voter_data_split[0].strip()
+                            last_name = voter_data_split[1].strip()
+                            first_names = voter_data_split[2].strip()
+                            college = voter_data_split[3].strip()
+
+                            # If the inputs contain invalid data, stop processing immediately
+                            if User.objects.filter(username=id_number).count() > 0 \
+                                    or College.objects.filter(name=college).count() == 0:
+                                messages.error(request,
+                                               'The uploaded list contained invalid voter data or voters who were already'
+                                               ' added previously. No further voters were added.')
+
+                                context = self.display_objects(1)
+
+                                return render(request, self.template_name, context)
+
+                            # Add them to the list
+                            voter_info.append(
+                                {
+                                    'id_number': id_number,
+                                    'last_name': last_name,
+                                    'first_names': first_names,
+                                    'college': college,
+                                }
+                            )
+
+                            # Increment the added voter count
+                            num_voters_added += 1
+
+                        # If the file uploaded was empty
+                        if num_voters_added == 0:
+                            messages.error(request,
+                                           'The uploaded list did not contain any voters.')
+                        try:
+                            for voter in voter_info:
+                                with transaction.atomic():
+                                    # Try to create the voter
+                                    self.create_voter(
+                                        voter['first_names'],
+                                        voter['last_name'],
+                                        voter['id_number'],
+                                        voter['college'],
+                                        voting_status_name,
+                                        eligibility_status_name
+                                    )
+
+                            # Display a success message after all voters have been successfully added
+                            messages.success(request, 'All {0} voter(s) successfully added.'.format(num_voters_added))
+                        except IntegrityError:
+                            messages.error(request, 'A voter with that ID number already exists.')
+                        except College.DoesNotExist:
+                            messages.error(request,
+                                           'The uploaded list contained invalid voter data. No voters were added')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                    else:
+                        # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                        # message
+                        messages.error(request, 'Invalid request.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                elif form_type == 'delete-voter':
+                    # The submitted form is for deleting voters
+                    voters_list = request.POST.getlist('voters')
+
+                    if voters_list is not False and len(voters_list) > 0:
+                        try:
+                            voters_deleted = 0
+
+                            # Try to delete each voter in the list
+                            with transaction.atomic():
+                                for voter in voters_list:
+                                    self.delete_voter(voter)
+
+                                    voters_deleted += 1
+
+                                messages.success(request,
+                                                 "All {0} voter(s) successfully deleted.".format(voters_deleted))
+                        except User.DoesNotExist:
+                            # If the user does not exist
+                            messages.error(request,
+                                           'One of the selected users has not existed in the first place. '
+                                           'No voters were deleted.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                    else:
+                        # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                        # message
+                        messages.error(request, 'Invalid request.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
                 else:
                     # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
                     # message
@@ -373,7 +385,7 @@ class VotersView(OfficerView):
 
                     return render(request, self.template_name, context)
             else:
-                # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                # If no objects are received, it's an invalid request, so stay on the page and then show an error
                 # message
                 messages.error(request, 'Invalid request.')
 
@@ -381,9 +393,7 @@ class VotersView(OfficerView):
 
                 return render(request, self.template_name, context)
         else:
-            # If no objects are received, it's an invalid request, so stay on the page and then show an error
-            # message
-            messages.error(request, 'Invalid request.')
+            messages.error(request, 'You cannot do that now because there are elections currently ongoing.')
 
             context = self.display_objects(1)
 
@@ -431,32 +441,13 @@ class ResultsView(OfficerView):
     template_name = 'passcode/officer-results.html'
 
     def display_objects(self, page, query=False):
-        # # Show everything if the query is empty
-        # if query is False:
-        #     voters = Voter.objects.all().order_by('user__username')
-        # else:
-        #     voters = Voter.objects.filter(
-        #         Q(user__username__icontains=query) |
-        #         Q(user__first_name__icontains=query) |
-        #         Q(user__last_name__icontains=query)
-        #     ) \
-        #         .order_by('user__username')
-        #
-        # colleges = College.objects.all().order_by('name')
-        #
-        # paginator = Paginator(voters, self.objects_per_page)
-        # paginated_voters = paginator.get_page(page)
-        #
-        # context = {
-        #     'voters': paginated_voters,
-        #     'colleges': colleges,
-        # }
+        # Retrieve all colleges
         colleges = College.objects.all().order_by('name')
 
         # Set a flag indicating whether elections have started or not
         election_ongoing = self.is_election_ongoing()
 
-        # Show the checkbox page when the elections aren't on, and show the eligible batches when the elections are on
+        # Show the checkbox page when the elections aren't on
         if not election_ongoing:
             # Get all batches from the batch of the current year until the batch of the year six years from the current
             # year
@@ -471,6 +462,7 @@ class ResultsView(OfficerView):
                 'batches': batches
             }
         else:
+            # Show the eligible batches when the elections are on
             college_batch_dict = {}
 
             college_batches = ElectionStatus.objects.all().order_by('college__name', '-batch')
@@ -481,18 +473,229 @@ class ResultsView(OfficerView):
 
                 college_batch_dict[college_batch.college.name].append(college_batch.batch)
 
+            # As well as the the relevant data from the election
+            votes = Vote.objects.all()
+
+            # Overall votes
+            overall_votes = votes.count()
+
+            # Votes today
+            now = datetime.datetime.now()
+
+            votes_today = votes.filter(timestamp__day=now.day)
+
+            overall_votes_today = votes_today.count()
+
+            reference_12 = now.replace(hour=12, minute=0, second=0, microsecond=0)
+            reference_15 = now.replace(hour=15, minute=0, second=0, microsecond=0)
+            reference_18 = now.replace(hour=18, minute=0, second=0, microsecond=0)
+
+            votes_today_12 = votes_today.filter(timestamp__lte=reference_12).count()
+            votes_today_15 = votes_today.filter(timestamp__lte=reference_15).count()
+            votes_today_18 = votes_today.filter(timestamp__lte=reference_18).count()
+
+            # Votes overall per day per batch
+            BATCH_QUERY = (
+                "WITH votes_12 AS (\n"
+                "	SELECT\n"
+                "		DATE(v12.timestamp) AS 'Date12',\n"
+                "		SUBSTR(v12.voter_id_number, 0, 4) AS 'Batch12',\n"
+                "		COUNT(v12.id) AS 'Count12'\n"
+                "	FROM\n"
+                "		vote_vote v12\n"
+                "	WHERE\n"
+                "		v12.timestamp <= DATETIME(v12.timestamp, 'start of day', '+12 hours')\n"
+                "	GROUP BY\n"
+                "		DATE(v12.timestamp),\n"
+                "		SUBSTR(v12.voter_id_number, 0, 4)\n"
+                "),\n"
+                "votes_15 AS (\n"
+                "	SELECT\n"
+                "		DATE(v15.timestamp) AS 'Date15',\n"
+                "		SUBSTR(v15.voter_id_number, 0, 4) AS 'Batch15',\n"
+                "		COUNT(v15.id) AS 'Count15'\n"
+                "	FROM\n"
+                "		vote_vote v15\n"
+                "	WHERE\n"
+                "		v15.timestamp <= DATETIME(v15.timestamp, 'start of day', '+15 hours')\n"
+                "	GROUP BY\n"
+                "		DATE(v15.timestamp),\n"
+                "		SUBSTR(v15.voter_id_number, 0, 4)\n"
+                "),\n"
+                "votes_18 AS (\n"
+                "	SELECT\n"
+                "		DATE(v18.timestamp) AS 'Date18',\n"
+                "		SUBSTR(v18.voter_id_number, 0, 4) AS 'Batch18',\n"
+                "		COUNT(v18.id) AS 'Count18'\n"
+                "	FROM\n"
+                "		vote_vote v18\n"
+                "	WHERE\n"
+                "		v18.timestamp <= DATETIME(v18.timestamp, 'start of day', '+18 hours')\n"
+                "	GROUP BY\n"
+                "		DATE(v18.timestamp),\n"
+                "		SUBSTR(v18.voter_id_number, 0, 4)\n"
+                ")\n"
+                "SELECT\n"
+                "	DATE(v.timestamp) AS 'Date',\n"
+                "	SUBSTR(v.voter_id_number, 0, 4) AS 'Batch',\n"
+                "	COUNT(v.id) 'Total Count',\n"
+                "	IFNULL(votes_12.'Count12', 0) AS 'As of 12 nn',\n"
+                "	IFNULL(votes_15.'Count15', 0) AS 'As of 3 pm',\n"
+                "	IFNULL(votes_18.'Count18', 0) AS 'As of 6 pm'\n"
+                "FROM\n"
+                "	vote_vote v\n"
+                "LEFT JOIN\n"
+                "	votes_12 ON\n"
+                "		DATE(v.timestamp) = votes_12.'Date12'\n"
+                "		AND SUBSTR(v.voter_id_number, 0, 4) = votes_12.'Batch12'\n"
+                "LEFT JOIN\n"
+                "	votes_15 ON\n"
+                "		DATE(v.timestamp) = votes_15.'Date15'\n"
+                "		AND SUBSTR(v.voter_id_number, 0, 4) = votes_15.'Batch15'\n"
+                "LEFT JOIN\n"
+                "	votes_18 ON\n"
+                "		DATE(v.timestamp) = votes_18.'Date18'\n"
+                "		AND SUBSTR(v.voter_id_number, 0, 4) = votes_18.'Batch18'\n"
+                "GROUP BY\n"
+                "	DATE(v.timestamp),\n"
+                "	SUBSTR(v.voter_id_number, 0, 4)\n"
+                "ORDER BY\n"
+                "   DATE(v.timestamp) DESC,\n"
+                "   SUBSTR(v.voter_id_number, 0, 4) ASC\n"
+            )
+
+            batch_results = []
+
+            with connection.cursor() as cursor:
+                cursor.execute(BATCH_QUERY)
+
+                batch_results.append(cursor.fetchall())
+
+            # Get the eligible colleges
+            eligible_colleges = ElectionStatus.objects.values('college').distinct()
+            eligible_colleges = [College.objects.get(id=eligible_college['college']) for eligible_college in
+                                 eligible_colleges]
+
+            overall_votes_college = {}
+
+            for eligible_college in eligible_colleges:
+                overall_votes_college[eligible_college.name] = Vote.objects.filter(
+                    voter_college=eligible_college.name).count()
+
+            # Votes per day per college per batch
+            COLLEGE_BATCH_QUERY = (
+                "WITH votes_12 AS (\n"
+                "	SELECT\n"
+                "		DATE(v12.timestamp) AS 'Date12',\n"
+                "		SUBSTR(v12.voter_id_number, 0, 4) AS 'Batch12',\n"
+                "		COUNT(v12.id) AS 'Count12'\n"
+                "	FROM\n"
+                "		vote_vote v12\n"
+                "	WHERE\n"
+                "		v12.timestamp <= DATETIME(v12.timestamp, 'start of day', '+12 hours')\n"
+                "		AND v12.voter_college = %s\n"
+                "	GROUP BY\n"
+                "		DATE(v12.timestamp),\n"
+                "		SUBSTR(v12.voter_id_number, 0, 4)\n"
+                "),\n"
+                "votes_15 AS (\n"
+                "	SELECT\n"
+                "		DATE(v15.timestamp) AS 'Date15',\n"
+                "		SUBSTR(v15.voter_id_number, 0, 4) AS 'Batch15',\n"
+                "		COUNT(v15.id) AS 'Count15'\n"
+                "	FROM\n"
+                "		vote_vote v15\n"
+                "	WHERE\n"
+                "		v15.timestamp <= DATETIME(v15.timestamp, 'start of day', '+15 hours')\n"
+                "		AND v15.voter_college = %s\n"
+                "	GROUP BY\n"
+                "		DATE(v15.timestamp),\n"
+                "		SUBSTR(v15.voter_id_number, 0, 4)\n"
+                "),\n"
+                "votes_18 AS (\n"
+                "	SELECT\n"
+                "		DATE(v18.timestamp) AS 'Date18',\n"
+                "		SUBSTR(v18.voter_id_number, 0, 4) AS 'Batch18',\n"
+                "		COUNT(v18.id) AS 'Count18'\n"
+                "	FROM\n"
+                "		vote_vote v18\n"
+                "	WHERE\n"
+                "		v18.timestamp <= DATETIME(v18.timestamp, 'start of day', '+18 hours')\n"
+                "		AND v18.voter_college = %s\n"
+                "	GROUP BY\n"
+                "		DATE(v18.timestamp),\n"
+                "		SUBSTR(v18.voter_id_number, 0, 4)\n"
+                ")\n"
+                "SELECT\n"
+                "	DATE(v.timestamp) AS 'Date',\n"
+                "	SUBSTR(v.voter_id_number, 0, 4) AS 'Batch',\n"
+                "	COUNT(v.id) 'Total Count',\n"
+                "	IFNULL(votes_12.'Count12', 0) AS 'As of 12 nn',\n"
+                "	IFNULL(votes_15.'Count15', 0) AS 'As of 3 pm',\n"
+                "	IFNULL(votes_18.'Count18', 0) AS 'As of 6 pm'\n"
+                "FROM\n"
+                "	vote_vote v\n"
+                "LEFT JOIN\n"
+                "	votes_12 ON\n"
+                "		DATE(v.timestamp) = votes_12.'Date12'\n"
+                "		AND SUBSTR(v.voter_id_number, 0, 4) = votes_12.'Batch12'\n"
+                "LEFT JOIN\n"
+                "	votes_15 ON\n"
+                "		DATE(v.timestamp) = votes_15.'Date15'\n"
+                "		AND SUBSTR(v.voter_id_number, 0, 4) = votes_15.'Batch15'\n"
+                "LEFT JOIN\n"
+                "	votes_18 ON\n"
+                "		DATE(v.timestamp) = votes_18.'Date18'\n"
+                "		AND SUBSTR(v.voter_id_number, 0, 4) = votes_18.'Batch18'\n"
+                "WHERE\n"
+                "	v.voter_college = %s\n"
+                "GROUP BY\n"
+                "	DATE(v.timestamp),\n"
+                "	SUBSTR(v.voter_id_number, 0, 4)\n"
+                "ORDER BY\n"
+                "   DATE(v.timestamp) DESC,\n"
+                "   SUBSTR(v.voter_id_number, 0, 4) ASC\n"
+            )
+
+            college_batch_results = {}
+
+            for eligible_college in eligible_colleges:
+                with connection.cursor() as cursor:
+                    cursor.execute(COLLEGE_BATCH_QUERY,
+                                   [eligible_college.name,
+                                    eligible_college.name,
+                                    eligible_college.name,
+                                    eligible_college.name]
+                                   )
+
+                    college_batch_results[eligible_college.name] = cursor.fetchall()
+
+            # Count all candidates by position
+
             context = {
                 'election_ongoing': election_ongoing,
                 'colleges': colleges,
-                'college_batch_dict': college_batch_dict
+                'college_batch_dict': college_batch_dict,
+                'overall_votes': overall_votes,
+                'overall_votes_today': overall_votes_today,
+                'votes_today_12': (votes_today_12 if now.time() >= reference_12.time() else None),
+                'votes_today_15': (votes_today_15 if now.time() >= reference_15.time() else None),
+                'votes_today_18': (votes_today_18 if now.time() >= reference_18.time() else None),
+                'batch_results': batch_results,
+                'eligible_colleges': eligible_colleges,
+                'overall_votes_college': overall_votes_college,
+                'college_batch_results': college_batch_results
             }
 
         return context
 
     @staticmethod
     def is_election_ongoing():
-        print(ElectionStatus.objects.all().exists())
         return ElectionStatus.objects.all().exists()
+
+    @staticmethod
+    def is_votes_empty():
+        return not Vote.objects.all().exists()
 
     def get(self, request):
         page = request.GET.get('page', False)
@@ -509,7 +712,14 @@ class ResultsView(OfficerView):
             # The submitted form is for starting the elections
             if form_type == 'start-elections':
                 # If the elections have already started, it can't be started again!
-                if not self.is_election_ongoing():
+                if self.is_election_ongoing():
+                    messages.error(request, 'The elections have already been started.')
+                elif not self.is_votes_empty():
+                    # If there still are votes left from the previous elections, the elections can't be started yet
+                    messages.error(request,
+                                   'The votes from the previous election haven\'t been archived yet. Archive them '
+                                   'first before starting this election.')
+                else:
                     # Only continue if the re-authentication password indeed matches the password of the current
                     # COMELEC officer
                     reauth_password = request.POST.get('reauth', False)
@@ -550,8 +760,6 @@ class ResultsView(OfficerView):
                             messages.error(request,
                                            'The elections weren\'t started because there were no batches selected at'
                                            ' all.')
-                else:
-                    messages.error(request, 'The elections have already been started.')
 
                 context = self.display_objects(1)
 
@@ -632,9 +840,10 @@ class PasscodeView(UserPassesTestMixin, View):
 
     def post(self, request):
         # Set error messages up
-        does_not_exist = 'dne'
-        already_in = 'ai'
-        invalid_request = 'ir'
+        DOES_NOT_EXIST = 'DNE'
+        ALREADY_IN = 'AI'
+        ALREADY_VOTED = 'AV'
+        INVALID_REQUEST = 'IR'
 
         # Please note that the user's password really isn't returned here (that would be indicative of poor security)
         # What these lines actually do is generate a new password every time a valid user is queried
@@ -650,34 +859,42 @@ class PasscodeView(UserPassesTestMixin, View):
         if id_number is not False:
             # Check whether a user with the queried ID number exists
             try:
-                # Get the user associated with that ID number
+                # Get the user and voter associated with that ID number
+                id_number = id_number.strip()
+
                 user = User.objects.get(username=id_number)
+                voter = Voter.objects.get(user__username=id_number)
 
-                # FIXME: is_currently_in() does not work yet
-                # Check if that user is currently logged in
-                if not is_currently_in(user):
-                    # Generate a passcode
-                    passcode = self.generate_passcode()
+                # Check if that user has already voted
+                if not voter.voting_status:
+                    # FIXME: is_currently_in() does not work yet
+                    # Check if that user is currently logged in
+                    if not is_currently_in(user):
+                        # Generate a passcode
+                        passcode = self.generate_passcode()
 
-                    # And then change the queried user's password to the generated passcode
-                    user.set_password(passcode)
+                        # And then change the queried user's password to the generated passcode
+                        user.set_password(passcode)
 
-                    # Save the changes to the user
-                    user.save()
+                        # Save the changes to the user
+                        user.save()
 
-                    # Store that passcode in the context
-                    context = {'message': passcode}
+                        # Store that passcode in the context
+                        context = {'message': passcode}
+                    else:
+                        # If not, we can't modify a currently logged in user's password, so return an already in error
+                        # Also, this would be a red flag, because this means someone has entered an ID number of someone
+                        # currently in the process of voting
+                        context = {'message': ALREADY_IN}
                 else:
-                    # If not, we can't modify a currently logged in user's password, so return an already in error
-                    # Also, this would be a red flag, because this means someone has entered an ID number of someone
-                    # currently in the process of voting
-                    context = {'message': already_in}
-            except User.DoesNotExist:
+                    # If the voter has already voted, the passcode can't be changed for that voter anymore
+                    context = {'message': ALREADY_VOTED}
+            except (User.DoesNotExist, Voter.DoesNotExist):
                 # That user does not exist, so return a does not exist error.
-                context = {'message': does_not_exist}
+                context = {'message': DOES_NOT_EXIST}
         else:
             # Send back an invalid request error.
-            context = {'message': invalid_request}
+            context = {'message': INVALID_REQUEST}
 
         # Go back to this page
         return render(request, self.template_name, context)
