@@ -1,5 +1,6 @@
 # Create your views here.
 import datetime
+import json
 from random import randint
 
 from django.contrib import messages
@@ -17,7 +18,7 @@ from django.utils import timezone
 from django.views import View
 
 # Test function for this view
-from vote.models import Voter, College, Candidate, ElectionStatus, Vote
+from vote.models import Voter, College, Candidate, ElectionStatus, Vote, Position
 
 
 def officer_test_func(user):
@@ -25,22 +26,6 @@ def officer_test_func(user):
         return Group.objects.get(name='comelec') in user.groups.all()
     except Group.DoesNotExist:
         return False
-
-
-# Check if a different user is currently logged in
-def is_currently_in(user):
-    # Query all unexpired sessions
-    sessions = Session.objects.filter(expire_date__gte=timezone.now())
-
-    # Build a list of authenticated IDs from that query
-    ids = []
-
-    for session in sessions:
-        data = session.get_decoded()
-        ids.append(data.get('_auth_user_id', None))
-
-    # Check if the given user's id is in that list
-    return user.id in ids
 
 
 class RestrictedView(UserPassesTestMixin, View):
@@ -164,8 +149,8 @@ class VotersView(OfficerView):
     def post(self, request):
         form_type = request.POST.get('form-type', False)
 
-        # Only allow editing while there are no elections ongoing
-        if not ResultsView.is_election_ongoing():
+        # Only allow editing while there are no elections ongoing and there are no votes in the database
+        if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
             if form_type is not False:
                 # The submitted form is for adding a voter
                 if form_type == 'add-voter':
@@ -287,7 +272,8 @@ class VotersView(OfficerView):
                                     or College.objects.filter(name=college).count() == 0:
                                 messages.error(request,
                                                'The uploaded list contained invalid voter data or voters who were already'
-                                               ' added previously. No further voters were added.')
+                                               ' added previously. No further voters were added. (Error at row ' + repr(
+                                                   num_voters_added + 2) + ')')
 
                                 context = self.display_objects(1)
 
@@ -310,6 +296,9 @@ class VotersView(OfficerView):
                         if num_voters_added == 0:
                             messages.error(request,
                                            'The uploaded list did not contain any voters.')
+
+                        current_row = 0
+
                         try:
                             for voter in voter_info:
                                 with transaction.atomic():
@@ -323,13 +312,17 @@ class VotersView(OfficerView):
                                         eligibility_status_name
                                     )
 
+                                current_row += 1
+
                             # Display a success message after all voters have been successfully added
                             messages.success(request, 'All {0} voter(s) successfully added.'.format(num_voters_added))
                         except IntegrityError:
-                            messages.error(request, 'A voter with that ID number already exists.')
+                            messages.error(request, 'A voter with that ID number already exists. (Error at row ' + repr(
+                                current_row) + ')')
                         except College.DoesNotExist:
                             messages.error(request,
-                                           'The uploaded list contained invalid voter data. No voters were added')
+                                           'The uploaded list contained invalid voter data. No voters were added. '
+                                           '(Error at row ' + repr(current_row) + ')')
 
                         context = self.display_objects(1)
 
@@ -393,7 +386,8 @@ class VotersView(OfficerView):
 
                 return render(request, self.template_name, context)
         else:
-            messages.error(request, 'You cannot do that now because there are elections currently ongoing.')
+            messages.error(request, 'You cannot do that now because there are still votes being tracked. There may be '
+                                    'elections still ongoing, or you haven\'t archived the votes yet.')
 
             context = self.display_objects(1)
 
@@ -412,6 +406,8 @@ class CandidatesView(OfficerView):
                 Q(voter__user__username__icontains=query) |
                 Q(voter__user__first_name__icontains=query) |
                 Q(voter__user__last_name__icontains=query) |
+                Q(position__base_position__name__icontains=query) |
+                Q(position__unit__name=query) |
                 Q(party__name__icontains=query)
             ) \
                 .order_by('voter__user__username')
@@ -456,10 +452,107 @@ class ResultsView(OfficerView):
             batches = ['1' + str(year)[2:] for year in range(current_year, current_year - 6, -1)]
             batches[-1] = batches[-1] + ' and below'
 
+            # Retrieve all positions
+            positions = Position.objects.all().order_by('base_position__name', 'unit__college__name', 'unit__name')
+
+            if query is not False:
+                # Count all candidates by position
+                TOTAL_VOTES_QUERY = (
+                    "WITH raw_count_position AS (\n"
+                    "	SELECT\n"
+                    "		p.identifier AS 'Identifier',\n"
+                    "		bp.name AS 'Position',\n"
+                    "		u.name AS 'Unit',\n"
+                    "		vs.candidate_id AS 'CandidateID',\n"
+                    "		COUNT(*) AS 'Votes'\n"
+                    "	FROM\n"
+                    "		vote_voteset vs\n"
+                    "	INNER JOIN\n"
+                    "		vote_position p ON vs.position_id = p.id\n"
+                    "	INNER JOIN\n"
+                    "		vote_baseposition bp ON p.base_position_id = bp.id\n"
+                    "	INNER JOIN\n"
+                    "		vote_unit u ON p.unit_id = u.id\n"
+                    "	GROUP BY\n"
+                    "		vs.position_id, vs.candidate_id\n"
+                    "),\n"
+                    "candidate_name AS (\n"
+                    "	SELECT\n"
+                    "		rcp.'Identifier',\n"
+                    "		rcp.'Position',\n"
+                    "		rcp.'Unit',\n"
+                    "		IFNULL(u.first_name || ' ' || u.last_name, '(abstained)') AS 'Candidate',\n"
+                    "		p.name AS 'Party',\n"
+                    "		rcp.'Votes'\n"
+                    "	FROM\n"
+                    "		raw_count_position rcp\n"
+                    "	LEFT JOIN\n"
+                    "		vote_candidate c ON rcp.'CandidateID' = c.id\n"
+                    "	LEFT JOIN\n"
+                    "		vote_voter v ON c.voter_id = v.id\n"
+                    "	LEFT JOIN\n"
+                    "		auth_user u ON v.user_id = u.id\n"
+                    "	LEFT JOIN\n"
+                    "		vote_party p ON c.party_id = p.id\n"
+                    "),\n"
+                    "party_name AS (\n"
+                    "	SELECT\n"
+                    "		cn.'Identifier' AS 'Identifier',\n"
+                    "		cn.'Position' AS 'Position',\n"
+                    "		cn.'Unit' AS 'Unit',\n"
+                    "		cn.'Candidate' AS 'Candidate',\n"
+                    "		CASE cn.'Candidate'\n"
+                    "			WHEN '(abstained)' THEN 'N/A'\n"
+                    "			ELSE IFNULL(cn.'Party', 'Independent')\n"
+                    "		END AS 'Party',\n"
+                    "		cn.'Votes' AS 'Votes'\n"
+                    "	FROM\n"
+                    "		candidate_name cn\n"
+                    ")\n"
+                    "SELECT\n"
+                    "	pn.'Identifier' AS 'Identifier',\n"
+                    "	pn.'Position' AS 'Position',\n"
+                    "	pn.'Unit' AS 'Unit',\n"
+                    "	pn.'Candidate' AS 'Candidate',\n"
+                    "	pn.'Party' AS 'Party',\n"
+                    "	pn.'Votes' AS 'Votes'\n"
+                    "FROM\n"
+                    "	party_name pn\n"
+                    "WHERE\n"
+                    "	pn.'Identifier' = %s\n"
+                    "ORDER BY\n"
+                    "	pn.'Position',\n"
+                    "	pn.'Unit',\n"
+                    "	pn.'Votes' DESC,\n"
+                    "	pn.'Candidate';\n"
+                )
+
+                # Correctly format the query
+                query_formatted = query.replace('-', '')
+
+                vote_results = {}
+
+                with connection.cursor() as cursor:
+                    cursor.execute(TOTAL_VOTES_QUERY, [query_formatted])
+
+                    vote_results[query] = cursor.fetchall()
+
+                # Create a shorter JSON version of the results
+                vote_results_json = {}
+
+                for result in vote_results[query]:
+                    vote_results_json[result[3]] = result[5]
+
+                vote_results_json = json.dumps(vote_results_json)
+
             context = {
                 'election_ongoing': election_ongoing,
                 'colleges': colleges,
-                'batches': batches
+                'batches': batches,
+                'positions': positions,
+                'vote_results': vote_results if query is not False else False,
+                'vote_results_json': vote_results_json if query is not False else False,
+                'identifier': query,
             }
         else:
             # Show the eligible batches when the elections are on
@@ -478,6 +571,12 @@ class ResultsView(OfficerView):
 
             # Overall votes
             overall_votes = votes.count()
+
+            # Total registered voters
+            overall_registered_voters = Voter.objects.count()
+
+            # Voter turnout
+            overall_turnout = overall_votes / overall_registered_voters * 100
 
             # Votes today
             now = datetime.datetime.now()
@@ -670,13 +769,13 @@ class ResultsView(OfficerView):
 
                     college_batch_results[eligible_college.name] = cursor.fetchall()
 
-            # Count all candidates by position
-
             context = {
                 'election_ongoing': election_ongoing,
                 'colleges': colleges,
                 'college_batch_dict': college_batch_dict,
                 'overall_votes': overall_votes,
+                'overall_registered_voters': overall_registered_voters,
+                'overall_turnout': overall_turnout,
                 'overall_votes_today': overall_votes_today,
                 'votes_today_12': (votes_today_12 if now.time() >= reference_12.time() else None),
                 'votes_today_15': (votes_today_15 if now.time() >= reference_15.time() else None),
@@ -807,6 +906,24 @@ class ResultsView(OfficerView):
 class PasscodeView(UserPassesTestMixin, View):
     template_name = 'passcode/password_generator.html'
 
+    # Check whether the user id of the queried user is currently in
+    @staticmethod
+    def is_currently_in(user_id):
+        # Query all non-expired sessions
+        # use timezone.now() instead of datetime.now() in latest versions of Django
+        sessions = Session.objects.filter(expire_date__gte=timezone.now())
+        uid_list = []
+
+        # Build a list of user ids from that query
+        for session in sessions:
+            data = session.get_decoded()
+            uid_list.append(data.get('_auth_user_id', None))
+
+        print(User.objects.filter(id__in=uid_list))
+
+        # Query all logged in users based on id list
+        return User.objects.filter(id=user_id, id__in=uid_list).count() > 0
+
     # Generate a random passcode for a user
     @staticmethod
     def generate_passcode():
@@ -814,7 +931,7 @@ class PasscodeView(UserPassesTestMixin, View):
         length = 8
 
         # The character domain of the passcode
-        charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+        charset = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNOPQRSTUVWXYZ0123456789'
 
         # The passcode to be generated
         passcode = ''
@@ -843,6 +960,7 @@ class PasscodeView(UserPassesTestMixin, View):
         DOES_NOT_EXIST = 'DNE'
         ALREADY_IN = 'AI'
         ALREADY_VOTED = 'AV'
+        INELIGIBLE = 'IE'
         INVALID_REQUEST = 'IR'
 
         # Please note that the user's password really isn't returned here (that would be indicative of poor security)
@@ -865,30 +983,36 @@ class PasscodeView(UserPassesTestMixin, View):
                 user = User.objects.get(username=id_number)
                 voter = Voter.objects.get(user__username=id_number)
 
-                # Check if that user has already voted
-                if not voter.voting_status:
-                    # FIXME: is_currently_in() does not work yet
-                    # Check if that user is currently logged in
-                    if not is_currently_in(user):
-                        # Generate a passcode
-                        passcode = self.generate_passcode()
+                # Check if that user is eligible at all
+                if voter.eligibility_status and ElectionStatus.objects.filter(
+                        college__name=voter.college.name).count() > 0:
+                    # Check if that user has already voted
+                    if not voter.voting_status:
+                        # FIXME: is_currently_in() does not work yet
+                        # Check if that user is currently logged in
+                        if not self.is_currently_in(user.id):
+                            # Generate a passcode
+                            passcode = self.generate_passcode()
 
-                        # And then change the queried user's password to the generated passcode
-                        user.set_password(passcode)
+                            # And then change the queried user's password to the generated passcode
+                            user.set_password(passcode)
 
-                        # Save the changes to the user
-                        user.save()
+                            # Save the changes to the user
+                            user.save()
 
-                        # Store that passcode in the context
-                        context = {'message': passcode}
+                            # Store that passcode in the context
+                            context = {'message': passcode}
+                        else:
+                            # If not, we can't modify a currently logged in user's password, so return an already in error
+                            # Also, this would be a red flag, because this means someone has entered an ID number of someone
+                            # currently in the process of voting
+                            context = {'message': ALREADY_IN}
                     else:
-                        # If not, we can't modify a currently logged in user's password, so return an already in error
-                        # Also, this would be a red flag, because this means someone has entered an ID number of someone
-                        # currently in the process of voting
-                        context = {'message': ALREADY_IN}
+                        # If the voter has already voted, the passcode can't be changed for that voter anymore
+                        context = {'message': ALREADY_VOTED}
                 else:
-                    # If the voter has already voted, the passcode can't be changed for that voter anymore
-                    context = {'message': ALREADY_VOTED}
+                    # If the voter is not eligible (or the voter's college is not eligible), don't churn out a passcode
+                    context = {'message': INELIGIBLE}
             except (User.DoesNotExist, Voter.DoesNotExist):
                 # That user does not exist, so return a does not exist error.
                 context = {'message': DOES_NOT_EXIST}

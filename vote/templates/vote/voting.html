@@ -62,12 +62,12 @@
                     {% for position, each_candidate in candidates_per_position.items %}
                         <div class="candidates-row clearfix">
                             <div class="candidate-position">
-                                {{ position|upper }}
+                                {{ position.base_position.name|upper }}
                                 <button type="button" id="abstain" class="abstain"
-                                        onclick="abstain_candidate('{{ position|slugify }}')">
+                                        onclick="abstain_candidate('{{ position.identifier }}')">
                                     Abstain
                                 </button>
-                                <input type="hidden" name="position" value="{{ position|slugify }}">
+                                <input type="hidden" name="position" value="{{ position.identifier }}">
                             </div>
                             {% for candidate in each_candidate %}
                                 <div class="candidate">
@@ -83,7 +83,7 @@
                                             response
                                             >></a>
                                     </div>
-                                    <input type="radio" name="{{ position|slugify }}"
+                                    <input type="radio" name="{{ position.identifier }}"
                                            value="{{ candidate.identifier }}"
                                            id="{{ candidate.identifier }}">
                                     <label for="{{ candidate.identifier }}"></label>
@@ -123,8 +123,8 @@
                 <div id="vote-summary">
                     {% for position in positions %}
                         <div class="candidate-row">
-                            <div class="candidate-position">{{ position }}</div>
-                            <div class="candidate-person" id="{{ position|slugify }}-summary"></div>
+                            <div class="candidate-position">{{ position.base_position.name }}</div>
+                            <div class="candidate-person" id="{{ position.identifier }}-summary"></div>
                         </div>
                     {% endfor %}
                     {% if positions %}

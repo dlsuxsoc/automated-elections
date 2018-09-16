@@ -1,7 +1,6 @@
 # Create your views here.
 import json
 import traceback
-from smtplib import SMTPException
 
 from django.conf import settings
 from django.contrib import messages
@@ -13,11 +12,10 @@ from django.core.mail import send_mail
 from django.db import transaction, IntegrityError
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
-from django.utils.text import slugify
 from django.views import View
 
 # Sends an email receipt containing the voted candidates to the voter
-from vote.models import Issue, Candidate, Voter, Take, Vote, VoteSet, BasePosition
+from vote.models import Issue, Candidate, Voter, Take, Vote, VoteSet, BasePosition, Position
 
 
 # Test function for this view
@@ -34,12 +32,19 @@ def vote_test_func(user):
 class VoteView(UserPassesTestMixin, View):
     template_name = 'vote/voting.html'
 
-    # Check for duplicate votes in a voteset
+    # Check for duplicate votes and positions in a voteset
     @staticmethod
-    def contains_duplicates(votes):
+    def contains_duplicates(position_votes):
+        positions = []
+        votes = []
+
+        for position_vote in position_votes:
+            positions.append(position_vote[0])
+            votes.append(position_vote[1])
+
         votes = list(filter(lambda vote: vote is not False, votes))
 
-        return len(votes) == len(list(set(votes)))
+        return len(positions) == len(list(set(positions))) and len(votes) == len(list(set(votes)))
 
     # Generate a serial number
     @staticmethod
@@ -59,8 +64,10 @@ class VoteView(UserPassesTestMixin, View):
         candidates_voted = ''
 
         # Generate message for the candidates voted
-        for position, candidate in voted.items():
-            candidates_voted += position + ": " + (candidate.__str__() if candidate is not False else 'Abstained') + '\n'
+        for position_candidate in voted.values():
+            candidates_voted += position_candidate[0].__str__() + ": " + (
+                (position_candidate[1].voter.user.first_name + " " + position_candidate[1].voter.user.last_name) if
+                position_candidate[1] is not False else '(abstained)') + '\n'
 
         # Append the serial number
         candidates_voted += '\nYour serial number is ' + serial_number + '.\n'
@@ -75,7 +82,7 @@ class VoteView(UserPassesTestMixin, View):
         try:
             send_mail(subject=subject, from_email=from_email, recipient_list=to_email, message=message,
                       fail_silently=False)
-        except SMTPException:
+        except Exception:
             # Show the exception in the server, but mask it from the user
             print("Email send failure.")
 
@@ -94,20 +101,6 @@ class VoteView(UserPassesTestMixin, View):
 
         # Get the batch of the current voter
         batch = voter.user.username[:3]
-
-        # # Check if there are executive candidates
-        # executive_board = Candidate.objects.filter(position__unit__batch__isnull=True,
-        #                                            position__unit__college__isnull=True).exists()
-        #
-        # # Check if there are college candidates
-        # college_board = Candidate.objects.filter(position__unit__batch__isnull=True,
-        #                                          position__unit__college__isnull=False,
-        #                                          position__unit__college__name=college).exists()
-        #
-        # # Check if there are batch candidates
-        # batch_board = Candidate.objects.filter(position__unit__batch__isnull=False,
-        #                                        position__unit__college__isnull=False,
-        #                                        position__unit__batch=batch).exists()
 
         # Get all candidates
         candidates = {}
@@ -133,23 +126,25 @@ class VoteView(UserPassesTestMixin, View):
             if candidates_type.count() != 0:
                 for candidate in candidates_type:
                     # If the position is of type college, the position's college must match the voter's college
-                    # If the position is of type batch, that position's batch must match the voter's batch
+                    # If the position is of type batch, that position's batch must match the voter's batch and college
                     if position_type == BasePosition.COLLEGE and candidate.position.unit.college.name != college \
-                            or position_type == BasePosition.BATCH and candidate.position.unit.batch != batch:
+                            or position_type == BasePosition.BATCH \
+                            and (candidate.position.unit.batch != batch
+                                 or candidate.position.unit.college.name != college):
                         continue
-                    else:
-                        # Only add the candidate if all the conditions above have been satisfied
-                        position = candidate.position.base_position.name
 
-                        if position not in candidates[position_type]:
-                            candidates[position_type][position] = []
+                    # Only add the candidate if all the conditions above have been satisfied
+                    position = candidate.position
 
-                        candidates[position_type][position].append(candidate)
+                    if position not in candidates[position_type]:
+                        candidates[position_type][position] = []
 
-                        # Remember the positions, if it's not already there
-                        if position not in positions:
-                            positions.append(position)
-                            positions_json.append(slugify(position))
+                    candidates[position_type][position].append(candidate)
+
+                    # Remember the positions, if they haven't already been remembered
+                    if position not in positions:
+                        positions.append(position)
+                        positions_json.append(str(position.identifier))
 
                 # If there turned out to be no candidates running for this position type relevant to the voter, just
                 # forget about that position type and move on
@@ -160,7 +155,7 @@ class VoteView(UserPassesTestMixin, View):
                 # move on
                 candidates.pop(position_type)
 
-        # Dump the slugified positions into JSON
+        # Dump the positions into JSON
         positions_json = json.dumps(list(positions_json))
 
         # Get all issues
@@ -183,7 +178,7 @@ class VoteView(UserPassesTestMixin, View):
         # If not yet...
         if not voter.voting_status:
             # Take note of the voter's votes
-            votes = {}
+            votes = []
 
             # Collect all "voteable" positions
             positions = request.POST.getlist('position')
@@ -192,16 +187,24 @@ class VoteView(UserPassesTestMixin, View):
                 for position in positions:
                     # For each position, get the voter's pick through its identifier
                     # It should return False when the voter abstained for that position (picked no one)
-                    position_key = position.replace('-', ' ').upper()
-                    votes[position_key] = request.POST.get(position, False)
+                    votes.append((position, request.POST.get(position, False),))
 
-            # Proceed only when there are no duplicate votes
-            if self.contains_duplicates(votes.values()):
+            # Proceed only when there are no duplicate votes and positions
+            if self.contains_duplicates(votes):
+                # If there are no duplicates, convert the list of tuples into a dict
+                votes_dict = {}
+
+                for vote in votes:
+                    votes_dict[vote[0]] = vote[1]
+
+                votes = votes_dict
+
                 try:
                     # Change the identifiers to the actual candidates they represent
                     for position, candidate in votes.items():
-                        if candidate is not False:
-                            votes[position] = Candidate.objects.get(identifier=candidate)
+                        votes[position] = (Position.objects.get(identifier=position),
+                                           Candidate.objects.get(
+                                               identifier=candidate) if candidate is not False else False,)
 
                     with transaction.atomic():
                         # Create a vote object to represent a single vote of a user
@@ -215,15 +218,18 @@ class VoteView(UserPassesTestMixin, View):
                         vote.save()
 
                         # Create a vote set array representing the individual votes to be saved in the database
-                        actual_votes = [VoteSet(vote=vote, candidate=(candidate if candidate is not False else None))
-                                        for candidate in votes.values()]
+                        actual_votes = [
+                            VoteSet(vote=vote,
+                                    candidate=(position_candidate[1] if position_candidate[1] is not False else None),
+                                    position=position_candidate[0]) for position_candidate in votes.values()
+                        ]
 
                         # Save all votes into the database
                         for actual_vote in actual_votes:
                             actual_vote.save()
 
                         # Send email receipt
-                        self.send_email_receipt(request.user, votes, serial_number)
+                        #self.send_email_receipt(request.user, votes, serial_number)
 
                         # Mark the voter as already voted
                         voter.voting_status = True
@@ -242,11 +248,11 @@ class VoteView(UserPassesTestMixin, View):
                     # A vote has already been created to the voter's name, meaning he has already voted
                     messages.error(request, 'You may have already voted before.')
 
-                    voter.voting_status = True
-                    voter.save()
-
                     # Log the user out
                     logout(request)
+
+                    voter.voting_status = True
+                    voter.save()
 
                     return redirect('logout:logout_fail')
                 # except SMTPException:

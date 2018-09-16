@@ -13,7 +13,7 @@ from django.views import View
 
 from passcode.views import PasscodeView, ResultsView
 from sysadmin.forms import IssueForm, OfficerForm, UnitForm
-from vote.models import Voter, College, Candidate, Position, Unit, Party, Issue, Take
+from vote.models import Voter, College, Candidate, Position, Unit, Party, Issue, Take, BasePosition
 
 
 # Test function for this view
@@ -145,8 +145,8 @@ class VotersView(SysadminView):
     def post(self, request):
         form_type = request.POST.get('form-type', False)
 
-        # Only allow editing while there are no elections ongoing
-        if not ResultsView.is_election_ongoing():
+        # Only allow editing while there are no elections ongoing and there are no votes in the database
+        if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
             if form_type is not False:
                 # The submitted form is for adding a voter
                 if form_type == 'add-voter':
@@ -177,8 +177,8 @@ class VotersView(SysadminView):
 
                         return render(request, self.template_name, context)
                     else:
-                        # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
-                        # message
+                        # If the form type is unknown, it's an invalid request, so stay on the page and then show an
+                        # error message
                         messages.error(request, 'Invalid request.')
 
                         context = self.display_objects(1)
@@ -268,7 +268,8 @@ class VotersView(SysadminView):
                                     or College.objects.filter(name=college).count() == 0:
                                 messages.error(request,
                                                'The uploaded list contained invalid voter data or voters who were already'
-                                               ' added previously. No further voters were added.')
+                                               ' added previously. No further voters were added. (Error at row ' + repr(
+                                                   num_voters_added + 2) + ')')
 
                                 context = self.display_objects(1)
 
@@ -291,6 +292,9 @@ class VotersView(SysadminView):
                         if num_voters_added == 0:
                             messages.error(request,
                                            'The uploaded list did not contain any voters.')
+
+                        current_row = 0
+
                         try:
                             for voter in voter_info:
                                 with transaction.atomic():
@@ -304,13 +308,17 @@ class VotersView(SysadminView):
                                         eligibility_status_name
                                     )
 
+                                current_row += 1
+
                             # Display a success message after all voters have been successfully added
                             messages.success(request, 'All {0} voter(s) successfully added.'.format(num_voters_added))
                         except IntegrityError:
-                            messages.error(request, 'A voter with that ID number already exists.')
+                            messages.error(request, 'A voter with that ID number already exists. (Error at row ' + repr(
+                                current_row) + ')')
                         except College.DoesNotExist:
                             messages.error(request,
-                                           'The uploaded list contained invalid voter data. No voters were added')
+                                           'The uploaded list contained invalid voter data. No voters were added (Error'
+                                           ' at row ' + repr(current_row) + ')')
 
                         context = self.display_objects(1)
 
@@ -374,7 +382,8 @@ class VotersView(SysadminView):
 
                 return render(request, self.template_name, context)
         else:
-            messages.error(request, 'You cannot do that now because there are elections currently ongoing.')
+            messages.error(request, 'You cannot do that now because there are still votes being tracked. There may be '
+                                    'elections still ongoing, or you haven\'t archived the votes yet.')
 
             context = self.display_objects(1)
 
@@ -384,7 +393,7 @@ class VotersView(SysadminView):
 class CandidatesView(SysadminView):
     template_name = 'sysadmin/admin-candidate.html'
 
-    # A convenience function for adding a candida   te
+    # A convenience function for adding a candidate
     @staticmethod
     def add_candidate(voter_id, position_unit, position_name, party):
         # Retrieve the voter
@@ -399,8 +408,17 @@ class CandidatesView(SysadminView):
         else:
             party = Party.objects.get(name=party)
 
-        # Create the candidate
-        Candidate.objects.create(voter=voter, position=position, party=party)
+        # A candidate may only run for a college or batch position in his own college and batch
+        if position.base_position.type == BasePosition.EXECUTIVE \
+                or position.base_position.type == BasePosition.COLLEGE \
+                and position.unit.college.name == voter.college.name \
+                or position.base_position.type == BasePosition.BATCH \
+                and (position.unit.batch == voter.user.username[:3]
+                     and position.unit.college.name == voter.college.name):
+            # Create the candidate
+            Candidate.objects.create(voter=voter, position=position, party=party)
+        else:
+            raise Candidate.DoesNotExist
 
     # A convenience function for adding a take
     @staticmethod
@@ -451,6 +469,8 @@ class CandidatesView(SysadminView):
                 Q(voter__user__username__icontains=query) |
                 Q(voter__user__first_name__icontains=query) |
                 Q(voter__user__last_name__icontains=query) |
+                Q(position__base_position__name__icontains=query) |
+                Q(position__unit__name=query) |
                 Q(party__name__icontains=query)
             ) \
                 .order_by('voter__user__username')
@@ -490,8 +510,8 @@ class CandidatesView(SysadminView):
 
         issue_form = IssueForm(request.POST)
 
-        # Only allow editing while there are no elections ongoing
-        if not ResultsView.is_election_ongoing():
+        # Only allow editing while there are no elections ongoing and there are no votes in the database
+        if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
             if form_type is not False:
                 # The submitted form is for adding a candidate
                 if form_type == 'add-candidate':
@@ -529,7 +549,8 @@ class CandidatesView(SysadminView):
                                 messages.success(request, 'Candidate successfully added.')
                         except IntegrityError:
                             messages.error(request,
-                                           'A candidate with the same position and party has already been added.')
+                                           'A candidate with the same name or position and party has already been added'
+                                           '.')
                         except Voter.DoesNotExist:
                             messages.error(request,
                                            'That student does not exist or has not yet been registered in here.')
@@ -537,6 +558,10 @@ class CandidatesView(SysadminView):
                             messages.error(request, 'That position does not exist.')
                         except Party.DoesNotExist:
                             messages.error(request, 'That party does not exist.')
+                        except Candidate.DoesNotExist:
+                            messages.error(request,
+                                           'A candidate may only run for a college or batch position in his own college'
+                                           ' and batch.')
 
                         context = self.display_objects(1)
 
@@ -687,7 +712,9 @@ class CandidatesView(SysadminView):
 
                 return render(request, self.template_name, context)
         else:
-            messages.error(request, 'You cannot do that now because there are elections currently ongoing.')
+            messages.error(request,
+                           'You cannot do that now because there are still votes being tracked. There may be '
+                           'elections still ongoing, or you haven\'t archived the votes yet.')
 
             context = self.display_objects(1)
 
@@ -747,8 +774,8 @@ class OfficersView(SysadminView):
 
         officer_form = OfficerForm(request.POST)
 
-        # Only allow editing while there are no elections ongoing
-        if not ResultsView.is_election_ongoing():
+        # Only allow editing while there are no elections ongoing and there are no votes in the database
+        if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
             if form_type is not False:
                 if form_type == 'add-officer':
                     # The submitted form is for adding an officer
@@ -830,7 +857,9 @@ class OfficersView(SysadminView):
 
                 return render(request, self.template_name, context)
         else:
-            messages.error(request, 'You cannot do that now because there are elections currently ongoing.')
+            messages.error(request,
+                           'You cannot do that now because there are still votes being tracked. There may be '
+                           'elections still ongoing, or you haven\'t archived the votes yet.')
 
             context = self.display_objects(1)
 
@@ -889,8 +918,8 @@ class UnitView(SysadminView):
 
         unit_form = UnitForm(request.POST)
 
-        # Only allow editing while there are no elections ongoing
-        if not ResultsView.is_election_ongoing():
+        # Only allow editing while there are no elections ongoing and there are no votes in the database
+        if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
             if form_type is not False:
                 if form_type == 'add-unit':
                     # The submitted form is for adding a unit
@@ -963,7 +992,9 @@ class UnitView(SysadminView):
 
                 return render(request, self.template_name, context)
         else:
-            messages.error(request, 'You cannot do that now because there are elections currently ongoing.')
+            messages.error(request,
+                           'You cannot do that now because there are still votes being tracked. There may be '
+                           'elections still ongoing, or you haven\'t archived the votes yet.')
 
             context = self.display_objects(1)
 

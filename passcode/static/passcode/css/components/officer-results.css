@@ -1,13 +1,17 @@
 .col-party {
-    flex-basis: 20%;
+    flex-basis: 30%;
     padding-left: 15%;
 }
 
 .col-name {
-    flex-basis: 25%;
+    flex-basis: 10%;
 }
 
 .col-position {
+    flex-basis: 20%;
+}
+
+.col-unit {
     flex-basis: 20%;
 }
 

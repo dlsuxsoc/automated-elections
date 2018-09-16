@@ -137,8 +137,12 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
 # Session expiry settings
-# Voting session expires in 10 minutes
-# SESSION_COOKIE_AGE = 60 * 10
+# Voting session expires in 30 minutes
+SESSION_COOKIE_AGE = 60 * 30
+
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+SESSION_SAVE_EVERY_REQUEST = True
 
 # Media settings
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

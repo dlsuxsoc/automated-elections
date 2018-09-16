@@ -79,7 +79,7 @@ class VoterLoginView(View):
                                                'You are not eligible for voting.' + (
                                                    ' You have already voted.'
                                                    if voter.voting_status is True else
-                                                   'You aren\'t part of the elections.')
+                                                   ' You aren\'t part of the elections.')
                                                )
 
                                 return render(request, self.template_name)

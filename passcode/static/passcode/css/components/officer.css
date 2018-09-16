@@ -372,7 +372,6 @@ select {
 
 #error {
     color: red;
-    text-transform: uppercase;
     font-size: 1.1rem;
     font-weight: 700;
     margin-left: 10px;
@@ -381,7 +380,6 @@ select {
 
 #success {
     color: green;
-    text-transform: uppercase;
     font-size: 1.1rem;
     font-weight: 700;
     margin-left: 10px;

@@ -47,18 +47,20 @@ class BasePosition(models.Model):
     type = models.CharField(max_length=16, choices=POSITION_TYPES)
 
     def __str__(self):
-        return self.name + '(' + self.type + ')'
+        return self.name + ' (' + self.type + ')'
 
 
 class Position(models.Model):
     base_position = models.ForeignKey(BasePosition, on_delete=models.CASCADE)
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE)
+    identifier = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
 
     class Meta:
         unique_together = ('base_position', 'unit')
 
     def __str__(self):
-        return self.base_position.name + " (" + self.unit.name + ")"
+        return ((self.unit.name + " ")
+                if self.base_position.type != BasePosition.EXECUTIVE else "") + self.base_position.name
 
 
 class Voter(models.Model):
@@ -123,6 +125,7 @@ class Vote(models.Model):
 class VoteSet(models.Model):
     vote = models.ForeignKey(Vote, on_delete=models.CASCADE)
     candidate = models.ForeignKey(Candidate, on_delete=models.CASCADE, null=True)
+    position = models.ForeignKey(Position, on_delete=models.CASCADE, null=True)
 
     def __str__(self):
         return self.vote.voter_id_number + " voted for " \

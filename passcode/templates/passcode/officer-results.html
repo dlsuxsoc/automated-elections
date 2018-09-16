@@ -7,8 +7,10 @@
     <link rel="stylesheet" type="text/css" href="{% static 'passcode/css/components/officer.css' %}"/>
     <link rel="stylesheet" type="text/css" href="{% static 'passcode/css/components/officer-results.css' %}"/>
 
+    <script src="{% static 'passcode/js/Chart.min.js' %}"></script>
+
 </head>
-<body>
+<body {% if identifier %}onload="drawChart('{{ vote_results_json|escapejs }}')" {% endif %}>
 <!-- HEADER BAR THING -->
 <div id="header-container">
     <img id="header-ballot" src="{% static 'passcode/assets/svg/ballot-white.svg' %}">
@@ -126,7 +128,7 @@
                     Total votes as of now
                     <div class="bold">
                         {% if overall_votes or overall_votes == 0 %}
-                            {{ overall_votes }}
+                            {{ overall_votes }}/{{ overall_registered_voters }} ({{ overall_turnout|floatformat:2 }}%)
                         {% else %}
                             N/A
                         {% endif %}
@@ -230,7 +232,7 @@
                         <div class="votes"> votes</div>
                     </button>
                 {% empty %}
-                    No votes yet.
+                    No new votes yet.
                 {% endfor %}
             </div>
 
@@ -278,49 +280,74 @@
             <div class="prohibited">
                 You may not view the results until the elections are done.
             </div>
-        {% endif %}
-        <div class="today-container">
-            <div class="today-stats">
-                <div id="table-container">
-                    <div class="table-row row-0">
-                        <div class="col-party">Government</div>
-                        <div class="col-name">Full Name</div>
-                        <div class="col-position">Position</div>
-                        <div class="col-votes">No. of Votes</div>
+        {% else %}
+            <div class="today-container">
+                <div class="today-stats">
+                    <div class="info-container">
+                        View votes per candidate for the position:
+                        <select id="position-results" class="info-input" onchange="viewVotesForPosition()">
+                            <option disabled="disabled" {% if identifier is False %}selected="selected"{% endif %}>
+                                (select a position)
+                            </option>
+                            {% for position in positions %}
+                                <option value="{{ position.identifier }}"
+                                        {% if identifier|stringformat:"s" == position.identifier|stringformat:"s" %}selected="selected"{% endif %}>
+                                    {{ position }}
+                                </option>
+                            {% endfor %}
+                        </select>
                     </div>
+                    <div id="table-container">
+                        <div class="table-row row-0">
+                            <div class="col-position">Position</div>
+                            <div class="col-unit">Unit</div>
+                            <div class="col-name">Candidate</div>
+                            <div class="col-party">Party</div>
+                            <div class="col-votes">Votes</div>
+                        </div>
 
-                    <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
-                    <div class="table-row row-1">
-                        <div class="col-party">mentgovern</div>
-                        <div class="col-name">namefull</div>
-                        <div class="col-position">tionposi</div>
-                        <div class="col-votes">112</div>
+                        <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
+                        {% if vote_results %}
+                            {% for results in vote_results.values %}
+                                {% for result in results %}
+                                    <div class="table-row {% cycle 'row-1' 'row-2' %}">
+                                        <div class="col-position">{{ result.1 }}</div>
+                                        <div class="col-unit">{{ result.2 }}</div>
+                                        <div class="col-name">{{ result.3 }}</div>
+                                        <div class="col-party">{{ result.4 }}</div>
+                                        <div class="col-votes">{{ result.5 }}</div>
+                                    </div>
+                                {% empty %}
+                                    No candidates have ran for this position.
+                                {% endfor %}
+                            {% endfor %}
+                        {% else %}
+                            Please select a position to see the election results of.
+                        {% endif %}
                     </div>
-
-                    <div class="table-row row-2">
-                        <div class="col-party">ornament</div>
-                        <div class="col-name">not a name</div>
-                        <div class="col-position">dog</div>
-                        <div class="col-votes">667</div>
-                    </div>
-
-                    <div class="table-row row-1">
-                        <div class="col-party">mentgovern</div>
-                        <div class="col-name">namefull</div>
-                        <div class="col-position">tionposi</div>
-                        <div class="col-votes">112</div>
-                    </div>
-
-                    <div class="table-row row-2">
-                        <div class="col-party">ornament</div>
-                        <div class="col-name">not a name</div>
-                        <div class="col-position">dog</div>
-                        <div class="col-votes">667</div>
-                    </div>
-
+                    <canvas id="piechart">
+                    </canvas>
+                    <form method="POST" action="">
+                        <div class="controls-instruction">
+                            Once you're done viewing the election results, reenter your password and click the
+                            <b>archive button</b> to <b>archive</b> the results in a CSV file. Archiving the results
+                            will also clear <i>all</i> votes, voters, candidates, positions, and issues from this
+                            website.
+                        </div>
+                        <div class="controls">
+                            <label class="info-label" for="reauth-archive">Reenter your password</label>
+                            <br>
+                            <input id="reauth-archive" class="password-reauth" type="password" name="reauth-archive"
+                                   required="required">
+                            <br>
+                            <input class="button {% if election_ongoing is False %}confirm{% else %}confirm-negative{% endif %}"
+                                   type="submit"
+                                   value="Archive election results">
+                        </div>
+                    </form>
                 </div>
             </div>
-        </div>
+        {% endif %}
 
         <div id="logo">
             <img width=500 height=50 src="{% static 'passcode/assets/svg/org-logos.svg' %}">
