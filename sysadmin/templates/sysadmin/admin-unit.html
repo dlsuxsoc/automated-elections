@@ -16,7 +16,8 @@
     <a href="{% url 'sysadmin:voters' %}">Voters List</a>
     <a href="{% url 'sysadmin:candidates' %}">Candidates List</a>
     <a href="{% url 'sysadmin:officers' %}">Comelec Officers</a>
-    <a href="{% url 'sysadmin:unit' %}" id="selected">Units</a>
+    <a href="{% url 'sysadmin:units' %}" id="selected">Units</a>
+    <a href="{% url 'sysadmin:positions' %}">Positions</a>
     <div id="user-container">
         <img id="user-icon" src="{% static 'sysadmin/assets/svg/user.svg' %}">
         <div id="user-name"> {{ user.first_name }} {{ user.last_name }}</div>
@@ -32,7 +33,7 @@
 
     <!-- SEARCH BAR AND DESELECT-DELETE TAKE UP THE SAME SPOT. THEY ARE ACTIVATED AND DEACTIVATED RESPECTIVELY-->
     <form action="" id="tab-search">
-        <input id="search" type="text" name="query" placeholder="Search a unit...">
+        <input id="search" type="text" name="query" placeholder="Search for a unit...">
     </form>
 
     <!-- DESELECT-DELETE -->
@@ -72,13 +73,11 @@
                     <div class="col-checkbox"><input type="checkbox" name="check" value="{{ unit.id }}"
                                                      onclick="selected(this)"></div>
                     <div class="col-college">
-                        <div class="name">
-                            {% if unit.college is None %}
-                                None
-                            {% else %}
-                                {{ unit.college.name }}
-                            {% endif %}
-                        </div>
+                        {% if unit.college is None %}
+                            None
+                        {% else %}
+                            {{ unit.college.name }}
+                        {% endif %}
                     </div>
                     <div class="col-batch">{{ unit.batch }}</div>
                     <div class="col-unit">{{ unit.name }}</div>

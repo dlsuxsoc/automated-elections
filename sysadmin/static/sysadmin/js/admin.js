@@ -198,6 +198,32 @@ function delete_units() {
     delete_form.submit();
 }
 
+function delete_positions() {
+    // Collect all checked checkboxes
+    var array = [];
+    var checkboxes = document.querySelectorAll("input[type=checkbox][name=check]:checked");
+
+    for (var i = 0; i < checkboxes.length; i++) {
+        array.push(checkboxes[i].value);
+    }
+
+    // Delete all of them by adding them to a form
+    delete_form = document.getElementById("delete-positions");
+
+    for (var i = 0; i < array.length; i++) {
+        hidden = document.createElement("input");
+
+        hidden.setAttribute("type", "hidden");
+        hidden.setAttribute("name", "positions");
+        hidden.setAttribute("value", array[i]);
+
+        delete_form.appendChild(hidden);
+    }
+
+    // Then activate that form
+    delete_form.submit();
+}
+
 function set_take(csrf_token) {
     // Get the candidate dropdown
     var candidateDropdown = document.getElementById("candidate-dropdown");

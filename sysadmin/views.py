@@ -12,7 +12,7 @@ from django.shortcuts import render
 from django.views import View
 
 from passcode.views import PasscodeView, ResultsView
-from sysadmin.forms import IssueForm, OfficerForm, UnitForm
+from sysadmin.forms import IssueForm, OfficerForm, UnitForm, PositionForm
 from vote.models import Voter, College, Candidate, Position, Unit, Party, Issue, Take, BasePosition
 
 
@@ -890,8 +890,6 @@ class UnitView(SysadminView):
             ) \
                 .order_by('college', 'batch', 'name')
 
-        colleges = College.objects.all().order_by('name')
-
         paginator = Paginator(units, self.objects_per_page)
         paginated_units = paginator.get_page(page)
 
@@ -899,7 +897,6 @@ class UnitView(SysadminView):
 
         context = {
             'units': paginated_units,
-            'colleges': colleges,
             'unit_form': unit_form
         }
 
@@ -962,7 +959,138 @@ class UnitView(SysadminView):
                             # If the unit does not exist
                             messages.error(request,
                                            'One of the selected units has not existed in the first place. '
-                                           'No unit were deleted.')
+                                           'No units were deleted.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                    else:
+                        # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                        # message
+                        messages.error(request, 'Invalid request.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                else:
+                    # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                    # message
+                    messages.error(request, 'Invalid request.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+            else:
+                # If no objects are received, it's an invalid request, so stay on the page and then show an error
+                # message
+                messages.error(request, 'Invalid request.')
+
+                context = self.display_objects(1)
+
+                return render(request, self.template_name, context)
+        else:
+            messages.error(request,
+                           'You cannot do that now because there are still votes being tracked. There may be '
+                           'elections still ongoing, or you haven\'t archived the votes yet.')
+
+            context = self.display_objects(1)
+
+            return render(request, self.template_name, context)
+
+
+class PositionView(SysadminView):
+    template_name = 'sysadmin/admin-position.html'
+
+    # A convenience function for deleting a position
+    @staticmethod
+    def delete_position(position_id):
+        # Retrieve the position
+        position = Position.objects.get(id=position_id)
+
+        # Get rid of that position
+        position.delete()
+
+    def display_objects(self, page, query=False):
+        # Show everything if the query is empty
+        if query is False:
+            positions = Position.objects.all().order_by('base_position__name', 'unit__name')
+        else:
+            positions = Position.objects.filter(
+                Q(base_position__name__icontains=query) |
+                Q(unit__name__icontains=query)
+            ) \
+                .order_by('base_position__name', 'unit__name')
+
+        paginator = Paginator(positions, self.objects_per_page)
+        paginated_positions = paginator.get_page(page)
+
+        position_form = PositionForm()
+
+        context = {
+            'positions': paginated_positions,
+            'position_form': position_form
+        }
+
+        return context
+
+    def get(self, request):
+        page = request.GET.get('page', False)
+        query = request.GET.get('query', False)
+
+        context = self.display_objects(page if page is not False else 1, query)
+
+        return render(request, self.template_name, context)
+
+    def post(self, request):
+        form_type = request.POST.get('form-type', False)
+
+        position_form = PositionForm(request.POST)
+
+        # Only allow editing while there are no elections ongoing and there are no votes in the database
+        if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
+            if form_type is not False:
+                if form_type == 'add-position':
+                    # The submitted form is for adding a position
+                    if position_form.is_valid():
+                        with transaction.atomic():
+                            # Save the form to the database if it is valid
+                            position_form.save()
+
+                            messages.success(request, 'Position successfully added.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                    else:
+                        # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                        # message
+                        messages.error(request, 'Could not add this position.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                elif form_type == 'delete-position':
+                    # The submitted form is for deleting positions
+                    positions_list = request.POST.getlist('positions')
+
+                    if positions_list is not False and len(positions_list) > 0:
+                        try:
+                            positions_deleted = 0
+
+                            # Try to delete each position in the list
+                            with transaction.atomic():
+                                for position in positions_list:
+                                    self.delete_position(position)
+
+                                    positions_deleted += 1
+
+                                messages.success(request,
+                                                 "All {0} position(s) successfully deleted.".format(positions_deleted))
+                        except Position.DoesNotExist:
+                            # If the position does not exist
+                            messages.error(request,
+                                           'One of the selected positions has not existed in the first place. '
+                                           'No positions were deleted.')
 
                         context = self.display_objects(1)
 

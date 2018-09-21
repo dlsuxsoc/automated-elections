@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 
-from vote.models import Issue, Unit
+from vote.models import Issue, Unit, Position
 
 
 class IssueForm(forms.ModelForm):
@@ -45,6 +45,20 @@ class UnitForm(forms.ModelForm):
                 attrs={'class': 'info-input', 'placeholder': 'Batch'}),
             'name': forms.TextInput(
                 attrs={'class': 'info-input', 'placeholder': 'Unit name', 'required': 'required'}),
+        }
+
+        fields = '__all__'
+
+
+class PositionForm(forms.ModelForm):
+    class Meta:
+        model = Position
+
+        widgets = {
+            'base_position': forms.Select(
+                attrs={'class': 'info-input', 'required': 'required'}),
+            'unit': forms.Select(
+                attrs={'class': 'info-input', 'required': 'required'}),
         }
 
         fields = '__all__'
