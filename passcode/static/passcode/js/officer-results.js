@@ -60,6 +60,8 @@ function drawChart(results) {
         let ctx = canvas.getContext('2d');
 
         // Draw the chart
+        Chart.defaults.global.defaultFontFamily = "Opensans";
+
         new Chart(ctx, {
             type: 'pie',
             data: {
@@ -68,25 +70,32 @@ function drawChart(results) {
                     label: 'Votes',
                     data: votes,
                     backgroundColor: [
-                        'rgba(255, 99, 132, 1.0)',
-                        'rgba(54, 162, 235, 1.0)',
-                        'rgba(255, 206, 86, 1.0)',
-                        'rgba(75, 192, 192, 1.0)',
-                        'rgba(153, 102, 255, 1.0)',
-                        'rgba(255, 159, 64, 1.0)'
+                        'rgba(54, 164, 114, 1.0)',
+                        'rgba(53, 53, 53, 1.0)',
+                        'rgba(60, 110, 113, 1.0)',
+                        'rgba(164, 145, 211, 1.0)',
+                        'rgba(197, 220, 160, 1.0)',
+                        'rgba(162, 215, 41, 1.0)'
                     ],
                     borderColor: [
-                        'rgba(255, 99, 132, 1.0)',
-                        'rgba(54, 162, 235, 1.0)',
-                        'rgba(255, 206, 86, 1.0)',
-                        'rgba(75, 192, 192, 1.0)',
-                        'rgba(153, 102, 255, 1.0)',
-                        'rgba(255, 159, 64, 1.0)'
+                        'rgba(54, 164, 114, 1.0)',
+                        'rgba(53, 53, 53, 1.0)',
+                        'rgba(60, 110, 113, 1.0)',
+                        'rgba(164, 145, 211, 1.0)',
+                        'rgba(197, 220, 160, 1.0)',
+                        'rgba(162, 215, 41, 1.0)'
                     ],
                     borderWidth: 1
                 }]
             },
-            options: {}
+            options: {
+                responsive: true,
+                title: {
+                    display: true,
+                    text: 'Voting results',
+                    fontSize: 20
+                }
+            }
         });
     } else {
         // Forget about it
@@ -94,4 +103,4 @@ function drawChart(results) {
     }
 }
 
-document.getElementById("tab-controls").click();
+document.getElementById("tab-underview").click();
