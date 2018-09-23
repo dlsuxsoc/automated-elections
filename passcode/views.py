@@ -1,4 +1,5 @@
 # Create your views here.
+import csv
 import datetime
 import json
 from random import randint
@@ -12,13 +13,13 @@ from django.contrib.sessions.models import Session
 from django.core.paginator import Paginator
 from django.db import transaction, IntegrityError, connection
 from django.db.models import Q
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from django.utils import timezone
 from django.views import View
 
 # Test function for this view
-from vote.models import Voter, College, Candidate, ElectionStatus, Vote, Position
+from vote.models import Voter, College, Candidate, ElectionStatus, Vote, Position, Issue, BasePosition, Unit
 
 
 def officer_test_func(user):
@@ -456,7 +457,7 @@ class ResultsView(OfficerView):
             positions = Position.objects.all().order_by('base_position__name', 'unit__college__name', 'unit__name')
 
             if query is not False:
-                # Count all candidates by position
+                # Count the votes of all candidates by position
                 TOTAL_VOTES_QUERY = (
                     "WITH all_candidates AS (\n"
                     "	SELECT\n"
@@ -479,7 +480,6 @@ class ResultsView(OfficerView):
                     "),\n"
                     "raw_count_position AS (\n"
                     "	SELECT\n"
-                    "		p.identifier AS 'Identifier',\n"
                     "		bp.name AS 'Position',\n"
                     "		u.name AS 'Unit',\n"
                     "		ac.'CandidateID' AS 'CandidateID',\n"
@@ -492,12 +492,13 @@ class ResultsView(OfficerView):
                     "		vote_baseposition bp ON p.base_position_id = bp.id\n"
                     "	LEFT JOIN\n"
                     "		vote_unit u ON p.unit_id = u.id\n"
+                    "	WHERE\n"
+                    "		p.identifier = %s\n"
                     "	GROUP BY\n"
                     "		ac.'PositionID', ac.'CandidateID'\n"
                     "),\n"
                     "candidate_name AS (\n"
                     "	SELECT\n"
-                    "		rcp.'Identifier',\n"
                     "		rcp.'Position',\n"
                     "		rcp.'Unit',\n"
                     "		IFNULL(u.first_name || ' ' || u.last_name, '(abstained)') AS 'Candidate',\n"
@@ -516,7 +517,6 @@ class ResultsView(OfficerView):
                     "),\n"
                     "party_name AS (\n"
                     "	SELECT\n"
-                    "		cn.'Identifier' AS 'Identifier',\n"
                     "		cn.'Position' AS 'Position',\n"
                     "		cn.'Unit' AS 'Unit',\n"
                     "		cn.'Candidate' AS 'Candidate',\n"
@@ -529,7 +529,6 @@ class ResultsView(OfficerView):
                     "		candidate_name cn\n"
                     ")\n"
                     "SELECT\n"
-                    "	pn.'Identifier' AS 'Identifier',\n"
                     "	pn.'Position' AS 'Position',\n"
                     "	pn.'Unit' AS 'Unit',\n"
                     "	pn.'Candidate' AS 'Candidate',\n"
@@ -537,8 +536,6 @@ class ResultsView(OfficerView):
                     "	pn.'Votes' AS 'Votes'\n"
                     "FROM\n"
                     "	party_name pn\n"
-                    "WHERE\n"
-                    "	pn.'Identifier' = %s\n"
                     "ORDER BY\n"
                     "	pn.'Position',\n"
                     "	pn.'Unit',\n"
@@ -560,7 +557,9 @@ class ResultsView(OfficerView):
                 vote_results_json = {}
 
                 for result in vote_results[query]:
-                    vote_results_json[result[3]] = result[5]
+                    print(result)
+
+                    vote_results_json[result[2]] = result[4]
 
                 vote_results_json = json.dumps(vote_results_json)
 
@@ -904,6 +903,161 @@ class ResultsView(OfficerView):
                 context = self.display_objects(1)
 
                 return render(request, self.template_name, context)
+            elif form_type == 'archive':
+                # If there are elections ongoing, no archiving may be done yet
+                if self.is_election_ongoing():
+                    messages.error(request, 'You may not archive while the elections are ongoing.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+                elif self.is_votes_empty():
+                    # If there no votes to archive, what's the point?
+                    messages.error(request,
+                                   'There aren\'t any election results to archive yet.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+                else:
+                    # The submitted form is for archiving the election results
+                    # Only continue if the re-authentication password indeed matches the password of the current
+                    # COMELEC officer
+                    reauth_password = request.POST.get('reauth-archive', False)
+
+                    if reauth_password is False \
+                            or authenticate(username=request.user.username, password=reauth_password) is None:
+                        messages.error(request,
+                                       'The election results weren\'t archived because the password was incorrect. '
+                                       'Try again.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                    else:
+                        with transaction.atomic():
+                            # Count the votes of all candidates
+                            TOTAL_VOTES_QUERY = (
+                                "WITH all_candidates AS (\n"
+                                "	SELECT\n"
+                                "		c.id AS 'CandidateID',\n"
+                                "		c.position_id AS 'PositionID',\n"
+                                "		IFNULL(vs.position_id, NULL) AS 'HasBeenVoted'\n"
+                                "	FROM\n"
+                                "		vote_candidate c\n"
+                                "	LEFT JOIN\n"
+                                "		vote_voteset vs ON c.id = vs.candidate_id\n"
+                                "	UNION ALL\n"
+                                "	SELECT\n"
+                                "		vs.candidate_id AS 'CandidateID',\n"
+                                "		vs.position_id AS 'PositionID',\n"
+                                "		IFNULL(vs.position_id, NULL) AS 'HasBeenVoted'\n"
+                                "	FROM\n"
+                                "		vote_voteset vs\n"
+                                "	WHERE\n"
+                                "		vs.candidate_id IS NULL\n"
+                                "),\n"
+                                "raw_count_position AS (\n"
+                                "	SELECT\n"
+                                "		bp.name AS 'Position',\n"
+                                "		u.name AS 'Unit',\n"
+                                "		ac.'CandidateID' AS 'CandidateID',\n"
+                                "		COUNT(ac.'HasBeenVoted') AS 'Votes'\n"
+                                "	FROM\n"
+                                "		all_candidates ac\n"
+                                "	LEFT JOIN\n"
+                                "		vote_position p ON ac.'PositionID' = p.id\n"
+                                "	LEFT JOIN\n"
+                                "		vote_baseposition bp ON p.base_position_id = bp.id\n"
+                                "	LEFT JOIN\n"
+                                "		vote_unit u ON p.unit_id = u.id\n"
+                                "	GROUP BY\n"
+                                "		ac.'PositionID', ac.'CandidateID'\n"
+                                "),\n"
+                                "candidate_name AS (\n"
+                                "	SELECT\n"
+                                "		rcp.'Position',\n"
+                                "		rcp.'Unit',\n"
+                                "		IFNULL(u.first_name || ' ' || u.last_name, '(abstained)') AS 'Candidate',\n"
+                                "		p.name AS 'Party',\n"
+                                "		rcp.'Votes'\n"
+                                "	FROM\n"
+                                "		raw_count_position rcp\n"
+                                "	LEFT JOIN\n"
+                                "		vote_candidate c ON rcp.'CandidateID' = c.id\n"
+                                "	LEFT JOIN\n"
+                                "		vote_voter v ON c.voter_id = v.id\n"
+                                "	LEFT JOIN\n"
+                                "		auth_user u ON v.user_id = u.id\n"
+                                "	LEFT JOIN\n"
+                                "		vote_party p ON c.party_id = p.id\n"
+                                "),\n"
+                                "party_name AS (\n"
+                                "	SELECT\n"
+                                "		cn.'Position' AS 'Position',\n"
+                                "		cn.'Unit' AS 'Unit',\n"
+                                "		cn.'Candidate' AS 'Candidate',\n"
+                                "		CASE cn.'Candidate'\n"
+                                "			WHEN '(abstained)' THEN '(abstained)'\n"
+                                "			ELSE IFNULL(cn.'Party', 'Independent')\n"
+                                "		END AS 'Party',\n"
+                                "		cn.'Votes' AS 'Votes'\n"
+                                "	FROM\n"
+                                "		candidate_name cn\n"
+                                ")\n"
+                                "SELECT\n"
+                                "	pn.'Position' AS 'Position',\n"
+                                "	pn.'Unit' AS 'Unit',\n"
+                                "	pn.'Candidate' AS 'Candidate',\n"
+                                "	pn.'Party' AS 'Party',\n"
+                                "	pn.'Votes' AS 'Votes'\n"
+                                "FROM\n"
+                                "	party_name pn\n"
+                                "ORDER BY\n"
+                                "	pn.'Position',\n"
+                                "	pn.'Unit',\n"
+                                "	pn.'Votes' DESC,\n"
+                                "	pn.'Candidate';\n"
+                            )
+
+                            vote_results = {}
+
+                            with connection.cursor() as cursor:
+                                cursor.execute(TOTAL_VOTES_QUERY, [])
+
+                                columns = [col[0] for col in cursor.description]
+                                vote_results['results'] = cursor.fetchall()
+
+                            # Create a response object, and classify it as a CSV response
+                            response = HttpResponse(content_type='text/csv')
+                            response['Content-Disposition'] = 'attachment; filename="results.csv"'
+
+                            # Then write the results to a CSV file
+                            writer = csv.writer(response)
+
+                            writer.writerow(columns)
+
+                            for row in vote_results['results']:
+                                writer.writerow(list(row))
+
+                            # Clear all users who are voters
+                            # This also clears the following tables: voters, candidates, takes, vote set
+                            User.objects.filter(groups__name='voter').delete()
+
+                            # Clear all issues
+                            Issue.objects.all().delete()
+
+                            # Clear all votes
+                            Vote.objects.all().delete()
+
+                            # Clear all batch positions
+                            Position.objects.filter(base_position__type=BasePosition.BATCH).delete()
+
+                            # Clear all batch units
+                            Unit.objects.filter(college__isnull=False, batch__isnull=False)
+
+                            # Show a Save As box so the user may download it
+                            return response
             else:
                 # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
                 # message
