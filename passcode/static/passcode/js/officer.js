@@ -93,6 +93,14 @@ function edit_voter(src, csrf_token, voter, page) {
     ajaxVoter(csrf_token, voter, page);
 }
 
+function resetField() {
+    var options = document.getElementById("edit-eligibility-status");
+
+    for (var i = 0, l = options.length; i < l; i++) {
+        options[i].selected = options[i].defaultSelected;
+    }
+}
+
 function delete_voters() {
     // Collect all checked checkboxes
     var array = [];

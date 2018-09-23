@@ -42,7 +42,7 @@
     <form action="" id="delete-units" method="POST">
         {% csrf_token %}
         <input type="hidden" name="form-type" value="delete-unit">
-        <button type="button" onclick="delete_units()" id="delete">Delete Selected Positions(s)</button>
+        <button type="button" onclick="delete_positions()" id="delete">Delete Selected Positions(s)</button>
     </form>
     <!--</div>-->
 </div>
@@ -112,7 +112,6 @@
         </div>
 
         <div class="info-buttons-container">
-            <button class="button cancel">Cancel</button>
             <!-- SUBMIT BUTTON FOR THE TAB -->
             <input class="button confirm" type="submit" value="Add new position">
         </div>
