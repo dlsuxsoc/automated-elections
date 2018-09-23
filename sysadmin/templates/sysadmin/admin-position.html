@@ -18,6 +18,7 @@
     <a href="{% url 'sysadmin:officers' %}">Comelec Officers</a>
     <a href="{% url 'sysadmin:units' %}">Units</a>
     <a href="{% url 'sysadmin:positions' %}" id="selected">Positions</a>
+    <a href="{% url 'sysadmin:issues' %}">Issues</a>
     <div id="user-container">
         <img id="user-icon" src="{% static 'sysadmin/assets/svg/user.svg' %}">
         <div id="user-name"> {{ user.first_name }} {{ user.last_name }}</div>
@@ -39,9 +40,9 @@
     <!-- DESELECT-DELETE -->
     <!--<div id="deselect-delete">
         <button id="deselect">Deselect All</button>-->
-    <form action="" id="delete-units" method="POST">
+    <form action="" id="delete-positions" method="POST">
         {% csrf_token %}
-        <input type="hidden" name="form-type" value="delete-unit">
+        <input type="hidden" name="form-type" value="delete-position">
         <button type="button" onclick="delete_positions()" id="delete">Delete Selected Positions(s)</button>
     </form>
     <!--</div>-->

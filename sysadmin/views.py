@@ -483,15 +483,12 @@ class CandidatesView(SysadminView):
         paginator = Paginator(candidates, self.objects_per_page)
         paginated_candidates = paginator.get_page(page)
 
-        issue_form = IssueForm()
-
         context = {
             'candidates': paginated_candidates,
             'voters': voters,
             'positions': positions,
             'parties': parties,
             'issues': issues,
-            'issue_form': issue_form,
             'candidates_all': candidates
         }
 
@@ -1091,6 +1088,133 @@ class PositionView(SysadminView):
                             messages.error(request,
                                            'One of the selected positions has not existed in the first place. '
                                            'No positions were deleted.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                    else:
+                        # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                        # message
+                        messages.error(request, 'Invalid request.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                else:
+                    # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                    # message
+                    messages.error(request, 'Invalid request.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+            else:
+                # If no objects are received, it's an invalid request, so stay on the page and then show an error
+                # message
+                messages.error(request, 'Invalid request.')
+
+                context = self.display_objects(1)
+
+                return render(request, self.template_name, context)
+        else:
+            messages.error(request,
+                           'You cannot do that now because there are still votes being tracked. There may be '
+                           'elections still ongoing, or you haven\'t archived the votes yet.')
+
+            context = self.display_objects(1)
+
+            return render(request, self.template_name, context)
+
+
+class IssueView(SysadminView):
+    template_name = 'sysadmin/admin-issue.html'
+
+    # A convenience function for deleting an issue
+    @staticmethod
+    def delete_issue(issue_id):
+        # Retrieve the issue
+        issue = Issue.objects.get(id=issue_id)
+
+        # Get rid of that issue
+        issue.delete()
+
+    def display_objects(self, page, query=False):
+        # Show everything if the query is empty
+        if query is False:
+            issues = Issue.objects.all().order_by('name')
+        else:
+            issues = Issue.objects.filter(name__icontains=query).order_by('name')
+
+        paginator = Paginator(issues, self.objects_per_page)
+        paginated_issues = paginator.get_page(page)
+
+        issue_form = IssueForm()
+
+        context = {
+            'issues': paginated_issues,
+            'issue_form': issue_form
+        }
+
+        return context
+
+    def get(self, request):
+        page = request.GET.get('page', False)
+        query = request.GET.get('query', False)
+
+        context = self.display_objects(page if page is not False else 1, query)
+
+        return render(request, self.template_name, context)
+
+    def post(self, request):
+        form_type = request.POST.get('form-type', False)
+
+        issue_form = IssueForm(request.POST)
+
+        # Only allow editing while there are no elections ongoing and there are no votes in the database
+        if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
+            if form_type is not False:
+                if form_type == 'add-issue':
+                    # The submitted form is for adding an issue
+                    if issue_form.is_valid():
+                        with transaction.atomic():
+                            # Save the form to the database if it is valid
+                            issue_form.save()
+
+                            messages.success(request, 'Issue successfully added.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                    else:
+                        # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                        # message
+                        messages.error(request, 'Could not add this issue.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                elif form_type == 'delete-position':
+                    # The submitted form is for deleting issues
+                    issues_list = request.POST.getlist('issues')
+
+                    if issues_list is not False and len(issues_list) > 0:
+                        try:
+                            issues_deleted = 0
+
+                            # Try to delete each issue in the list
+                            with transaction.atomic():
+                                for issue in issues_list:
+                                    self.delete_issue(issue)
+
+                                    issues_deleted += 1
+
+                                messages.success(request,
+                                                 "All {0} issue(s) successfully deleted.".format(issues_deleted))
+                        except Issue.DoesNotExist:
+                            # If the position does not exist
+                            messages.error(request,
+                                           'One of the selected issues has not existed in the first place. '
+                                           'No issues were deleted.')
 
                         context = self.display_objects(1)
 

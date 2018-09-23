@@ -18,6 +18,7 @@
     <a href="{% url 'sysadmin:officers' %}">Comelec Officers</a>
     <a href="{% url 'sysadmin:units' %}">Units</a>
     <a href="{% url 'sysadmin:positions' %}">Positions</a>
+    <a href="{% url 'sysadmin:issues' %}">Issues</a>
     <div id="user-container">
         <img id="user-icon" src="{% static 'sysadmin/assets/svg/user.svg' %}">
         <div id="user-name"> {{ user.first_name }} {{ user.last_name }}</div>
@@ -29,7 +30,6 @@
 <div id="tab-buttons-container">
     <button class="tab-buttons" onclick="openTab(event, 'All')" id="tab-all">See all candidates</button>
     <button class="tab-buttons" onclick="openTab(event, 'Add')" id="tab-add">Add a candidate</button>
-    <button class="tab-buttons" onclick="openTab(event, 'Issue')" id="tab-add-issue">Add issue</button>
     <button class="tab-buttons" onclick="openTab(event, 'Edit')" id="tab-edit-take">Edit takes</button>
 
     <!-- SEARCH BAR AND DESELECT-DELETE TAKE UP THE SAME SPOT. THEY ARE ACTIVATED AND DEACTIVATED RESPECTIVELY-->
@@ -157,26 +157,6 @@
     </form>
 
     <!-- THIRD TAB (FORM TAB)-->
-    <form action="" id="Issue" class="tab-content" method="POST">
-        <div class="issue-container">
-            {% csrf_token %}
-            <input type="hidden" name="form-type" value="add-issue">
-            {% if issue_form %}
-                {% for field in issue_form %}
-                    <div class="info-container">
-                        <div class="info-label">{{ field.label }}</div>
-                        {{ field }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-        </div>
-        <div class="info-buttons-container">
-            <button class="button cancel">Cancel</button>
-            <!-- SUBMIT BUTTON FOR THE TAB -->
-            <input class="button confirm" type="submit" value="Save Changes">
-        </div>
-    </form>
-    <!-- FOURTH TAB (FORM TAB)-->
     <form action="" id="Edit" class="tab-content" method="POST">
         {% csrf_token %}
         <input type="hidden" name="form-type" value="change-take">

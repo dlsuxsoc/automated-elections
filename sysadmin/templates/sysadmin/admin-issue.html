@@ -6,7 +6,7 @@
 
     <!-- CSS LINKS -->
     <link rel="stylesheet" type="text/css" href="{% static 'sysadmin/css/components/admin.css' %}"/>
-    <link rel="stylesheet" type="text/css" href="{% static 'sysadmin/css/components/admin-unit.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'sysadmin/css/components/admin-issue.css' %}"/>
 
 </head>
 <body>
@@ -16,9 +16,9 @@
     <a href="{% url 'sysadmin:voters' %}">Voters List</a>
     <a href="{% url 'sysadmin:candidates' %}">Candidates List</a>
     <a href="{% url 'sysadmin:officers' %}">Comelec Officers</a>
-    <a href="{% url 'sysadmin:units' %}" id="selected">Units</a>
+    <a href="{% url 'sysadmin:units' %}">Units</a>
     <a href="{% url 'sysadmin:positions' %}">Positions</a>
-    <a href="{% url 'sysadmin:issues' %}">Issues</a>
+    <a href="{% url 'sysadmin:issues' %}" id="selected">Issues</a>
     <div id="user-container">
         <img id="user-icon" src="{% static 'sysadmin/assets/svg/user.svg' %}">
         <div id="user-name"> {{ user.first_name }} {{ user.last_name }}</div>
@@ -29,21 +29,21 @@
 
 <!-- TABS BUTTONS TO TRAVERSE THE DIFF SECTIONS -->
 <div id="tab-buttons-container">
-    <button class="tab-buttons" onclick="openTab(event, 'All')" id="tab-all">See all units</button>
-    <button class="tab-buttons" onclick="openTab(event, 'Add')" id="tab-add">Add a unit</button>
+    <button class="tab-buttons" onclick="openTab(event, 'All')" id="tab-all">See all issues</button>
+    <button class="tab-buttons" onclick="openTab(event, 'Add')" id="tab-add">Add an issue</button>
 
     <!-- SEARCH BAR AND DESELECT-DELETE TAKE UP THE SAME SPOT. THEY ARE ACTIVATED AND DEACTIVATED RESPECTIVELY-->
     <form action="" id="tab-search">
-        <input id="search" type="text" name="query" placeholder="Search for a unit...">
+        <input id="search" type="text" name="query" placeholder="Search for an issue">
     </form>
 
     <!-- DESELECT-DELETE -->
     <!--<div id="deselect-delete">
         <button id="deselect">Deselect All</button>-->
-    <form action="" id="delete-units" method="POST">
+    <form action="" id="delete-issues" method="POST">
         {% csrf_token %}
-        <input type="hidden" name="form-type" value="delete-unit">
-        <button type="button" onclick="delete_units()" id="delete">Delete Selected Unit(s)</button>
+        <input type="hidden" name="form-type" value="delete-issue">
+        <button type="button" onclick="delete_issues()" id="delete">Delete Selected Issues(s)</button>
     </form>
     <!--</div>-->
 </div>
@@ -63,40 +63,30 @@
             <!-- FIRST ROW IS HEADER/TITLE ROW. -->
             <div class="table-row row-0">
                 <div class="col-checkbox"><input type="checkbox" id="toggle-all" onclick="toggle(this)"></div>
-                <div class="col-college">College</div>
-                <div class="col-batch">Batch</div>
-                <div class="col-unit">Unit Name</div>
+                <div class="col-name">Issue</div>
             </div>
 
             <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
-            {% for unit in units %}
+            {% for issue in issues %}
                 <div class="table-row {% cycle 'row-1' 'row-2' %}">
-                    <div class="col-checkbox"><input type="checkbox" name="check" value="{{ unit.id }}"
+                    <div class="col-checkbox"><input type="checkbox" name="check" value="{{ issue.id }}"
                                                      onclick="selected(this)"></div>
-                    <div class="col-college">
-                        {% if unit.college is None %}
-                            None
-                        {% else %}
-                            {{ unit.college.name }}
-                        {% endif %}
-                    </div>
-                    <div class="col-batch">{{ unit.batch }}</div>
-                    <div class="col-unit">{{ unit.name }}</div>
+                    <div class="col-name">{{ issue.name }}</div>
                 </div>
             {% endfor %}
         </div>
 
         <div class="pagination">
             <span class="step-links">
-                {% if units.has_previous %}
+                {% if issues.has_previous %}
                     <a href="?page=1{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">&laquo; first</a>
-                    <a href="?page={{ units.previous_page_number }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">previous</a>
+                    <a href="?page={{ issues.previous_page_number }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">previous</a>
                 {% endif %}
-                <span class="current">Page {{ units.number }} of {{ units.paginator.num_pages }}.</span>
+                <span class="current">Page {{ issues.number }} of {{ issues.paginator.num_pages }}.</span>
 
-                {% if units.has_next %}
-                    <a href="?page={{ units.next_page_number }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">next</a>
-                    <a href="?page={{ units.paginator.num_pages }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">last &raquo;</a>
+                {% if issues.has_next %}
+                    <a href="?page={{ issues.next_page_number }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">next</a>
+                    <a href="?page={{ issues.paginator.num_pages }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">last &raquo;</a>
                 {% endif %}
             </span>
         </div>
@@ -107,9 +97,9 @@
 
         <div class="info-fields-container">
             {% csrf_token %}
-            <input type="hidden" name="form-type" value="add-unit">
-            {% if unit_form %}
-                {% for field in unit_form %}
+            <input type="hidden" name="form-type" value="add-issue">
+            {% if issue_form %}
+                {% for field in issue_form %}
                     <div class="info-container">
                         <div class="info-label">{{ field.label }}</div>
                         {{ field }}
@@ -120,7 +110,7 @@
 
         <div class="info-buttons-container">
             <!-- SUBMIT BUTTON FOR THE TAB -->
-            <input class="button confirm" type="submit" value="Add new unit">
+            <input class="button confirm" type="submit" value="Add new issue">
         </div>
     </form>
 
@@ -134,5 +124,3 @@
 <!-- JAVASCRIPT LINK-->
 <script src="{% static 'sysadmin/js/admin.js' %}"></script>
 </html>
-
-
