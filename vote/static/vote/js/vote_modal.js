@@ -1,26 +1,34 @@
-// TODO: Revise once voting is avaialble
-function showVote() {
+function showVote(positions) {
+    // Remember the "voteable" positions
+    positions = JSON.parse(positions);
+
+    // For each position, collect each vote, if any
+    for (let index = 0; index < positions.length; index++) {
+        // Check if the input with this position is checked
+        // Get that input
+        selector = 'input[name="' + positions[index] + '"]:checked';
+        element = document.querySelector(selector);
+
+        // If it is indeed checked, get the candidate name from the parent of that input
+        candidateName = '';
+
+        if (element != null) {
+            inputParent = element.parentElement.getElementsByClassName('candidate-name')[0];
+            candidateName = inputParent.innerHTML;
+        } else {
+            // If no input has been checked, it means the voter has abstained on that position
+            candidateName = "(abstained)";
+        }
+
+        // Put the candidate name in the summary modal
+        selector = positions[index] + '-summary';
+        summary = document.getElementById(selector);
+
+        summary.innerHTML = candidateName;
+    }
+
+    // Show the summary modal
     document.getElementById('vote-modal').style.display = "block";
-
-    let batchPresident = document.querySelector('input[name="batch-president"]:checked');
-    let batchVicePresident = document.querySelector('input[name="batch-vice-president"]:checked');
-    let laRepresentative = document.querySelector('input[name="legislative-assembly-representative"]:checked');
-    let collegePresident = document.querySelector('input[name="college-president"]:checked');
-    let president = document.querySelector('input[name="president"]:checked');
-    let vicePresidentInternal = document.querySelector('input[name="vice-president-internal"]:checked');
-    let vicePresidentExternal = document.querySelector('input[name="vice-president-external"]:checked');
-    let secretary = document.querySelector('input[name="secretary"]:checked');
-    let treasurer = document.querySelector('input[name="treasurer"]:checked');
-
-    document.getElementById("batch-president-summary").innerHTML = batchPresident == null ? 'Abstained' : batchPresident.value;
-    document.getElementById("batch-vice-president-summary").innerHTML = batchVicePresident == null ? 'Abstained' : batchVicePresident.value;
-    document.getElementById("legislative-assembly-representative-summary").innerHTML = laRepresentative == null ? 'Abstained' : laRepresentative.value;
-    document.getElementById("college-president-summary").innerHTML = collegePresident == null ? 'Abstained' : collegePresident.value;
-    document.getElementById("president-summary").innerHTML = president == null ? 'Abstained' : president.value;
-    document.getElementById("vice-president-internal-summary").innerHTML = vicePresidentInternal == null ? 'Abstained' : vicePresidentInternal.value;
-    document.getElementById("vice-president-external-summary").innerHTML = vicePresidentExternal == null ? 'Abstained' : vicePresidentExternal.value;
-    document.getElementById("secretary-summary").innerHTML = secretary == null ? 'Abstained' : secretary.value;
-    document.getElementById("treasurer-summary").innerHTML = treasurer == null ? 'Abstained' : treasurer.value;
 }
 
 function closeModal() {
