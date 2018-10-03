@@ -94,6 +94,14 @@ function edit_voter(src, csrf_token, voter, page) {
 
 }
 
+function resetField() {
+    var options = document.getElementById("edit-eligibility-status");
+
+    for (var i = 0, l = options.length; i < l; i++) {
+        options[i].selected = options[i].defaultSelected;
+    }
+}
+
 function delete_voters() {
     // Collect all checked checkboxes
     var array = [];
@@ -198,6 +206,58 @@ function delete_units() {
     delete_form.submit();
 }
 
+function delete_positions() {
+    // Collect all checked checkboxes
+    var array = [];
+    var checkboxes = document.querySelectorAll("input[type=checkbox][name=check]:checked");
+
+    for (var i = 0; i < checkboxes.length; i++) {
+        array.push(checkboxes[i].value);
+    }
+
+    // Delete all of them by adding them to a form
+    delete_form = document.getElementById("delete-positions");
+
+    for (var i = 0; i < array.length; i++) {
+        hidden = document.createElement("input");
+
+        hidden.setAttribute("type", "hidden");
+        hidden.setAttribute("name", "positions");
+        hidden.setAttribute("value", array[i]);
+
+        delete_form.appendChild(hidden);
+    }
+
+    // Then activate that form
+    delete_form.submit();
+}
+
+function delete_issues() {
+    // Collect all checked checkboxes
+    var array = [];
+    var checkboxes = document.querySelectorAll("input[type=checkbox][name=check]:checked");
+
+    for (var i = 0; i < checkboxes.length; i++) {
+        array.push(checkboxes[i].value);
+    }
+
+    // Delete all of them by adding them to a form
+    delete_form = document.getElementById("delete-issues");
+
+    for (var i = 0; i < array.length; i++) {
+        hidden = document.createElement("input");
+
+        hidden.setAttribute("type", "hidden");
+        hidden.setAttribute("name", "issues");
+        hidden.setAttribute("value", array[i]);
+
+        delete_form.appendChild(hidden);
+    }
+
+    // Then activate that form
+    delete_form.submit();
+}
+
 function set_take(csrf_token) {
     // Get the candidate dropdown
     var candidateDropdown = document.getElementById("candidate-dropdown");
@@ -206,20 +266,23 @@ function set_take(csrf_token) {
     var user = candidateDropdown.options[candidateDropdown.selectedIndex];
 
     // Get the username of the candidate
-    var username = user.innerText.split(":")[0];
+    if (user !== undefined) {
+        var username = user.innerText.split(":")[0];
+        username = username.trim();
 
-    // Get the issue dropdown
-    var issueDropdown = document.getElementById("issue-dropdown");
+        // Get the issue dropdown
+        var issueDropdown = document.getElementById("issue-dropdown");
 
-    // Get the selected issue
-    var issue = issueDropdown.options[issueDropdown.selectedIndex];
-    issue = issue.text;
+        // Get the selected issue
+        var issue = issueDropdown.options[issueDropdown.selectedIndex];
+        issue = issue.text;
 
-    // Get the take form
-    var takeForm = document.getElementById("take");
+        // Get the take form
+        var takeForm = document.getElementById("take");
 
-    // Retrieve the response using AJAX
-    ajaxTake(csrf_token, username, issue, takeForm);
+        // Retrieve the response using AJAX
+        ajaxTake(csrf_token, username, issue, takeForm);
+    }
 }
 
 function ajaxTake(csrf_token, candidate, issue, takeForm) {
@@ -231,10 +294,10 @@ function ajaxTake(csrf_token, candidate, issue, takeForm) {
                 callbackTake(takeForm, xmlhttp.responseText);
             }
             else if (xmlhttp.status === 400) {
-                callbackTake(takeForm, "(Unable to retrieve this candidate's take from the server)")
+                callbackTake(takeForm, "(unable to retrieve this candidate's take from the server)")
             }
             else {
-                callbackTake(takeForm, "(Unable to retrieve this candidate's take from the server)")
+                callbackTake(takeForm, "(unable to retrieve this candidate's take from the server)")
             }
         }
     };

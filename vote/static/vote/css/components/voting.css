@@ -36,3 +36,19 @@
     background-color: white;
     text-align: center;
 }
+
+#error {
+    color: red;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-left: 10px;
+    line-height: 1.75rem;
+}
+
+#success {
+    color: green;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-left: 10px;
+    line-height: 1.75rem;
+}

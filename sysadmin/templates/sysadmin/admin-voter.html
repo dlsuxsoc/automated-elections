@@ -16,7 +16,9 @@
     <a href="{% url 'sysadmin:voters' %}" id="selected">Voters List</a>
     <a href="{% url 'sysadmin:candidates' %}">Candidates List</a>
     <a href="{% url 'sysadmin:officers' %}">Comelec Officers</a>
-    <a href="{% url 'sysadmin:unit' %}">Units</a>
+    <a href="{% url 'sysadmin:units' %}">Units</a>
+    <a href="{% url 'sysadmin:positions' %}">Positions</a>
+    <a href="{% url 'sysadmin:issues' %}">Issues</a>
     <div id="user-container">
         <img id="user-icon" src="{% static 'sysadmin/assets/svg/user.svg' %}">
         <div id="user-name"> {{ user.first_name }} {{ user.last_name }}</div>
@@ -32,7 +34,7 @@
 
     <!-- SEARCH BAR AND DESELECT-DELETE TAKE UP THE SAME SPOT. THEY ARE ACTIVATED AND DEACTIVATED RESPECTIVELY-->
     <form action="" id="tab-search" method="GET">
-        <input id="search" type="text" name="query" placeholder="Search a voter...">
+        <input id="search" type="text" name="query" placeholder="Search for a voter...">
     </form>
 
     <!-- DESELECT-DELETE -->
@@ -177,7 +179,6 @@
         </div>
 
         <div class="info-buttons-container">
-            <button class="button cancel">Cancel</button>
             <!-- SUBMIT BUTTON FOR THE TAB -->
             <input class="button confirm" type="submit" value="Add new voter">
         </div>
@@ -213,7 +214,6 @@
         </div>
 
         <div class="info-buttons-container">
-            <button class="button cancel">Cancel</button>
             <!-- SUBMIT BUTTON FOR THE TAB -->
             <input class="button confirm" type="submit" value="Add new voters">
         </div>
@@ -262,7 +262,7 @@
         </div>
 
         <div class="info-buttons-container">
-            <button class="button cancel">Cancel</button>
+            <button type="button" class="button cancel" onclick="resetField()">Cancel</button>
             <!-- SUBMIT BUTTON FOR THE TAB -->
             <input class="button confirm" type="submit" value="Save Changes">
         </div>

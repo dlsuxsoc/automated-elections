@@ -1,0 +1,202 @@
+.col-party {
+    flex-basis: 30%;
+    padding-left: 15%;
+}
+
+.col-name {
+    flex-basis: 10%;
+}
+
+.col-position {
+    flex-basis: 20%;
+}
+
+.col-unit {
+    flex-basis: 20%;
+}
+
+.col-batch {
+    flex-basis: 20%;
+}
+
+.col-votes {
+    flex-basis: 20%;
+    font-weight: bold;
+}
+
+.col-date {
+    flex-basis: 20%;
+    padding-left: 15%;
+}
+
+.col-12nn {
+    flex-basis: 15%;
+}
+
+.col-3pm {
+    flex-basis: 15%;
+}
+
+.col-6pm {
+    flex-basis: 15%;
+}
+
+.password-reauth {
+    width: 60%;
+    height: 40px;
+    font-size: 20px;
+    font-weight: bold;
+    text-align: center;
+    margin: 10px;
+}
+
+.controls-container {
+    width: 100%;
+    margin-top: 5%;
+
+}
+
+.controls-instruction {
+    font-size: 20px;
+    color: black;
+    text-align: center;
+
+    margin: 5%;
+}
+
+.controls-header {
+    font-size: 30px;
+    font-family: montserrat;
+    color: #36A472;
+    text-align: center;
+
+}
+
+.controls {
+    font-size: 16px;
+    color: black;
+    text-align: center;
+
+    margin-top: 1%;
+}
+
+.batch-checkboxes {
+    display: inline-block;
+    margin-bottom: 5%;
+}
+
+.today-container {
+    width: 100%;
+    margin-top: 5%;
+
+}
+
+.today-votes {
+    font-size: 30px;
+    font-family: montserrat;
+    color: #36A472;
+    text-align: center;
+
+}
+
+.today-overall {
+    font-size: 16px;
+    color: black;
+    text-align: center;
+
+    display: flex;
+
+    margin-top: 1%;
+    margin-left: 40%;
+}
+
+.bold {
+    font-weight: bold;
+    margin-left: 2px;
+}
+
+.as-ofs {
+    display: flex;
+    justify-content: space-evenly;
+
+    margin: 3% 10% 0px 10%;
+}
+
+.time {
+    flex-basis: 20%;
+    text-align: center;
+}
+
+.big-vote {
+    font-size: 70px;
+    font-family: montserrat;
+    color: #36A472;
+}
+
+.votes {
+    font-size: 16px;
+    color: #36A472;
+    font-weight: bold;
+}
+
+#college-buttons-container {
+    display: flex;
+    justify-content: space-evenly;
+
+    margin-top: 3%;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #36A472;
+}
+
+.college-buttons {
+    flex-basis: 30%;
+    text-align: center;
+    border: none;
+    background: none;
+    outline: none;
+    border: 2px solid transparent;
+
+    transition: border .2s ease;
+}
+
+.college-buttons:hover {
+    border: 2px solid #36A472;
+    cursor: pointer;
+}
+
+.college-buttons.active {
+    border: 2px solid #36A472;
+}
+
+.college-name {
+    font-size: 40px;
+    font-weight: bold;
+    font-family: montserrat;
+    text-align: center;
+
+    margin-top: 7%;
+}
+
+#stop {
+    width: 200px;
+    height: 200px;
+    display: block;
+    margin: 5% auto 0px auto;
+}
+
+header {
+    font-size: 60px;
+    color: #36A472;
+    font-family: montserrat;
+    text-align: center;
+
+    margin-top: 5%;
+}
+
+.prohibited {
+    font-size: 16px;
+    color: black;
+    text-align: center;
+
+    margin-top: 1%;
+}

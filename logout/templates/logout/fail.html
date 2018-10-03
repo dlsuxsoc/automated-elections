@@ -1,0 +1,36 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+
+    <!-- external links for typefaces -->
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,700" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Montserrat:400,600,700,800" rel="stylesheet">
+
+
+    <!-- elements -->
+    <link href="{% static 'logout/css/elements/body.css' %}" rel="stylesheet" type="text/css"/>
+    <link href="{% static 'logout/css/elements/root.css' %}" rel="stylesheet" type="text/css"/>
+    <link href="{% static 'logout/css/elements/link.css' %}" rel="stylesheet" type="text/css"/>
+
+    <!-- components -->
+    <link href="{% static 'logout/css/components/success.css' %}" rel="stylesheet" type="text/css"/>
+    <link href="{% static 'logout/css/components/instruction-cell.css' %}" rel="stylesheet" type="text/css"/>
+    <link href="{% static 'logout/css/components/success-logos.css' %}" rel="stylesheet" type="text/css"/>
+
+    <!-- scripts -->
+
+</head>
+<body>
+<div id="success-container">
+    <div id="success-title">You have already voted!</div>
+
+    <div id="success-link">
+        Got it? <a href="{% url 'login:login' %}">Click here to login</a>
+    </div>
+
+    <img src="{% static 'logout/assets/png/org-logos.png' %}" id="success-org-logos">
+</div>
+</body>
+</html>

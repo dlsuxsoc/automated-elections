@@ -1,0 +1,131 @@
+{% load static %}
+<html>
+<head>
+    <title>Officer Dashboard</title>
+
+    <!-- CSS LINKS -->
+    <link rel="stylesheet" type="text/css" href="{% static 'passcode/css/components/officer.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'passcode/css/components/officer-candidate.css' %}"/>
+
+</head>
+<body>
+<!-- HEADER BAR THING -->
+<div id="header-container">
+    <img id="header-ballot" src="{% static 'passcode/assets/svg/ballot-white.svg' %}">
+    <a href="{% url 'passcode:voters' %}">Voters List</a>
+    <a href="{% url 'passcode:candidates' %}" id="selected">Candidates List</a>
+    <a href="{% url 'passcode:elections' %}">Election Dashboard</a>
+    <a href="{% url 'passcode:passcode' %}">Passcode Generator</a>
+    <div id="user-container">
+        <img id="user-icon" src="{% static 'passcode/assets/svg/user.svg' %}">
+        <div id="user-name"> {{ user.first_name }} {{ user.last_name }}</div>
+        <a id="log-out" href="{% url 'logout:logout' %}">Logout</a>
+    </div>
+    <!--
+    <div id="user-container">
+        <button class="dropbtn">
+
+        </button>
+        <div id="user-container-content">
+            <div> Profile</div>
+            <div> Log out </div>
+
+        </div>
+    </div> -->
+
+</div>
+
+<!-- TABS BUTTONS TO TRAVERSE THE DIFF SECTIONS -->
+<div id="tab-buttons-container">
+    <button class="tab-buttons" onclick="openTab(event, 'All')" id="tab-all">See all candidates</button>
+
+    <!-- SEARCH BAR AND DESELECT-DELETE TAKE UP THE SAME SPOT. THEY ARE ACTIVATED AND DEACTIVATED RESPECTIVELY-->
+
+    <!-- SEARCH BAR-->
+    <form action="" id="tab-search">
+        <input id="search" type="text" name="query" placeholder="Search for a candidate...">
+    </form>
+
+    <!-- DESELECT-DELETE -->
+    <!--<div id="deselect-delete">
+        <button id="deselect">Deselect All</button>-->
+    <button id="delete">Delete Selected Candidate(s)</button>
+    <!--</div>-->
+</div>
+
+<!-- CONTAINER WHERE TABS WILL OCCUPY -->
+<div id="tab-container">
+    {% if messages %}
+        <div>
+            {% for message in messages %}
+                <p {% if message.tags %}id="{{ message.tags }}"{% endif %}>{{ message }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
+    <div id="All" class="tab-content">
+        <div id="table-container">
+            <!-- FIRST ROW IS HEADER/TITLE ROW. -->
+            <div class="table-row row-0">
+                <div class="col-checkbox"></div>
+                <div class="col-name">Full Name</div>
+                <div class="col-id">ID Number</div>
+                <div class="col-position">Position</div>
+                <div class="col-party">Political Party</div>
+                <div class="col-status">Has Voted</div>
+            </div>
+
+            <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
+            {% for candidate in candidates %}
+                <div class="table-row {% cycle 'row-1' 'row-2' %}">
+                    <div class="col-checkbox"></div>
+                    <div class="col-name">
+                        {{ candidate.voter.user.last_name }}, {{ candidate.voter.user.first_name }}
+                    </div>
+                    <div class="col-id">{{ candidate.voter.user.username }}</div>
+                    <div class="col-position">{{ candidate.position.base_position.name }} ({{ candidate.position.unit.name }})</div>
+                    <div class="col-party">
+                        {% if candidate.party %}
+                            {{ candidate.party.name }}
+                        {% else %}
+                            Independent
+                        {% endif %}
+                    </div>
+                    <div class="col-status">
+                        {% if candidate.voter.voting_status == 1 %}
+                            Yes
+                        {% else %}
+                            No
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="pagination">
+            <span class="step-links">
+                {% if candidates.has_previous %}
+                    <a href="?page=1{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">&laquo; first</a>
+                    <a href="?page={{ candidates.previous_page_number }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">previous</a>
+                {% endif %}
+                <span class="current">Page {{ candidates.number }} of {{ candidates.paginator.num_pages }}.</span>
+
+                {% if candidates.has_next %}
+                    <a href="?page={{ candidates.next_page_number }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">next</a>
+                    <a href="?page={{ candidates.paginator.num_pages }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">last &raquo;</a>
+                {% endif %}
+            </span>
+        </div>
+    </div>
+
+</div>
+
+<div id="logo">
+    <img width=500 height=50 src="{% static 'passcode/assets/svg/org-logos.svg' %}">
+</div>
+</body>
+
+<!-- JAVASCRIPT LINK-->
+<script src="{% static 'passcode/js/officer.js' %}"></script>
+</html>
+
+
