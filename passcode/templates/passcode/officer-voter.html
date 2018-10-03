@@ -1,0 +1,279 @@
+{% load static %}
+<html>
+<head>
+    <title>Officer Dashboard</title>
+
+    <!-- CSS LINKS -->
+    <link rel="stylesheet" type="text/css" href="{% static 'passcode/css/components/officer.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'passcode/css/components/officer-voter.css' %}"/>
+
+</head>
+<body>
+<!-- HEADER BAR THING -->
+<div id="header-container">
+    <img id="header-ballot" src="{% static 'passcode/assets/svg/ballot-white.svg' %}">
+    <a href="{% url 'passcode:voters' %}" id="selected">Voters List</a>
+    <a href="{% url 'passcode:candidates' %}">Candidates List</a>
+    <a href="{% url 'passcode:elections' %}">Election Dashboard</a>
+    <a href="{% url 'passcode:passcode' %}">Passcode Generator</a>
+    <div id="user-container">
+        <img id="user-icon" src="{% static 'passcode/assets/svg/user.svg' %}">
+        <div id="user-name"> {{ user.first_name }} {{ user.last_name }}</div>
+        <a id="log-out" href="{% url 'logout:logout' %}">Logout</a>
+    </div>
+
+</div>
+
+<!-- TABS BUTTONS TO TRAVERSE THE DIFF SECTIONS -->
+<div id="tab-buttons-container">
+    <button class="tab-buttons" onclick="openTab(event, 'All')" id="tab-all">See all voters</button>
+    <button class="tab-buttons" onclick="openTab(event, 'Add')" id="tab-add">Add a voter</button>
+    <button class="tab-buttons" onclick="openTab(event, 'AddMany')" id="tab-bulk">Add voters in bulk</button>
+
+    <!-- SEARCH BAR AND DESELECT-DELETE TAKE UP THE SAME SPOT. THEY ARE ACTIVATED AND DEACTIVATED RESPECTIVELY-->
+    <form action="" id="tab-search" method="GET">
+        <input id="search" type="text" name="query" placeholder="Search for a voter...">
+    </form>
+
+    <!-- DESELECT-DELETE -->
+    <!--<div id="deselect-delete">
+        <button id="deselect">Deselect All  </button>-->
+    <form action="" id="delete-voters" method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="form-type" value="delete-voter">
+        <button type="button" onclick="delete_voters()" id="delete">Delete Selected Voter(s)</button>
+    </form>
+    <!--</div>-->
+</div>
+
+<!-- CONTAINER WHERE TABS WILL OCCUPY -->
+<div id="tab-container">
+    {% if messages %}
+        <div>
+            {% for message in messages %}
+                <p {% if message.tags %}id="{{ message.tags }}"{% endif %}>{{ message }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- FIRST TAB -->
+    <div id="All" class="tab-content">
+        <div id="table-container">
+            <!-- FIRST ROW IS HEADER/TITLE ROW. -->
+            <div class="table-row row-0">
+                <div class="col-checkbox"><input type="checkbox" id="toggle-all" onclick="toggle(this)"></div>
+                <div class="col-name">Full Name</div>
+                <div class="col-id">ID Number</div>
+                <div class="col-voted">Has Voted</div>
+                <div class="col-eligible">Eligibility</div>
+            </div>
+
+            <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
+            <!-- EXPERIMENTAL!! DO NOT TOUCH TY
+                <div class="table-row row-1" id="row-data-0">
+                <div class="col-checkbox"><input type="checkbox" name="check" onclick="selected(this)"></div>
+                <div class="col-name">
+                    <div class="name" data-value="0" onclick="edit(this)">
+                        Logan Paul
+                    </div>
+                </div>
+                <div class="col-id">17496849</div>
+                <div class="col-voted">NO</div>
+                <div class="col-eligible">Active</div>
+            </div>-->
+
+            {% for voter in voters %}
+                <div class="table-row {% cycle 'row-1' 'row-2' %}">
+                    <input type="hidden" name="form-type" value="save-status">
+                    <div class="col-checkbox"><input type="checkbox" name="check" value="{{ voter.user.id }}"
+                                                     onclick="selected(this)"></div>
+                    <div class="col-name">
+                        <div class="name"
+                             onclick="edit_voter(this, '{{ csrf_token }}', {{ voter.user.username }}, {{ voters.number }})">
+                            {{ voter.user.last_name }}, {{ voter.user.first_name }}
+                        </div>
+                    </div>
+                    <div class="col-id">{{ voter.user.username }}</div>
+                    <div class="col-voted">
+                        {% if voter.voting_status == 1 %}
+                            Yes
+                        {% else %}
+                            No
+                        {% endif %}
+                    </div>
+                    <div class="col-eligible">
+                        {% if voter.eligibility_status == 1 %}
+                            Eligible
+                        {% else %}
+                            Not eligible
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="pagination">
+            <span class="step-links">
+                {% if voters.has_previous %}
+                    <a href="?page=1{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">&laquo; first</a>
+                    <a href="?page={{ voters.previous_page_number }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">previous</a>
+                {% endif %}
+                <span class="current">Page {{ voters.number }} of {{ voters.paginator.num_pages }}.</span>
+
+                {% if voters.has_next %}
+                    <a href="?page={{ voters.next_page_number }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">next</a>
+                    <a href="?page={{ voters.paginator.num_pages }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">last &raquo;</a>
+                {% endif %}
+            </span>
+        </div>
+    </div>
+
+    <!-- SECOND TAB (FORM TAB)-->
+    <form action="" id="Add" class="tab-content" method="POST">
+        {% csrf_token %}
+        <div class="info-fields-container">
+            <input type="hidden" name="form-type" value="add-voter">
+            <div class="info-container">
+                <div class="info-label"> First Names (w/ second & middle names)</div>
+                <input type="text" class="info-input" name="voter-firstnames" placeholder="First names"
+                       required="required">
+            </div>
+
+            <div class="info-container">
+                <div class="info-label"> Last Name</div>
+                <input type="text" class="info-input" name="voter-lastname" placeholder="Last name" required="required">
+            </div>
+
+            <div class="info-container">
+                <div class="info-label"> ID Number</div>
+                <input type="text" class="info-input" name="voter-id" placeholder="ID number" required="required">
+            </div>
+
+            <div class="info-container">
+                <div class="info-label"> College</div>
+                <select class="info-input" name="voter-college" required="required">
+                    <option disabled="disabled" selected="selected">(Select a college)</option>
+                    {% for college in colleges %}
+                        <option>{{ college.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="info-container">
+                <div class="info-label"> Voting Status</div>
+                <select class="info-input" name="voter-voting-status" required="required">
+                    <option>Hasn't voted yet</option>
+                    <option>Has already voted</option>
+                </select>
+            </div>
+
+            <div class="info-container">
+                <div class="info-label"> Eligibility Status</div>
+                <select class="info-input" name="voter-eligibility-status" required="required">
+                    <option>Eligible</option>
+                    <option>Not eligible</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="info-buttons-container">
+            <!-- SUBMIT BUTTON FOR THE TAB -->
+            <input class="button confirm" type="submit" value="Add new voter">
+        </div>
+
+    </form>
+
+    <!-- THIRD TAB (BULK FORM TAB)-->
+    <form action="" id="AddMany" class="tab-content" method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="form-type" value="add-bulk-voter">
+        <div class="info-fields-container">
+            <div class="info-label"> Upload the official CSV file containing the voters list below with the columns:
+                <code>ID Number, Last Name, First Names, College</code>
+            </div>
+            <input type="file" class="info-input" name="voters-list" placeholder="Voters list"
+                   required="required" accept=".csv">
+            <div class="info-container">
+                <div class="info-label"> Voting Status for all of them</div>
+                <select class="info-input" name="voter-voting-status" required="required">
+                    <option>Hasn't voted yet</option>
+                    <option>Has already voted</option>
+                </select>
+            </div>
+
+            <div class="info-container">
+                <div class="info-label"> Eligibility Status for all of them</div>
+                <select class="info-input" name="voter-eligibility-status" required="required">
+                    <option>Eligible</option>
+                    <option>Not eligible</option>
+                </select>
+            </div>
+
+        </div>
+
+        <div class="info-buttons-container">
+            <!-- SUBMIT BUTTON FOR THE TAB -->
+            <input class="button confirm" type="submit" value="Add new voters">
+        </div>
+    </form>
+
+    <!-- THIRD HIDDEN TAB (EDIT TAB)-->
+    <form action="" id="Edit" class="tab-content" method="POST">
+        {% csrf_token %}
+        <div class="info-fields-container">
+            <input type="hidden" name="form-type" value="edit-voter">
+            <input type="hidden" name="edit-id" value="">
+            <input type="hidden" name="page" value="">
+            <div class="info-container">
+                <div class="info-label"> First Names (w/ second & middle names)</div>
+                <input type="text" class="info-input" name="voter-firstnames" id="edit-firstnames"
+                       disabled="disabled" value="">
+            </div>
+
+            <div class="info-container">
+                <div class="info-label"> Last Name</div>
+                <input type="text" class="info-input" name="voter-lastname" id="edit-lastname"
+                       disabled="disabled" value="">
+            </div>
+
+            <div class="info-container">
+                <div class="info-label"> College</div>
+                <select class="info-input" id="edit-college" name="voter-college" disabled="disabled">
+                    <option></option>
+                </select>
+            </div>
+
+            <div class="info-container">
+                <div class="info-label"> Voting Status</div>
+                <select class="info-input" id="edit-voting-status" name="voter-voting-status" disabled="disabled">
+                    <option></option>
+                </select>
+            </div>
+
+            <div class="info-container">
+                <div class="info-label"> Eligibility Status</div>
+                <select class="info-input" id="edit-eligibility-status" name="voter-eligibility-status">
+                    <option id="eligible">Eligible</option>
+                    <option id="not-eligible">Not eligible</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="info-buttons-container">
+            <button type="button" class="button cancel" onclick="resetField()">Cancel</button>
+            <!-- SUBMIT BUTTON FOR THE TAB -->
+            <input class="button confirm" type="submit" value="Save Changes">
+        </div>
+    </form>
+</div>
+
+<div id="logo">
+    <img width=500 height=50 src="{% static 'passcode/assets/png/org-logos.png' %}">
+</div>
+</body>
+
+<!-- JAVASCRIPT LINK-->
+<script src="{% static 'passcode/js/officer.js' %}"></script>
+</html>
+
+

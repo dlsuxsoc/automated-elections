@@ -106,13 +106,13 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Shanghai'
 
 USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = True
+USE_TZ = False
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.0/howto/static-files/
@@ -130,15 +130,19 @@ EMAIL_HOST = 'smtp.gmail.com'
 
 EMAIL_HOST_USER = 'comelec.dlsu.autoelections.sysad@gmail.com'
 
-EMAIL_HOST_PASSWORD = 'ch0m3l@ck:amino!'
+EMAIL_HOST_PASSWORD = 'cHhem3l@ck:amino!'
 
 EMAIL_PORT = 587
 
 EMAIL_USE_TLS = True
 
 # Session expiry settings
-# Voting session expires in 10 minutes
-# SESSION_COOKIE_AGE = 60 * 10
+# Voting session expires in 30 minutes
+SESSION_COOKIE_AGE = 60 * 30
+
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+SESSION_SAVE_EVERY_REQUEST = True
 
 # Media settings
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

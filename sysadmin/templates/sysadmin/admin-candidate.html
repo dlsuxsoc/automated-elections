@@ -16,7 +16,9 @@
     <a href="{% url 'sysadmin:voters' %}">Voters List</a>
     <a href="{% url 'sysadmin:candidates' %}" id="selected">Candidates List</a>
     <a href="{% url 'sysadmin:officers' %}">Comelec Officers</a>
-    <a href="{% url 'sysadmin:unit' %}">Units</a>
+    <a href="{% url 'sysadmin:units' %}">Units</a>
+    <a href="{% url 'sysadmin:positions' %}">Positions</a>
+    <a href="{% url 'sysadmin:issues' %}">Issues</a>
     <div id="user-container">
         <img id="user-icon" src="{% static 'sysadmin/assets/svg/user.svg' %}">
         <div id="user-name"> {{ user.first_name }} {{ user.last_name }}</div>
@@ -28,12 +30,11 @@
 <div id="tab-buttons-container">
     <button class="tab-buttons" onclick="openTab(event, 'All')" id="tab-all">See all candidates</button>
     <button class="tab-buttons" onclick="openTab(event, 'Add')" id="tab-add">Add a candidate</button>
-    <button class="tab-buttons" onclick="openTab(event, 'Issue')" id="tab-add-issue">Add issue</button>
     <button class="tab-buttons" onclick="openTab(event, 'Edit')" id="tab-edit-take">Edit takes</button>
 
     <!-- SEARCH BAR AND DESELECT-DELETE TAKE UP THE SAME SPOT. THEY ARE ACTIVATED AND DEACTIVATED RESPECTIVELY-->
     <form action="" id="tab-search" method="GET">
-        <input id="search" type="text" name="query" placeholder="Search a candidate...">
+        <input id="search" type="text" name="query" placeholder="Search for a candidate...">
     </form>
 
     <!-- DESELECT-DELETE -->
@@ -74,12 +75,10 @@
                     <div class="col-checkbox"><input type="checkbox" name="check" value="{{ candidate.id }}"
                                                      onclick="selected(this)"></div>
                     <div class="col-name">
-                        <div class="name">
-                            {{ candidate.voter.user.last_name }}, {{ candidate.voter.user.first_name }}
-                        </div>
+                        {{ candidate.voter.user.last_name }}, {{ candidate.voter.user.first_name }}
                     </div>
                     <div class="col-id">{{ candidate.voter.user.username }}</div>
-                    <div class="col-position">{{ candidate.position.name }} ({{ candidate.position.unit.name }})</div>
+                    <div class="col-position">{{ candidate.position.base_position.name }} ({{ candidate.position.unit.name }})</div>
                     <div class="col-party">
                         {% if candidate.party %}
                             {{ candidate.party.name }}
@@ -105,7 +104,6 @@
                     <a href="?page={{ candidates.previous_page_number }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">previous</a>
                 {% endif %}
                 <span class="current">Page {{ candidates.number }} of {{ candidates.paginator.num_pages }}.</span>
-
                 {% if candidates.has_next %}
                     <a href="?page={{ candidates.next_page_number }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">next</a>
                     <a href="?page={{ candidates.paginator.num_pages }}{% if request.GET.query %}&query={{ request.GET.query }}{% endif %}">last &raquo;</a>
@@ -136,7 +134,7 @@
                        required="required">
                 <datalist id="positions">
                     {% for position in positions %}
-                        <option value="{{ position.unit.name }}: {{ position.name }}">
+                        <option value="{{ position.unit.name }}: {{ position.base_position.name }}">
                     {% endfor %}
                 </datalist>
             </div>
@@ -153,43 +151,24 @@
         </div>
 
         <div class="info-buttons-container">
-            <button class="button cancel">Cancel</button>
             <!-- SUBMIT BUTTON FOR THE TAB -->
             <input class="button confirm" type="submit" value="Add new candidate">
         </div>
     </form>
 
     <!-- THIRD TAB (FORM TAB)-->
-    <form action="" id="Issue" class="tab-content" method="POST">
-        <div class="issue-container">
-            {% csrf_token %}
-            <input type="hidden" name="form-type" value="add-issue">
-            {% if issue_form %}
-                {% for field in issue_form %}
-                    <div class="info-container">
-                        <div class="info-label">{{ field.label }}</div>
-                        {{ field }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-        </div>
-        <div class="info-buttons-container">
-            <button class="button cancel">Cancel</button>
-            <!-- SUBMIT BUTTON FOR THE TAB -->
-            <input class="button confirm" type="submit" value="Save Changes">
-        </div>
-    </form>
-    <!-- FOURTH TAB (FORM TAB)-->
     <form action="" id="Edit" class="tab-content" method="POST">
         {% csrf_token %}
         <input type="hidden" name="form-type" value="change-take">
         <div class="takes-container">
             <div class="info-container">
-                <div class="info-label"> Select an Issue</div>
+                <div class="info-label"> Select an issue</div>
                 <select class="info-input" name="take-issue" id="issue-dropdown"
                         onchange="set_take('{{ csrf_token }}')">
                     {% for issue in issues %}
                         <option>{{ issue.name }}</option>
+                    {% empty %}
+                        <option disabled="disabled" selected="selected">(no issues yet)</option>
                     {% endfor %}
                 </select>
             </div>
@@ -198,24 +177,29 @@
                 <div class="info-label"> Select a candidate</div>
                 <select class="info-input" name="take-candidate" id="candidate-dropdown"
                         onchange="set_take('{{ csrf_token }}')">
+
                     {% for candidate in candidates_all %}
-                        <option>{{ candidate.voter.user.username }}: {{ candidate.voter.user.last_name }}, {{ candidate.voter.user.first_name }}</option>
+                        <option>
+                            {{ candidate.voter.user.username }}: {{ candidate.voter.user.last_name }}, {{ candidate.voter.user.first_name }}
+                        </option>
+                    {% empty %}
+                        <option disabled="disabled" selected="selected">(no candidates yet)</option>
                     {% endfor %}
                 </select>
             </div>
         </div>
 
         <div class="response-container">
-            <div class="info-label"> Talk/Response to the Issue</div>
-            <textarea name="take-response" form="Edit" id="take" class="response-textarea">
-            </textarea>
+            <div class="info-label">Response to the Issue</div>
+            <textarea name="take-response" form="Edit" id="take" class="response-textarea"></textarea>
         </div>
 
         <div class="info-buttons-container">
-            <button class="button cancel">Cancel</button>
-            <input class="button confirm-negative" name="action" type="submit" value="Delete this Take">
-            <!-- SUBMIT BUTTON FOR THE TAB -->
-            <input class="button confirm" name="action" type="submit" value="Save Changes">
+            {% if candidates_all %}
+                <input class="button confirm-negative" name="action" type="submit" value="Delete this Take">
+                <!-- SUBMIT BUTTON FOR THE TAB -->
+                <input class="button confirm" name="action" type="submit" value="Save Changes">
+            {% endif %}
         </div>
     </form>
 </div>

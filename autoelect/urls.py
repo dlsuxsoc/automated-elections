@@ -29,9 +29,8 @@ urlpatterns = [
     # /logout/
     path('logout/', include('logout.urls')),
 
-    # TODO: Change to /comelec/ when COMELEC dashboard becomes available
-    # /passcode/
-    path('passcode/', include('passcode.urls')),
+    # /officer/
+    path('officer/', include('passcode.urls')),
 
     # /sysadmin/
     path('sysadmin/', include('sysadmin.urls')),
