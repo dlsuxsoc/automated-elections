@@ -33,8 +33,8 @@ function openTab(evt, tab) {
     }
     document.getElementById(tab).style.display = "block";
     evt.currentTarget.className += " active";
-
-    //document.getElementById("college-ccs").click();
+    
+    document.querySelectorAll('*[id^="tab-college"]')[0].click();
 }
 
 function drawChart(results) {

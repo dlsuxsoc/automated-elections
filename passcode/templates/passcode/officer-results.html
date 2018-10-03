@@ -30,7 +30,7 @@
 <div id="tab-buttons-container">
     <button class="tab-buttons" onclick="openTab(event, 'Controls')" id="tab-controls">Election controls</button>
     <button class="tab-buttons" onclick="openTab(event, 'Overview')" id="tab-overview">Overview of votes</button>
-    <button class="tab-buttons" onclick="openTab(event, 'Underview')" id="tab-underview">Votes per candidate</button>
+    <button class="tab-buttons" onclick="openTab(event, 'Underview')" id="tab-underview">Election results</button>
     <button class="tab-buttons" onclick="openTab(event, 'Archive')" id="tab-archive">Archive election results</button>
 
 </div>
@@ -227,7 +227,7 @@
             <div id="college-buttons-container">
                 {% for college, count in overall_votes_college.items %}
                     <button class="college-buttons" onclick="selectCollege(event, '{{ college }}')"
-                            id="college-{{ college|lower }}">
+                            id="tab-college-{{ college|lower }}">
                         <div class="bold" style="font-size: 25px">{{ college }}</div>
                         <div class="big-vote">{{ count }}</div>
                         <div class="votes"> votes</div>
