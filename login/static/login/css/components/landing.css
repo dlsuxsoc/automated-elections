@@ -76,19 +76,19 @@ body::after {
     display: inline-block;
     text-align: left;
     min-height: 60vh;
-    margin-top: 20vh;
+    margin-top: 15%;
     position: relative;
 }
 
 @media screen and (max-height: 800px) {
     body {
         height: 800px;
-        overflow-y: scroll;
+        overflow-y: hidden;
     }
 
     #landing-child {
         height: 60%;
-        margin-top: 20%;
+        margin-top: 15%;
         min-height: 480px;
     }
 }

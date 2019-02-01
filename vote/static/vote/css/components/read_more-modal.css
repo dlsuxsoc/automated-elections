@@ -6,14 +6,13 @@
     left: 25%;
     right: 0;
     bottom: 0;
-    background: #36A472;
+    border-radius: 5px;
+    background: rgba(54,164,114,0.9);
     width: 50%;
     height: 50%;
+    overflow-y: scroll;
     clip-path: polygon(calc(50% - 0em) calc(50% - 0em), calc(50% + 0em) calc(50% - 0em), calc(50% + 0em) calc(50% + 0em), calc(50% - 0em) calc(50% + 0em));
     transition: clip-path 0.4s cubic-bezier(0, 0.58, 0.36, 1), -webkit-clip-path 0.4s cubic-bezier(0, 0.58, 0.36, 1);
-    display: flex;
-    justify-content: center;
-    align-items: center;
 }
 
 #modal__content-read {
@@ -26,6 +25,8 @@
     padding: 2em;
     max-width: 30em;
     color: #fff;
+    margin: auto !important;
+    max-width: 90%;
 }
 
 .button-read:focus ~ #modal-read {
@@ -108,12 +109,9 @@ blockquote cite:before {
 }
 
 .info-container {
-    width: 40%;
-    height: 75px;
     display: flex;
     flex-direction: column;
-
-    margin: 50px 0px 10px 20px;
+    background-color: #2d875e;
 }
 
 .info-label {
@@ -138,4 +136,15 @@ blockquote cite:before {
 
 .takes-container {
     display: block;
+}
+
+#issue-dropdown{
+    background-color: transparent;
+    max-width: 90%;
+    display: block;
+    margin: auto;
+    border-radius: 0;
+    color: white;
+    font-size: medium;
+    border: none;
 }

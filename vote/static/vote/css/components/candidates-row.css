@@ -1,9 +1,13 @@
+button{
+    outline: none;
+}
+
 .candidates-row {
     width: calc(100% - 85px);
     margin: 40px;
     margin-bottom: 0px;
     padding-bottom: 68px;
-    border-bottom: 2px solid #D7D7D7;
+    border-bottom: thin solid #D7D7D7;
 }
 
 .candidates-row:last-of-type {
@@ -14,7 +18,7 @@
     border: 0;
     background: none;
     box-shadow: none;
-    border-radius: 5px;
+    border-radius: 3px;
     background-color: var(--theme-green);
     color: white;
     font-family: 'Open Sans', sans-serif;
@@ -36,8 +40,8 @@
 .candidate-position {
     font-weight: 700;
     color: var(--theme-green);
-    font-size: 1.4rem;
-    text-align: left;
+    font-size: 1rem;
+    text-align: center;
 }
 
 .candidate-category {
@@ -47,7 +51,7 @@
     text-align: center;
     margin: auto;
     width: 50%;
-    padding: 20px;
+    padding: 50px 20px;
 }
 
 .candidate {
@@ -87,6 +91,11 @@
     font-size: 0.7rem;
     padding-top: 5px;
     padding-bottom: 5px;
+}
+
+.candidate-wrapper{
+    display: flex;
+    justify-content: center;
 }
 
 .response-link {

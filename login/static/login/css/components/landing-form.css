@@ -31,10 +31,14 @@
     width: 400px;
     height: 55px;
     line-height: 55px;
-    margin-bottom: 10px;
+    margin: 1.5em 0;
     margin-left: 10px;
     margin-right: 10px;
     color: #333;
+}
+
+#id-number, #passcode, #username{
+    font-size: larger;
 }
 
 #id-number::-webkit-inner-spin-button,

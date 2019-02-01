@@ -69,6 +69,7 @@
                                 </button>
                                 <input type="hidden" name="position" value="{{ position.identifier }}">
                             </div>
+                            <div class="candidate-wrapper">
                             {% for candidate in each_candidate %}
                                 <div class="candidate">
                                     <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
@@ -89,6 +90,7 @@
                                     <label for="{{ candidate.identifier }}"></label>
                                 </div>
                             {% endfor %}
+                            </div>
                         </div>
                     {% endfor %}
                 {% endif %}
@@ -101,7 +103,7 @@
             <div id="modal-read">
                 <div class="takes-container">
                     <div class="info-container">
-                        <div class="info-label"> Select an Issue</div>
+                        <!--<div class="info-label"> Select an Issue</div>-->
                         <input type="hidden" id="associated-candidate" name="candidate" value="">
                         <select class="info-input" name="take-issue" id="issue-dropdown"
                                 onchange="change_take('{{ csrf_token }}')">
