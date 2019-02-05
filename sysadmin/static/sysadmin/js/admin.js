@@ -275,7 +275,7 @@ function set_take(csrf_token) {
 
         // Get the selected issue
         var issue = issueDropdown.options[issueDropdown.selectedIndex];
-        issue = issue.text;
+        issue = issue.value;
 
         // Get the take form
         var takeForm = document.getElementById("take");
@@ -294,10 +294,10 @@ function ajaxTake(csrf_token, candidate, issue, takeForm) {
                 callbackTake(takeForm, xmlhttp.responseText);
             }
             else if (xmlhttp.status === 400) {
-                callbackTake(takeForm, "(unable to retrieve this candidate's take from the server)")
+                callbackTake(takeForm, JSON.stringify({'response': 'Unable to retrieve this candidate\'s take from the server'}))
             }
             else {
-                callbackTake(takeForm, "(unable to retrieve this candidate's take from the server)")
+                callbackTake(takeForm, JSON.stringify({'response': 'Unable to retrieve this candidate\'s take from the server'}))
             }
         }
     };

@@ -28,6 +28,6 @@ urlpatterns = [
     # /sysadmin/voters/details/<voter_id>
     path('voters/details/<int:voter_id>/', json_details, name='voter_details'),
 
-    # /sysadmin/candidates/takes/<candidate_id>/<issue>/
-    path('candidates/takes/<int:candidate_id>/<str:issue>/', json_take, name='candidate_takes'),
+    # /sysadmin/candidates/takes/<candidate_id>/<issue_id>/
+    path('candidates/takes/<int:candidate_id>/<int:issue_id>/', json_take, name='candidate_takes'),
 ]

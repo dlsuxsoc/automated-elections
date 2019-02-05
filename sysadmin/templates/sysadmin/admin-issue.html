@@ -40,7 +40,7 @@
     <!-- DESELECT-DELETE -->
     <!--<div id="deselect-delete">
         <button id="deselect">Deselect All</button>-->
-    <form action="" id="delete-issues" method="POST">
+    <form action="" id="delete-issue" method="POST">
         {% csrf_token %}
         <input type="hidden" name="form-type" value="delete-issue">
         <button type="button" onclick="delete_issues()" id="delete">Delete Selected Issues(s)</button>

@@ -422,12 +422,12 @@ class CandidatesView(SysadminView):
 
     # A convenience function for adding a take
     @staticmethod
-    def add_or_edit_take(candidate_id, issue, response):
+    def add_or_edit_take(candidate_id, issue_id, response):
         # Retrieve the candidate
         candidate = Candidate.objects.get(voter__user__username=candidate_id)
 
         # Retrieve the issue
-        issue = Issue.objects.get(name=issue)
+        issue = Issue.objects.get(id=issue_id)
 
         # If a candidate's take on an issue already exists, edit it instead
         take, created = Take.objects.get_or_create(candidate=candidate, issue=issue, defaults={'response': response})
@@ -627,11 +627,11 @@ class CandidatesView(SysadminView):
                         return render(request, self.template_name, context)
                 elif form_type == 'change-take':
                     action = request.POST.get('action', False)
-                    issue = request.POST.get('take-issue', False)
+                    issue_id = request.POST.get('take-issue', False)
                     candidate = request.POST.get('take-candidate', False)
                     response = request.POST.get('take-response', False)
 
-                    if action is not False and issue is not False and candidate is not False and response is not False:
+                    if action is not False and issue_id is not False and candidate is not False and response is not False:
                         # Check for missing data
                         try:
                             # Clean the input
@@ -652,7 +652,7 @@ class CandidatesView(SysadminView):
                             # Try to add or edit the take
                             try:
                                 with transaction.atomic():
-                                    self.add_or_edit_take(candidate, issue, response)
+                                    self.add_or_edit_take(candidate, issue_id, response)
 
                                     messages.success(request, 'Take successfully updated.')
                             except IntegrityError:
@@ -666,7 +666,7 @@ class CandidatesView(SysadminView):
                             # Try to delete this take
                             try:
                                 with transaction.atomic():
-                                    self.delete_take(candidate, issue)
+                                    self.delete_take(candidate, issue_id)
 
                                     messages.success(request, 'Take successfully deleted.')
                             except Take.DoesNotExist:
@@ -1193,7 +1193,7 @@ class IssueView(SysadminView):
                         context = self.display_objects(1)
 
                         return render(request, self.template_name, context)
-                elif form_type == 'delete-position':
+                elif form_type == 'delete-issue':
                     # The submitted form is for deleting issues
                     issues_list = request.POST.getlist('issues')
 
@@ -1268,10 +1268,10 @@ def json_details(request, voter_id):
 
 
 @user_passes_test(sysadmin_test_func)
-def json_take(request, candidate_id, issue):
+def json_take(request, candidate_id, issue_id):
     # Get the take
     try:
-        take = Take.objects.get(candidate__voter__user__username=candidate_id, issue__name=issue)
+        take = Take.objects.get(candidate__voter__user__username=candidate_id, issue__id=issue_id)
     except Take.DoesNotExist:
         return JsonResponse({'response': "(This candidate doesn't have a take on this issue yet)"})
 

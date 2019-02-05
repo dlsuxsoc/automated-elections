@@ -43,7 +43,7 @@ function set_take(csrf_token, candidate_id) {
 
     // Get the selected issue
     var issue = issueDropdown.options[issueDropdown.selectedIndex];
-    issue = issue.text;
+    issue = issue.value;
 
     // Get the response container
     var responseContainer = document.getElementById("response-modal");

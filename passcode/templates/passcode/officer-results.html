@@ -350,10 +350,9 @@
                 <input type="hidden" name="form-type" value="archive">
                 <div class="controls-instruction">
                     Once you're done viewing the election results, reenter your password and click the
-                    <b>archive button</b> to <b>archive</b> <i>all</i> the results to a CSV file. Archiving the
-                    results
-                    will also clear <i>all</i> votes, voters, candidates, batch positions, batch units, and issues from
-                    this website.
+                    <b>archive button</b> to <b>archive</b> the results of the election to a CSV file. You may also
+                    clear all data (voters, candidates, votes, takes, issues, batch positions, and batch units) from the
+                    previous elections.
                 </div>
                 <div class="controls">
                     <label class="info-label" for="reauth-archive">Reenter your password</label>
@@ -361,8 +360,11 @@
                     <input id="reauth-archive" class="password-reauth" type="password" name="reauth-archive"
                            required="required">
                     <br>
-                    <input class="button {% if election_ongoing is False %}confirm{% else %}confirm-negative{% endif %}"
-                           type="submit" value="Archive election results">
+                    <input class="button confirm"
+                           type="submit" name="archive" value="Archive in CSV">
+                    &nbsp;&nbsp;&nbsp;&nbsp;<b>or</b>&nbsp;&nbsp;&nbsp;&nbsp;
+                    <input class="button confirm-negative"
+                           type="submit" name="clear" value="Clear election data">
                 </div>
             </form>
         {% endif %}

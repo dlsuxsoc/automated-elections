@@ -80,9 +80,7 @@
                                     <div class="candidate-response">
                                         <a id="response"
                                            onclick="hintBrowser('{{ csrf_token }}', '{{ candidate.identifier }}')"
-                                           class="response-link button-read">Read the
-                                            response
-                                            >></a>
+                                           class="response-link button-read">Read this candidate's takes >></a>
                                     </div>
                                     <input type="radio" name="{{ position.identifier }}"
                                            value="{{ candidate.identifier }}"
@@ -108,7 +106,7 @@
                         <select class="info-input" name="take-issue" id="issue-dropdown"
                                 onchange="change_take('{{ csrf_token }}')">
                             {% for issue in issues %}
-                                <option>{{ issue.name }}</option>
+                                <option value="{{ issue.id }}">{{ issue.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
