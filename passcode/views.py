@@ -1045,21 +1045,21 @@ class ResultsView(OfficerView):
                                 # Show a Save As box so the user may download it
                                 return response
                             elif request.POST.get('clear'):
-                                ## Clear all users who are voters
-                                ## This also clears the following tables: voters, candidates, takes, vote set
-                                #User.objects.filter(groups__name='voter').delete()
-                                #
-                                ## Clear all issues
-                                #Issue.objects.all().delete()
-                                #
+                                # Clear all users who are voters
+                                # This also clears the following tables: voters, candidates, takes, vote set
+                                User.objects.filter(groups__name='voter').delete()
+                                
+                                # Clear all issues
+                                Issue.objects.all().delete()
+
                                 # Clear all votes
                                 Vote.objects.all().delete()
-                                #
-                                ## Clear all batch positions
-                                #Position.objects.filter(base_position__type=BasePosition.BATCH).delete()
-                                #
-                                ## Clear all batch units
-                                #Unit.objects.filter(college__isnull=False, batch__isnull=False)
+
+                                # Clear all batch positions
+                                Position.objects.filter(base_position__type=BasePosition.BATCH).delete()
+
+                                # Clear all batch units
+                                Unit.objects.filter(college__isnull=False, batch__isnull=False)
 
                                 messages.success(request, 'Data from the previous elections has now been cleared.')
 
