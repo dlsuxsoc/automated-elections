@@ -10,5 +10,5 @@ urlpatterns = [
 
     # AJAX handlers
     # takes/<candidate_identifier>/<issue>/
-    path('takes/<uuid:candidate_identifier>/<str:issue>/', json_take, name='candidate_takes'),
+    path('takes/<uuid:candidate_identifier>/<int:issue_id>/', json_take, name='candidate_takes'),
 ]

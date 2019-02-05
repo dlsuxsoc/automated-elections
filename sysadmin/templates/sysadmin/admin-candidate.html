@@ -166,7 +166,7 @@
                 <select class="info-input" name="take-issue" id="issue-dropdown"
                         onchange="set_take('{{ csrf_token }}')">
                     {% for issue in issues %}
-                        <option>{{ issue.name }}</option>
+                        <option value="{{ issue.id }}">{{ issue.name }}</option>
                     {% empty %}
                         <option disabled="disabled" selected="selected">(no issues yet)</option>
                     {% endfor %}
