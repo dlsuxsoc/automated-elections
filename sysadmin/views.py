@@ -374,8 +374,14 @@ class VotersView(SysadminView):
                     context = self.display_objects(1)
 
                     return render(request, self.template_name, context)
-        
-        # REMOVED, Voters 
+            else:
+                # If no objects are received, it's an invalid request, so stay on the page and then show an error
+                # message
+                messages.error(request, 'Invalid request.')
+
+                context = self.display_objects(1)
+
+                return render(request, self.template_name, context)
         else:
             messages.error(request, 'You cannot do that now because there are still votes being tracked. There may be '
                                     'elections still ongoing, or you haven\'t archived the votes yet.')
@@ -766,80 +772,73 @@ class OfficersView(SysadminView):
 
         officer_form = OfficerForm(request.POST)
 
+        if form_type is False:
+            # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+            # message
+            messages.error(request, 'Invalid request.')
+
+            context = self.display_objects(1)
+
+            return render(request, self.template_name, context)
+        
+        if form_type == 'add-officer':
+            # The submitted form is for adding an officer
+            if officer_form.is_valid():
+                with transaction.atomic():
+                    # Save the form to the database if it is valid
+                    officer = officer_form.save()
+
+                    # Set the correctly hashed password
+                    officer.set_password(officer_form.cleaned_data['password'])
+
+                    # Add the officer to the COMELEC officer group
+                    group = Group.objects.get(name='comelec')
+                    group.user_set.add(officer)
+
+                    officer.save()
+
+                    messages.success(request, 'Officer successfully added.')
+
+                context = self.display_objects(1)
+
+                return render(request, self.template_name, context)
+                
         # Only allow editing while there are no elections ongoing and there are no votes in the database
         if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
-            if form_type is not False:
-                if form_type == 'add-officer':
-                    # The submitted form is for adding an officer
-                    if officer_form.is_valid():
+            if form_type == 'delete-officer':
+                # The submitted form is for deleting officers
+                officers_list = request.POST.getlist('officers')
+
+                if officers_list is not False and len(officers_list) > 0:
+                    try:
+                        officers_deleted = 0
+
+                        # Try to delete each voter in the list
                         with transaction.atomic():
-                            # Save the form to the database if it is valid
-                            officer = officer_form.save()
+                            for officer in officers_list:
+                                self.delete_officer(officer)
 
-                            # Set the correctly hashed password
-                            officer.set_password(officer_form.cleaned_data['password'])
+                                officers_deleted += 1
 
-                            # Add the officer to the COMELEC officer group
-                            group = Group.objects.get(name='comelec')
-                            group.user_set.add(officer)
-
-                            officer.save()
-
-                            messages.success(request, 'Officer successfully added.')
-
-                        context = self.display_objects(1)
-
-                        return render(request, self.template_name, context)
-                    else:
-                        # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
-                        # message
-                        messages.error(request, 'Could not add this officer.')
-
-                        context = self.display_objects(1)
-
-                        return render(request, self.template_name, context)
-                elif form_type == 'delete-officer':
-                    # The submitted form is for deleting officers
-                    officers_list = request.POST.getlist('officers')
-
-                    if officers_list is not False and len(officers_list) > 0:
-                        try:
-                            officers_deleted = 0
-
-                            # Try to delete each voter in the list
-                            with transaction.atomic():
-                                for officer in officers_list:
-                                    self.delete_officer(officer)
-
-                                    officers_deleted += 1
-
-                                messages.success(request,
-                                                 "All {0} officer(s) successfully deleted.".format(officers_deleted))
-                        except User.DoesNotExist:
-                            # If the user does not exist
-                            messages.error(request,
-                                           'One of the selected users has not existed in the first place. '
-                                           'No officers were deleted.')
-
-                        context = self.display_objects(1)
-
-                        return render(request, self.template_name, context)
-                    else:
-                        # If the form type is unknown, it's an invalid request, so stay on the page and then show an
-                        # error message
-                        messages.error(request, 'Invalid request.')
-
-                        context = self.display_objects(1)
-
-                        return render(request, self.template_name, context)
-                else:
-                    # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
-                    # message
-                    messages.error(request, 'Invalid request.')
+                            messages.success(request,
+                                                "All {0} officer(s) successfully deleted.".format(officers_deleted))
+                    except User.DoesNotExist:
+                        # If the user does not exist
+                        messages.error(request,
+                                        'One of the selected users has not existed in the first place. '
+                                        'No officers were deleted.')
 
                     context = self.display_objects(1)
 
                     return render(request, self.template_name, context)
+                else:
+                    # If the form type is unknown, it's an invalid request, so stay on the page and then show an
+                    # error message
+                    messages.error(request, 'Invalid request.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)    
             else:
                 # If no objects are received, it's an invalid request, so stay on the page and then show an error
                 # message
