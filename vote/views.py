@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.contrib.auth.models import Group
-from django.contrib.auth.views import logout
+from django.contrib.auth import logout
 from django.core.mail import send_mail
 from django.db import transaction, IntegrityError
 from django.http import JsonResponse
