@@ -53,10 +53,12 @@ class BasePosition(models.Model):
 class Position(models.Model):
     base_position = models.ForeignKey(BasePosition, on_delete=models.CASCADE)
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE)
+    priority = models.IntegerField(default=100)
     identifier = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
 
     class Meta:
         unique_together = ('base_position', 'unit')
+        ordering = ['priority']
 
     def __str__(self):
         return ((self.unit.name + " ")
@@ -88,6 +90,7 @@ class Candidate(models.Model):
 
     class Meta:
         unique_together = ('position', 'party')
+        ordering = ['position__priority']
 
     def __str__(self):
         return self.voter.user.first_name + " " + self.voter.user.last_name \

@@ -121,7 +121,7 @@ class VoteView(UserPassesTestMixin, View):
 
             # Then try to fill that partition with candidates running for that position type
             candidates_type = Candidate.objects.filter(position__base_position__type=position_type).order_by(
-                'party__name')
+                'party__name').order_by('position__priority')
 
             if candidates_type.count() != 0:
                 for candidate in candidates_type:
@@ -154,6 +154,13 @@ class VoteView(UserPassesTestMixin, View):
                 # If there are no candidates running for this position type, just forget about that position type and
                 # move on
                 candidates.pop(position_type)
+
+        print('DATA DUMP STARTS HERE')
+        print(candidates)
+        print(positions)
+        print(positions_json)
+
+        print(candidates["Executive"])
 
         # Dump the positions into JSON
         positions_json = json.dumps(list(positions_json))
