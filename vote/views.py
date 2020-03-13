@@ -155,11 +155,6 @@ class VoteView(UserPassesTestMixin, View):
                 # move on
                 candidates.pop(position_type)
 
-        print('DATA DUMP STARTS HERE')
-        print(candidates)
-        print(positions)
-        print(positions_json)
-
         print(candidates["Executive"])
 
         # Dump the positions into JSON
