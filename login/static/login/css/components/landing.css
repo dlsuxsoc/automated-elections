@@ -1,5 +1,6 @@
 body {
     position: relative;
+    overflow-y: hidden;
 }
 
 body::before,
@@ -80,7 +81,7 @@ body::after {
     position: relative;
 }
 
-@media screen and (max-height: 800px) {
+@media screen and (max-height: 800px){
     body {
         height: 800px;
         overflow-y: scroll;
