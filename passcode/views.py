@@ -2,6 +2,7 @@
 import csv
 import datetime
 import json
+import smtplib
 from random import randint
 
 from django.contrib import messages
@@ -592,9 +593,9 @@ class ResultsView(OfficerView):
 
             # Total registered voters
             overall_registered_voters = Voter.objects.count()
-
+            
             # Voter turnout
-            overall_turnout = overall_votes / overall_registered_voters * 100
+            overall_turnout = overall_votes / overall_registered_voters * 100 if overall_registered_voters != 0 else 0
 
             # Votes today
             now = datetime.datetime.now()
@@ -855,6 +856,9 @@ class ResultsView(OfficerView):
                         # Keep track of whether no checkboxes where checked
                         empty = True
 
+                        # List of all voters
+                        voters = [ ]
+
                         # Add each into the database
                         for college, batches in college_batches.items():
                             # Get the college object from the name
@@ -866,12 +870,35 @@ class ResultsView(OfficerView):
                                     empty = False
 
                                     ElectionStatus.objects.create(college=college_object, batch=batch)
+                                    batch_voters = list(
+                                        Voter.objects.filter(
+                                            college=college_object,
+                                            user__username__startswith=str(batch),
+                                            voting_status=False,
+                                            eligibility_status=True
+                                        ).values('user__email')
+                                    )
+
+                                    # print(batch_voters)
+                                    voters += batch_voters
                             except College.DoesNotExist:
                                 # If the college does not exist
                                 messages.error(request, 'Internal server error.')
 
                         # Check whether batches were actually selected in the first place
                         if not empty:
+                            # Email every student once election starts
+                            server = smtplib.SMTP('smtp.gmail.com', 587)
+                            server.ehlo()
+                            server.starttls()
+                            # TODO: Edit this (user, password)
+                            server.login('<USER>', '<PASS>')
+                            
+                            for voter in voters:
+                                msg = "HELLO " + voter['user__email']
+                                server.sendmail('lcsc.research.and.development@gmail.com', voter['user__email'], msg)
+
+                            server.quit()
                             messages.success(request, 'The elections have now started.')
                         else:
                             messages.error(request,
