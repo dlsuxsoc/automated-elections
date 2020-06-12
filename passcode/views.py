@@ -5,6 +5,7 @@ import json
 import smtplib
 from random import randint
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate
 from django.contrib.auth.decorators import user_passes_test
@@ -91,6 +92,33 @@ class VotersView(OfficerView):
         # Create the voter using the created user
         Voter.objects.create(user=user, college=college,
                              voting_status=voting_status, eligibility_status=eligibility_status)
+        
+        if ResultsView.is_election_ongoing() and not voting_status and eligibility_status:
+            # Also check if his batch and college is in the election status
+            if ElectionStatus.objects.filter(college=college, batch=int(username[:3])).count() > 0:
+                server = smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT)
+                server.ehlo()
+                server.starttls()
+                server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
+                
+                msg = '''Subject: [COMELEC] Election is starting
+
+Hello {} {},
+Election has started.
+Use this as your credential for submitting your vote:
+User: {}
+Pass: {}
+                '''.format(
+                    first_name,
+                    last_name,
+                    username,
+                    password
+                )
+
+                # Send the email to the user
+                server.sendmail(settings.EMAIL_HOST_USER, email, msg)
+
+                server.quit()
 
     # A convenience function for changing a voter
     @staticmethod
@@ -151,46 +179,47 @@ class VotersView(OfficerView):
     def post(self, request):
         form_type = request.POST.get('form-type', False)
 
+        # The submitted form is for adding a voter
+        if form_type == 'add-voter':
+            first_name = request.POST.get('voter-firstnames', False)
+            last_name = request.POST.get('voter-lastname', False)
+            username = request.POST.get('voter-id', False)
+            college_name = request.POST.get('voter-college', False)
+            voting_status_name = request.POST.get('voter-voting-status', False)
+            eligibility_status_name = request.POST.get('voter-eligibility-status', False)
+
+            if first_name is not False and last_name is not False and username is not False \
+                    and college_name is not False \
+                    and voting_status_name is not False and eligibility_status_name is not False:
+                try:
+                    with transaction.atomic():
+                        # Create the voter
+                        self.create_voter(first_name, last_name, username, college_name, voting_status_name,
+                                            eligibility_status_name)
+
+                        # Display a success message
+                        messages.success(request, 'Voter successfully created.')
+                except IntegrityError:
+                    messages.error(request, 'A voter with that ID number already exists.')
+                except College.DoesNotExist:
+                    messages.error(request, 'That college does not exist.')
+
+                context = self.display_objects(1)
+
+                return render(request, self.template_name, context)
+            else:
+                # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                # message
+                messages.error(request, 'Invalid request.')
+
+                context = self.display_objects(1)
+
+                return render(request, self.template_name, context)
+
         # Only allow editing while there are no elections ongoing and there are no votes in the database
         if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
             if form_type is not False:
-                # The submitted form is for adding a voter
-                if form_type == 'add-voter':
-                    first_name = request.POST.get('voter-firstnames', False)
-                    last_name = request.POST.get('voter-lastname', False)
-                    username = request.POST.get('voter-id', False)
-                    college_name = request.POST.get('voter-college', False)
-                    voting_status_name = request.POST.get('voter-voting-status', False)
-                    eligibility_status_name = request.POST.get('voter-eligibility-status', False)
-
-                    if first_name is not False and last_name is not False and username is not False \
-                            and college_name is not False \
-                            and voting_status_name is not False and eligibility_status_name is not False:
-                        try:
-                            with transaction.atomic():
-                                # Create the voter
-                                self.create_voter(first_name, last_name, username, college_name, voting_status_name,
-                                                  eligibility_status_name)
-
-                                # Display a success message
-                                messages.success(request, 'Voter successfully created.')
-                        except IntegrityError:
-                            messages.error(request, 'A voter with that ID number already exists.')
-                        except College.DoesNotExist:
-                            messages.error(request, 'That college does not exist.')
-
-                        context = self.display_objects(1)
-
-                        return render(request, self.template_name, context)
-                    else:
-                        # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
-                        # message
-                        messages.error(request, 'Invalid request.')
-
-                        context = self.display_objects(1)
-
-                        return render(request, self.template_name, context)
-                elif form_type == 'edit-voter':
+                if form_type == 'edit-voter':
                     # The submitted form is for editing a voter
                     page = request.POST.get('page', False)
                     voter_id = request.POST.get('edit-id', False)
@@ -815,6 +844,24 @@ class ResultsView(OfficerView):
     def is_votes_empty():
         return not Vote.objects.all().exists()
 
+    # Generate a random passcode for a user
+    @staticmethod
+    def generate_passcode():
+        # Length of the passcode
+        length = 8
+
+        # The character domain of the passcode
+        charset = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNOPQRSTUVWXYZ0123456789'
+
+        # The passcode to be generated
+        passcode = ''
+
+        # Generate a random passcode of specified length
+        for index in range(length):
+            passcode += charset[randint(0, len(charset) - 1)]
+
+        return passcode
+
     def get(self, request):
         page = request.GET.get('page', False)
         query = request.GET.get('query', False)
@@ -876,7 +923,7 @@ class ResultsView(OfficerView):
                                             user__username__startswith=str(batch),
                                             voting_status=False,
                                             eligibility_status=True
-                                        ).values('user__email')
+                                        ).values('user__email', 'user__first_name', 'user__last_name', 'user__username')
                                     )
 
                                     # print(batch_voters)
@@ -888,15 +935,35 @@ class ResultsView(OfficerView):
                         # Check whether batches were actually selected in the first place
                         if not empty:
                             # Email every student once election starts
-                            server = smtplib.SMTP('smtp.gmail.com', 587)
+                            server = smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT)
                             server.ehlo()
                             server.starttls()
-                            # TODO: Edit this (user, password)
-                            server.login('<USER>', '<PASS>')
+                            server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
                             
                             for voter in voters:
-                                msg = "HELLO " + voter['user__email']
-                                server.sendmail('lcsc.research.and.development@gmail.com', voter['user__email'], msg)
+                                # Create a new passcode for the student
+                                passcode = self.generate_passcode()
+                                msg = '''Subject: [COMELEC] Election is starting
+
+Hello {} {},
+Election has started.
+Use this as your credential for submitting your vote:
+User: {}
+Pass: {}
+                                '''.format(
+                                    voter['user__first_name'],
+                                    voter['user__last_name'],
+                                    voter['user__username'],
+                                    passcode
+                                )
+
+                                # Send the email to the user
+                                server.sendmail(settings.EMAIL_HOST_USER, voter['user__email'], msg)
+
+                                # Save the new pass code to the database
+                                user = User.objects.get(username=voter['user__username'])
+                                user.set_password(passcode)
+                                user.save()
 
                             server.quit()
                             messages.success(request, 'The elections have now started.')
