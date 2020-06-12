@@ -110,7 +110,7 @@ class VoteView(UserPassesTestMixin, View):
         positions_json = []
 
         # Partition the candidates into their position's types
-        base_positions = BasePosition.objects.values('type').distinct()
+        base_positions = BasePosition.objects.values('type').distinct().order_by('-type')
 
         for base_position in base_positions:
             # Take note of the position type
@@ -155,7 +155,7 @@ class VoteView(UserPassesTestMixin, View):
                 # move on
                 candidates.pop(position_type)
 
-        print(candidates["Executive"])
+        # print(candidates["Executive"])
 
         # Dump the positions into JSON
         positions_json = json.dumps(list(positions_json))
