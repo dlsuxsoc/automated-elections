@@ -56,6 +56,33 @@
         <div id="candidates-column">
             <form id="vote" method="POST" action="">
                 {% csrf_token %}
+                {% if polls %}
+                <div class="candidate-category">
+                    PLEBISCITE
+                </div>
+                {% for poll in polls %}
+                <div class="candidates-row clearfix">
+                    <div class="candidate-position">
+                        {{ poll.name }}
+                    </div>
+                    <input type="hidden" name="poll" value="{{ poll.identifier }}">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; justify-items: center;">
+                        <div class="candidate" style="grid-row-start:1; grid-column-start:1; ">
+                            <h1 class="poll-choice">Yes</h1>
+                            <input type="radio" name="{{ poll.identifier }}"
+                                value="{{ poll.identifier }}-yes" id="{{ poll.identifier }}-yes">
+                            <label for="{{ poll.identifier }}-yes"></label>
+                        </div>
+                        <div class="candidate" style="grid-row-start:1; grid-column-start:3; ">
+                            <h1 class="poll-choice">No</h1>
+                            <input type="radio" name="{{ poll.identifier }}"
+                                value="{{ poll.identifier }}-no" id="{{ poll.identifier }}-no">
+                            <label for="{{ poll.identifier }}-no"></label>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% endif %}
                 {% for position_type, candidates_per_position in candidates.items %}
                 {% if position_type %}
                 <div class="candidate-category">
@@ -113,7 +140,7 @@
                         {% endif %}
                         {% endfor %}
 
-                        <button id="voting-submit" type="button" onclick="showVote('{{ positions_json }}')">Submit my
+                        <button id="voting-submit" type="button" onclick="showVote('{{ positions_json }}', '{{ polls_json }}')">Submit my
                             vote</button>
 
                         <div id="overlay" onclick="removeHint()">
@@ -145,6 +172,12 @@
                                 <div class="candidate-row">
                                     <div class="candidate-position">{{ position.base_position.name }}</div>
                                     <div class="candidate-person" id="{{ position.identifier }}-summary"></div>
+                                </div>
+                                {% endfor %}
+                                {% for poll in polls %}
+                                <div class="candidate-row">
+                                    <div class="candidate-position">{{ poll }}</div>
+                                    <div class="candidate-person" id="{{ poll.identifier }}-summary"></div>
                                 </div>
                                 {% endfor %}
                                 {% if positions %}

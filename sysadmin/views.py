@@ -12,8 +12,8 @@ from django.shortcuts import render
 from django.views import View
 
 from passcode.views import PasscodeView, ResultsView
-from sysadmin.forms import IssueForm, OfficerForm, UnitForm, PositionForm
-from vote.models import Voter, College, Candidate, Position, Unit, Party, Issue, Take, BasePosition
+from sysadmin.forms import IssueForm, OfficerForm, UnitForm, PositionForm, PollForm
+from vote.models import Voter, College, Candidate, Position, Unit, Party, Issue, Take, BasePosition, Poll
 
 
 # Test function for this view
@@ -1187,7 +1187,7 @@ class IssueView(SysadminView):
                         context = self.display_objects(1)
 
                         return render(request, self.template_name, context)
-                elif form_type == 'delete-position':
+                elif form_type == 'delete-issues':
                     # The submitted form is for deleting issues
                     issues_list = request.POST.getlist('issues')
 
@@ -1271,3 +1271,129 @@ def json_take(request, candidate_id, issue):
 
     # Then return its response
     return JsonResponse({'response': take.response})
+
+class PollView(SysadminView):
+    template_name = 'sysadmin/admin-poll.html'
+
+    # A convenience function for deleting an poll
+    @staticmethod
+    def delete_poll(poll_id):
+        # Retrieve the poll
+        poll = Poll.objects.get(id=poll_id)
+
+        # Get rid of that issupolle
+        poll.delete()
+
+    def display_objects(self, page, query=False):
+        # Show everything if the query is empty
+        if query is False:
+            polls = Poll.objects.all().order_by('name')
+        else:
+            polls = Poll.objects.filter(name__icontains=query).order_by('name')
+
+        paginator = Paginator(polls, self.objects_per_page)
+        paginated_polls = paginator.get_page(page)
+
+        poll_form = PollForm()
+
+        context = {
+            'polls': paginated_polls,
+            'poll_form': poll_form
+        }
+
+        return context
+
+    def get(self, request):
+        page = request.GET.get('page', False)
+        query = request.GET.get('query', False)
+
+        context = self.display_objects(page if page is not False else 1, query)
+
+        return render(request, self.template_name, context)
+
+    def post(self, request):
+        form_type = request.POST.get('form-type', False)
+
+        poll_form = PollForm(request.POST)
+
+        # Only allow editing while there are no elections ongoing and there are no votes in the database
+        if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
+            if form_type is not False:
+                if form_type == 'add-poll':
+                    # The submitted form is for adding an poll
+                    if poll_form.is_valid():
+                        with transaction.atomic():
+                            # Save the form to the database if it is valid
+                            poll_form.save()
+
+                            messages.success(request, 'Poll successfully added.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                    else:
+                        # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                        # message
+                        messages.error(request, 'Could not add this poll.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                elif form_type == 'delete-polls':
+                    # The submitted form is for deleting polls
+                    polls_list = request.POST.getlist('polls')
+
+                    if polls_list is not False and len(polls_list) > 0:
+                        try:
+                            polls_deleted = 0
+
+                            # Try to delete each poll in the list
+                            with transaction.atomic():
+                                for poll in polls_list:
+                                    self.delete_poll(poll)
+
+                                    polls_deleted += 1
+
+                                messages.success(request,
+                                                 "All {0} poll(s) successfully deleted.".format(polls_deleted))
+                        except Poll.DoesNotExist:
+                            # If the position does not exist
+                            messages.error(request,
+                                           'One of the selected polls has not existed in the first place. '
+                                           'No polls were deleted.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                    else:
+                        # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                        # message
+                        messages.error(request, 'Invalid request.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                else:
+                    # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                    # message
+                    messages.error(request, 'Invalid request.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+            else:
+                # If no objects are received, it's an invalid request, so stay on the page and then show an error
+                # message
+                messages.error(request, 'Invalid request.')
+
+                context = self.display_objects(1)
+
+                return render(request, self.template_name, context)
+        else:
+            messages.error(request,
+                           'You cannot do that now because there are still votes being tracked. There may be '
+                           'elections still ongoing, or you haven\'t archived the votes yet.')
+
+            context = self.display_objects(1)
+
+            return render(request, self.template_name, context)

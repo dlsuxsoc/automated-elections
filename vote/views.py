@@ -15,7 +15,7 @@ from django.shortcuts import render, redirect
 from django.views import View
 
 # Sends an email receipt containing the voted candidates to the voter
-from vote.models import Issue, Candidate, Voter, Take, Vote, VoteSet, BasePosition, Position
+from vote.models import Issue, Candidate, Voter, Take, Vote, VoteSet, BasePosition, Position, Poll, PollSet, PollAnswerType
 
 
 # Test function for this view
@@ -163,11 +163,20 @@ class VoteView(UserPassesTestMixin, View):
         # Get all issues
         issues = Issue.objects.all().order_by('name')
 
+        # Get polls
+        polls = Poll.objects.all().order_by('name')
+        polls_json = []
+        for poll in polls:
+            polls_json.append(str(poll.identifier))
+        polls_json = json.dumps(list(polls_json))
+
         context = {
             'candidates': candidates,
             'positions': positions,
             'positions_json': positions_json,
-            'issues': issues
+            'issues': issues,
+            'polls': polls,
+            'polls_json': polls_json
         }
 
         # Get this page
@@ -181,9 +190,13 @@ class VoteView(UserPassesTestMixin, View):
         if not voter.voting_status:
             # Take note of the voter's votes
             votes = []
+            poll_votes = []
 
             # Collect all "voteable" positions
             positions = request.POST.getlist('position')
+
+            # Collect all polls
+            polls = request.POST.getlist('poll')
 
             if positions is not False and len(positions) > 0:
                 for position in positions:
@@ -191,8 +204,14 @@ class VoteView(UserPassesTestMixin, View):
                     # It should return False when the voter abstained for that position (picked no one)
                     votes.append((position, request.POST.get(position, False),))
 
+            if polls is not False and len(polls) > 0:
+                for poll in polls:
+                    poll_votes.append((poll, request.POST.get(poll)[request.POST.get(poll).rfind('-')+1:],))
+            
+            print(poll_votes)
+
             # Proceed only when there are no duplicate votes and positions
-            if self.contains_duplicates(votes):
+            if self.contains_duplicates(votes) and self.contains_duplicates(poll_votes):
                 # If there are no duplicates, convert the list of tuples into a dict
                 votes_dict = {}
 
@@ -201,12 +220,23 @@ class VoteView(UserPassesTestMixin, View):
 
                 votes = votes_dict
 
+                poll_votes_dict = {}
+
+                for poll in poll_votes:
+                    poll_votes_dict[poll[0]] = poll[1]
+
+                polls = poll_votes_dict
+
                 try:
                     # Change the identifiers to the actual candidates they represent
                     for position, candidate in votes.items():
                         votes[position] = (Position.objects.get(identifier=position),
                                            Candidate.objects.get(
                                                identifier=candidate) if candidate is not False else False,)
+
+                    for identifier, answer in polls.items():
+                        polls[identifier] = (Poll.objects.get(identifier=identifier),
+                                           answer,)
 
                     with transaction.atomic():
                         # Create a vote object to represent a single vote of a user
@@ -226,9 +256,18 @@ class VoteView(UserPassesTestMixin, View):
                                     position=position_candidate[0]) for position_candidate in votes.values()
                         ]
 
+                        actual_poll_votes = [
+                            PollSet(vote=vote,
+                                    poll=(poll[0]),
+                                    answer=(poll[1])) for poll in polls.values()
+                        ]
+
                         # Save all votes into the database
                         for actual_vote in actual_votes:
                             actual_vote.save()
+
+                        for actual_poll_vote in actual_poll_votes:
+                            actual_poll_vote.save()
 
                         # Send email receipt
                         #self.send_email_receipt(request.user, votes, serial_number)

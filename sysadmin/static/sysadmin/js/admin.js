@@ -234,6 +234,7 @@ function delete_positions() {
 
 function delete_issues() {
     // Collect all checked checkboxes
+    console.log('AHHHHHHHHH');
     var array = [];
     var checkboxes = document.querySelectorAll("input[type=checkbox][name=check]:checked");
 
@@ -249,6 +250,34 @@ function delete_issues() {
 
         hidden.setAttribute("type", "hidden");
         hidden.setAttribute("name", "issues");
+        hidden.setAttribute("value", array[i]);
+
+        delete_form.appendChild(hidden);
+    }
+
+    console.log(delete_form);
+
+    // Then activate that form
+    delete_form.submit();
+}
+
+function delete_polls() {
+    // Collect all checked checkboxes
+    var array = [];
+    var checkboxes = document.querySelectorAll("input[type=checkbox][name=check]:checked");
+
+    for (var i = 0; i < checkboxes.length; i++) {
+        array.push(checkboxes[i].value);
+    }
+
+    // Delete all of them by adding them to a form
+    delete_form = document.getElementById("delete-polls");
+
+    for (var i = 0; i < array.length; i++) {
+        hidden = document.createElement("input");
+
+        hidden.setAttribute("type", "hidden");
+        hidden.setAttribute("name", "polls");
         hidden.setAttribute("value", array[i]);
 
         delete_form.appendChild(hidden);

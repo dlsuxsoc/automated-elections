@@ -21,7 +21,7 @@ body {
 }
 
 #header-container {
-    width: 75%;
+    width: 80%;
     height: 10%;
     background: #36A472;
 
@@ -32,7 +32,7 @@ body {
     top: 0;
     position: fixed;
 
-    padding: 0px 10% 0px 15%;
+    padding: 0px 10% 0px 10%;
 }
 
 #header-ballot {

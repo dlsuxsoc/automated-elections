@@ -934,41 +934,42 @@ class ResultsView(OfficerView):
 
                         # Check whether batches were actually selected in the first place
                         if not empty:
+                            pass
                             # Email every student once election starts
-                            server = smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT)
-                            server.ehlo()
-                            server.starttls()
-                            server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
+    #                         server = smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT)
+    #                         server.ehlo()
+    #                         server.starttls()
+    #                         server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
                             
-                            for voter in voters:
-                                # Limit to 1 email for testing
-                                if(voter['user__email'] == '11731788@dlsu.edu.ph'):
-                                # Create a new passcode for the student
-                                    passcode = self.generate_passcode()
-                                    msg = '''Subject: [COMELEC] Election is starting
+    #                         for voter in voters:
+    #                             # Limit to 1 email for testing
+    #                             if(voter['user__email'] == '11731788@dlsu.edu.ph'):
+    #                             # Create a new passcode for the student
+    #                                 passcode = self.generate_passcode()
+    #                                 msg = '''Subject: [COMELEC] Election is starting
 
-    Hello {} {},
-    Election has started.
-    Use this as your credential for submitting your vote:
-    User: {}
-    Pass: {}
-                                    '''.format(
-                                        voter['user__first_name'],
-                                        voter['user__last_name'],
-                                        voter['user__username'],
-                                        passcode
-                                    )
+    # Hello {} {},
+    # Election has started.
+    # Use this as your credential for submitting your vote:
+    # User: {}
+    # Pass: {}
+    #                                 '''.format(
+    #                                     voter['user__first_name'],
+    #                                     voter['user__last_name'],
+    #                                     voter['user__username'],
+    #                                     passcode
+    #                                 )
 
-                                    # Send the email to the user
-                                    server.sendmail(settings.EMAIL_HOST_USER, voter['user__email'], msg)
+    #                                 # Send the email to the user
+    #                                 server.sendmail(settings.EMAIL_HOST_USER, voter['user__email'], msg)
 
-                                    # Save the new pass code to the database
-                                    user = User.objects.get(username=voter['user__username'])
-                                    user.set_password(passcode)
-                                    user.save()
+    #                                 # Save the new pass code to the database
+    #                                 user = User.objects.get(username=voter['user__username'])
+    #                                 user.set_password(passcode)
+    #                                 user.save()
 
-                            server.quit()
-                            messages.success(request, 'The elections have now started.')
+    #                         server.quit()
+    #                         messages.success(request, 'The elections have now started.')
                         else:
                             messages.error(request,
                                            'The elections weren\'t started because there were no batches selected at'

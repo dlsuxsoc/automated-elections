@@ -1,7 +1,7 @@
 from django.urls import path
 
 from sysadmin.views import VotersView, CandidatesView, OfficersView, UnitView, json_take, json_details, PositionView, \
-    IssueView
+    IssueView, PollView
 
 app_name = 'sysadmin'
 
@@ -23,6 +23,9 @@ urlpatterns = [
 
     # /sysadmin/issue/
     path('issues/', IssueView.as_view(), name='issues'),
+
+    # /sysadmin/poll/
+    path('polls/', PollView.as_view(), name='polls'),
 
     # AJAX handlers
     # /sysadmin/voters/details/<voter_id>
