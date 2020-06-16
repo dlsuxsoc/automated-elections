@@ -42,3 +42,9 @@
     -webkit-appearance: none;
     margin: 0;
 }
+
+@media screen and (max-width: 400px){
+    .input-field {
+        width: 300px;
+    }
+}
