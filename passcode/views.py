@@ -24,7 +24,7 @@ from django.utils import timezone
 from django.views import View
 
 # Test function for this view
-from vote.models import Voter, College, Candidate, ElectionStatus, Vote, Position, Issue, BasePosition, Unit
+from vote.models import Voter, College, Candidate, ElectionStatus, Vote, Position, Issue, BasePosition, Unit, Poll
 
 # EMAIL BODY CONST
 fp = open(settings.BASE_DIR + '/email_template.html', 'r')
@@ -509,7 +509,7 @@ class CandidatesView(OfficerView):
 class ResultsView(OfficerView):
     template_name = 'passcode/officer-results.html'
 
-    def display_objects(self, page, query=False):
+    def display_objects(self, page, query=False, pollquery=False):
         # Retrieve all colleges
         colleges = College.objects.all().order_by('name')
 
@@ -527,6 +527,8 @@ class ResultsView(OfficerView):
 
             # Retrieve all positions
             positions = Position.objects.all().order_by('base_position__name', 'unit__college__name', 'unit__name')
+
+            polls = Poll.objects.all().order_by('name')
 
             if query is not False:
                 # Count the votes of all candidates by position
@@ -635,15 +637,64 @@ class ResultsView(OfficerView):
 
                 vote_results_json = json.dumps(vote_results_json)
 
-            context = {
-                'election_ongoing': election_ongoing,
-                'colleges': colleges,
-                'batches': batches,
-                'positions': positions,
-                'vote_results': vote_results if query is not False else False,
-                'vote_results_json': vote_results_json if query is not False else False,
-                'identifier': query,
-            }
+                context = {
+                    'election_ongoing': election_ongoing,
+                    'colleges': colleges,
+                    'batches': batches,
+                    'positions': positions,
+                    'polls': polls,
+                    'vote_results': vote_results if query is not False else False,
+                    'vote_results_json': vote_results_json if query is not False else False,
+                    'identifier': query,
+                }
+            elif pollquery is not False:
+                # Count the votes of all candidates by position
+                TOTAL_POLL_VOTES_QUERY = (
+                    "SELECT\n"
+                    "   p.'name' AS 'PollQuestion',\n"
+                    "   SUM((CASE WHEN ps.'answer' = 'yes' AND p.'identifier' = %s THEN 1 ELSE 0 END)) AS 'AnsweredYes',\n"
+                    "   SUM((CASE WHEN ps.'answer' = 'no' AND p.'identifier' = %s THEN 1 ELSE 0 END)) AS 'AnsweredNo'\n"
+                    "FROM\n"
+                    "   vote_pollset ps\n"
+                    "LEFT JOIN\n"
+                    "   vote_poll p\n"
+                    "ON\n"
+                    "   ps.'poll_id' = p.'id'\n"
+                    "AND\n"
+                    "   p.'identifier' = %s;\n"
+                )
+
+                # Correctly format the query
+                poll_query_formatted = pollquery.replace('-', '')
+
+                poll_results = {}
+
+                with connection.cursor() as cursor:
+                    cursor.execute(TOTAL_POLL_VOTES_QUERY, [poll_query_formatted, poll_query_formatted, poll_query_formatted])
+
+                    poll_results[pollquery] = cursor.fetchall()
+
+                # Create a shorter JSON version of the results
+                poll_results_json = {}
+
+                for result in poll_results[pollquery]:
+                    print(result)
+
+                    poll_results_json[result[0]] = (result[1], result[2])
+
+                poll_results_json = json.dumps(poll_results_json)
+
+                context = {
+                    'election_ongoing': election_ongoing,
+                    'colleges': colleges,
+                    'batches': batches,
+                    'positions': positions,
+                    'polls': polls,
+                    'poll_results': poll_results if query is not False else False,
+                    'poll_results_json': poll_results_json if query is not False else False,
+                    'identifier': query,
+                }
+
         else:
             # Show the eligible batches when the elections are on
             college_batch_dict = {}
@@ -907,8 +958,9 @@ class ResultsView(OfficerView):
     def get(self, request):
         page = request.GET.get('page', False)
         query = request.GET.get('query', False)
+        pollquery = request.GET.get('pollquery', False)
 
-        context = self.display_objects(page if page is not False else 1, query)
+        context = self.display_objects(page if page is not False else 1, query, pollquery)
 
         return render(request, self.template_name, context)
 
@@ -976,8 +1028,45 @@ class ResultsView(OfficerView):
 
                         # Check whether batches were actually selected in the first place
                         if not empty:
+<<<<<<< HEAD
                             for voter in voters:
                                 send_email(voter['user__username'])
+=======
+                            # Email every student once election starts
+                            server = smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT)
+                            server.ehlo()
+                            server.starttls()
+                            server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
+                            
+                            for voter in voters:
+                                # Limit to 1 email for testing
+                                if(voter['user__email'] == '11731788@dlsu.edu.ph'):
+                                # Create a new passcode for the student
+                                    passcode = self.generate_passcode()
+                                    msg = '''Subject: [COMELEC] Election is starting
+
+    Hello {} {},
+    Election has started.
+    Use this as your credential for submitting your vote:
+    User: {}
+    Pass: {}
+                                    '''.format(
+                                        voter['user__first_name'],
+                                        voter['user__last_name'],
+                                        voter['user__username'],
+                                        passcode
+                                    )
+
+                                    # Send the email to the user
+                                    server.sendmail(settings.EMAIL_HOST_USER, voter['user__email'], msg)
+
+                                    # Save the new pass code to the database
+                                    user = User.objects.get(username=voter['user__username'])
+                                    user.set_password(passcode)
+                                    user.save()
+
+                            server.quit()
+>>>>>>> voting-position
                             messages.success(request, 'The elections have now started.')
                         else:
                             messages.error(request,
