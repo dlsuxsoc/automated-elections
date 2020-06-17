@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Officer Dashboard</title>
+    <meta name="viewport" content="height=device-height, initial-scale=1">
 
     <!-- CSS LINKS -->
     <link rel="stylesheet" type="text/css" href="{% static 'passcode/css/components/officer.css' %}"/>
@@ -31,7 +32,9 @@
     <button class="tab-buttons" onclick="openTab(event, 'Controls')" id="tab-controls">Election controls</button>
     <button class="tab-buttons" onclick="openTab(event, 'Overview')" id="tab-overview">Overview of votes</button>
     <button class="tab-buttons" onclick="openTab(event, 'Underview')" id="tab-underview">Election results</button>
+    <button class="tab-buttons" onclick="openTab(event, 'Poll')" id="tab-poll">Poll results</button>
     <button class="tab-buttons" onclick="openTab(event, 'Archive')" id="tab-archive">Archive election results</button>
+    <button class="tab-buttons" onclick="openTab(event, 'PollArchive')" id="tab-poll-archive">Archive poll results</button>
 
 </div>
 
@@ -337,7 +340,105 @@
         </div>
     </div>
 
+    <div id="Poll" class="tab-content">
+        {% if election_ongoing is True %}
+            <img id="stop" src="{% static 'passcode/assets/svg/stop.svg' %}">
+            <header>Woah there!</header>
+            <div class="prohibited">
+                You may not view the results until the elections are done.
+            </div>
+        {% else %}
+            <div class="today-container">
+                <div class="today-stats">
+                    <div class="info-container">
+                        View votes per poll:
+                        <select id="poll-results" class="info-input" onchange="viewVotesForPosition()">
+                            <option disabled="disabled" {% if identifier is False %}selected="selected"{% endif %}>
+                                (select a position)
+                            </option>
+                            {% for position in positions %}
+                                <option value="{{ position.identifier }}"
+                                        {% if identifier|stringformat:"s" == position.identifier|stringformat:"s" %}selected="selected"{% endif %}>
+                                    {{ position }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div id="table-container">
+                        <div class="table-row row-0">
+                            <div class="col-position">Position</div>
+                            <div class="col-unit">Unit</div>
+                            <div class="col-name">Candidate</div>
+                            <div class="col-party">Party</div>
+                            <div class="col-votes">Votes</div>
+                        </div>
+
+                        <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
+                        {% if vote_results %}
+                            {% for results in vote_results.values %}
+                                {% for result in results %}
+                                    <div class="table-row {% cycle 'row-1' 'row-2' %}">
+                                        <div class="col-position">{{ result.0 }}</div>
+                                        <div class="col-unit">{{ result.1 }}</div>
+                                        <div class="col-name">{{ result.2 }}</div>
+                                        <div class="col-party">{{ result.3 }}</div>
+                                        <div class="col-votes">{{ result.4 }}</div>
+                                    </div>
+                                {% empty %}
+                                    No candidates have ran for this position.
+                                {% endfor %}
+                            {% endfor %}
+                        {% else %}
+                            Please select a position to see the election results of.
+                        {% endif %}
+                    </div>
+                    <canvas id="piechart">
+                    </canvas>
+                </div>
+            </div>
+        {% endif %}
+
+        <div id="logo">
+            <img width=500 height=50 src="{% static 'passcode/assets/svg/org-logos.svg' %}">
+        </div>
+    </div>
+
     <div id="Archive" class="tab-content">
+        {% if election_ongoing is True %}
+            <img id="stop" src="{% static 'passcode/assets/svg/stop.svg' %}">
+            <header>Woah there!</header>
+            <div class="prohibited">
+                You may not archive any results until the elections are done.
+            </div>
+        {% else %}
+            <form method="POST" action="">
+                {% csrf_token %}
+                <input type="hidden" name="form-type" value="archive">
+                <div class="controls-instruction">
+                    Once you're done viewing the election results, reenter your password and click the
+                    <b>archive button</b> to <b>archive</b> <i>all</i> the results to a CSV file. Archiving the
+                    results
+                    will also clear <i>all</i> votes, voters, candidates, batch positions, batch units, and issues from
+                    this website.
+                </div>
+                <div class="controls">
+                    <label class="info-label" for="reauth-archive">Reenter your password</label>
+                    <br>
+                    <input id="reauth-archive" class="password-reauth" type="password" name="reauth-archive"
+                           required="required">
+                    <br>
+                    <input class="button {% if election_ongoing is False %}confirm{% else %}confirm-negative{% endif %}"
+                           type="submit" value="Archive election results">
+                </div>
+            </form>
+        {% endif %}
+
+        <div id="logo">
+            <img width=500 height=50 src="{% static 'passcode/assets/svg/org-logos.svg' %}">
+        </div>
+    </div>
+
+    <div id="PollArchive" class="tab-content">
         {% if election_ongoing is True %}
             <img id="stop" src="{% static 'passcode/assets/svg/stop.svg' %}">
             <header>Woah there!</header>
