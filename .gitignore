@@ -6,3 +6,4 @@
 ;;directories to ignore
 .idea/
 
+test.py

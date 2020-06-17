@@ -3,6 +3,9 @@ import csv
 import datetime
 import json
 import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
 from random import randint
 
 from django.conf import settings
@@ -23,6 +26,67 @@ from django.views import View
 # Test function for this view
 from vote.models import Voter, College, Candidate, ElectionStatus, Vote, Position, Issue, BasePosition, Unit
 
+# EMAIL BODY CONST
+fp = open(settings.BASE_DIR + '/email_template.html', 'r')
+HTML_STR = fp.read()
+fp.close()
+
+def send_email(voter_id, voter_key = None):
+    if voter_key == None:
+        voter_key = PasscodeView.generate_passcode()
+
+        user = User.objects.get(username=voter_id)
+        user.set_password(voter_key)
+        user.save()
+
+    # Init email server
+    server = smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT)
+    server.ehlo()
+    server.starttls()
+    server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
+
+    voter_email = voter_id + '@dlsu.edu.ph'
+
+    # Create email with message and template
+    # Header
+    msgRoot = MIMEMultipart('related')
+    msgRoot['Subject'] = '[COMELEC] Election is now starting'
+    msgRoot['From'] = settings.EMAIL_HOST_USER
+    msgRoot['To'] = voter_email
+    msgRoot.preamble = 'This is a multi-part message in MIME format.'
+
+    msgAlternative = MIMEMultipart('alternative')
+    msgRoot.attach(msgAlternative)
+
+    # Message Text
+    msg = '''\
+DLSU Comelec is inviting to you to vote in the elections.
+Voter ID: {}
+Voter Key: {}
+To vote, go to this link: https://some_link
+    '''.format(voter_id, voter_key)
+    msgText = MIMEText(msg)
+    msgAlternative.attach(msgText)
+
+    # Message HTML
+    html = HTML_STR
+    html = html.replace('11xxxxxx', voter_id, 2)
+    html = html.replace('xxxxxxxx', voter_key, 1)
+
+    msgText = MIMEText(html, 'html')
+    msgAlternative.attach(msgText)
+
+    # Imbedded Image
+    fp = open(settings.BASE_DIR + '/ComelecLogo.png', 'rb')
+    msgImage = MIMEImage(fp.read())
+    fp.close()
+
+    msgImage.add_header('Content-ID', '<logo>')
+    msgRoot.attach(msgImage)
+
+    # Send the email to the user
+    server.sendmail(settings.EMAIL_HOST_USER, voter_email, msgRoot.as_string())
+    server.quit()
 
 def officer_test_func(user):
     try:
@@ -96,34 +160,7 @@ class VotersView(OfficerView):
         if ResultsView.is_election_ongoing() and not voting_status and eligibility_status:
             # Also check if his batch and college is in the election status
             if ElectionStatus.objects.filter(college=college, batch=int(username[:3])).count() > 0:
-
-                # Init email server
-
-                server = smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT)
-                server.ehlo()
-                server.starttls()
-                server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
-
-                # Create email with message and template
-                
-                msg = '''Subject: [COMELEC] Election is starting
-
-Hello {} {},
-Election has started.
-Use this as your credential for submitting your vote:
-User: {}
-Pass: {}
-                '''.format(
-                    first_name,
-                    last_name,
-                    username,
-                    password
-                )
-
-                # Send the email to the user
-                server.sendmail(settings.EMAIL_HOST_USER, email, msg)
-
-                server.quit()
+                send_email(username, password)
 
     # A convenience function for changing a voter
     @staticmethod
@@ -928,7 +965,7 @@ class ResultsView(OfficerView):
                                             user__username__startswith=str(batch),
                                             voting_status=False,
                                             eligibility_status=True
-                                        ).values('user__email', 'user__first_name', 'user__last_name', 'user__username')
+                                        ).values('user__username')
                                     )
 
                                     # print(batch_voters)
@@ -939,42 +976,9 @@ class ResultsView(OfficerView):
 
                         # Check whether batches were actually selected in the first place
                         if not empty:
-                            pass
-                            # Email every student once election starts
-    #                         server = smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT)
-    #                         server.ehlo()
-    #                         server.starttls()
-    #                         server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
-                            
-    #                         for voter in voters:
-    #                             # Limit to 1 email for testing
-    #                             if(voter['user__email'] == '11731788@dlsu.edu.ph'):
-    #                             # Create a new passcode for the student
-    #                                 passcode = self.generate_passcode()
-    #                                 msg = '''Subject: [COMELEC] Election is starting
-
-    # Hello {} {},
-    # Election has started.
-    # Use this as your credential for submitting your vote:
-    # User: {}
-    # Pass: {}
-    #                                 '''.format(
-    #                                     voter['user__first_name'],
-    #                                     voter['user__last_name'],
-    #                                     voter['user__username'],
-    #                                     passcode
-    #                                 )
-
-    #                                 # Send the email to the user
-    #                                 server.sendmail(settings.EMAIL_HOST_USER, voter['user__email'], msg)
-
-    #                                 # Save the new pass code to the database
-    #                                 user = User.objects.get(username=voter['user__username'])
-    #                                 user.set_password(passcode)
-    #                                 user.save()
-
-    #                         server.quit()
-    #                         messages.success(request, 'The elections have now started.')
+                            for voter in voters:
+                                send_email(voter['user__username'])
+                            messages.success(request, 'The elections have now started.')
                         else:
                             messages.error(request,
                                            'The elections weren\'t started because there were no batches selected at'
