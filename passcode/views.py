@@ -637,16 +637,6 @@ class ResultsView(OfficerView):
 
                 vote_results_json = json.dumps(vote_results_json)
 
-                context = {
-                    'election_ongoing': election_ongoing,
-                    'colleges': colleges,
-                    'batches': batches,
-                    'positions': positions,
-                    'polls': polls,
-                    'vote_results': vote_results if query is not False else False,
-                    'vote_results_json': vote_results_json if query is not False else False,
-                    'identifier': query,
-                }
             elif pollquery is not False:
                 # Count the votes of all candidates by position
                 TOTAL_POLL_VOTES_QUERY = (
@@ -684,17 +674,19 @@ class ResultsView(OfficerView):
 
                 poll_results_json = json.dumps(poll_results_json)
 
-                context = {
-                    'election_ongoing': election_ongoing,
-                    'colleges': colleges,
-                    'batches': batches,
-                    'positions': positions,
-                    'polls': polls,
-                    'poll_results': poll_results if query is not False else False,
-                    'poll_results_json': poll_results_json if query is not False else False,
-                    'identifier': query,
-                }
-
+            context = {
+                'election_ongoing': election_ongoing,
+                'colleges': colleges,
+                'batches': batches,
+                'positions': positions,
+                'polls': polls,
+                'poll_results': poll_results if pollquery is not False else False,
+                'poll_results_json': poll_results_json if pollquery is not False else False,
+                'poll_identifier': pollquery,
+                'vote_results': vote_results if query is not False else False,
+                'vote_results_json': vote_results_json if query is not False else False,
+                'identifier': query,
+            }
         else:
             # Show the eligible batches when the elections are on
             college_batch_dict = {}
@@ -814,7 +806,7 @@ class ResultsView(OfficerView):
             # Get the eligible colleges
             eligible_colleges = ElectionStatus.objects.values('college').distinct()
             eligible_colleges = [College.objects.get(id=eligible_college['college']) for eligible_college in
-                                 eligible_colleges]
+                                eligible_colleges]
 
             overall_votes_college = {}
 
@@ -902,11 +894,11 @@ class ResultsView(OfficerView):
             for eligible_college in eligible_colleges:
                 with connection.cursor() as cursor:
                     cursor.execute(COLLEGE_BATCH_QUERY,
-                                   [eligible_college.name,
+                                [eligible_college.name,
                                     eligible_college.name,
                                     eligible_college.name,
                                     eligible_college.name]
-                                   )
+                                )
 
                     college_batch_results[eligible_college.name] = cursor.fetchall()
 
@@ -924,7 +916,7 @@ class ResultsView(OfficerView):
                 'batch_results': batch_results,
                 'eligible_colleges': eligible_colleges,
                 'overall_votes_college': overall_votes_college,
-                'college_batch_results': college_batch_results
+                'college_batch_results': college_batch_results,
             }
 
         return context
@@ -1028,45 +1020,8 @@ class ResultsView(OfficerView):
 
                         # Check whether batches were actually selected in the first place
                         if not empty:
-<<<<<<< HEAD
                             for voter in voters:
                                 send_email(voter['user__username'])
-=======
-                            # Email every student once election starts
-                            server = smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT)
-                            server.ehlo()
-                            server.starttls()
-                            server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
-                            
-                            for voter in voters:
-                                # Limit to 1 email for testing
-                                if(voter['user__email'] == '11731788@dlsu.edu.ph'):
-                                # Create a new passcode for the student
-                                    passcode = self.generate_passcode()
-                                    msg = '''Subject: [COMELEC] Election is starting
-
-    Hello {} {},
-    Election has started.
-    Use this as your credential for submitting your vote:
-    User: {}
-    Pass: {}
-                                    '''.format(
-                                        voter['user__first_name'],
-                                        voter['user__last_name'],
-                                        voter['user__username'],
-                                        passcode
-                                    )
-
-                                    # Send the email to the user
-                                    server.sendmail(settings.EMAIL_HOST_USER, voter['user__email'], msg)
-
-                                    # Save the new pass code to the database
-                                    user = User.objects.get(username=voter['user__username'])
-                                    user.set_password(passcode)
-                                    user.save()
-
-                            server.quit()
->>>>>>> voting-position
                             messages.success(request, 'The elections have now started.')
                         else:
                             messages.error(request,

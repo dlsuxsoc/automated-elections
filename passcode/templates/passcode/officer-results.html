@@ -340,7 +340,7 @@
         </div>
     </div>
 
-    <div id="Poll" class="tab-content">
+    <div id="Poll" class="tab-content" {% if poll_results is not False %}data-selected="selected"{% endif %}>
         {% if election_ongoing is True %}
             <img id="stop" src="{% static 'passcode/assets/svg/stop.svg' %}">
             <header>Woah there!</header>
@@ -352,48 +352,42 @@
                 <div class="today-stats">
                     <div class="info-container">
                         View votes per poll:
-                        <select id="poll-results" class="info-input" onchange="viewVotesForPosition()">
-                            <option disabled="disabled" {% if identifier is False %}selected="selected"{% endif %}>
-                                (select a position)
+                        <select id="poll-results" class="info-input" onchange="viewVotesForPoll()">
+                            <option disabled="disabled" {% if poll_identifier is False %}selected="selected"{% endif %}>
+                                (select a poll)
                             </option>
-                            {% for position in positions %}
-                                <option value="{{ position.identifier }}"
-                                        {% if identifier|stringformat:"s" == position.identifier|stringformat:"s" %}selected="selected"{% endif %}>
-                                    {{ position }}
+                            {% for poll in polls %}
+                                <option value="{{ poll.identifier }}"
+                                        {% if poll_identifier|stringformat:"s" == poll.identifier|stringformat:"s" %}selected="selected"{% endif %}>
+                                    {{ poll.name }}
                                 </option>
                             {% endfor %}
                         </select>
                     </div>
                     <div id="table-container">
                         <div class="table-row row-0">
-                            <div class="col-position">Position</div>
-                            <div class="col-unit">Unit</div>
-                            <div class="col-name">Candidate</div>
-                            <div class="col-party">Party</div>
-                            <div class="col-votes">Votes</div>
+                            <div class="col-position">Question</div>
+                            <div class="col-unit">Yes</div>
+                            <div class="col-name">No</div>
                         </div>
 
                         <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
-                        {% if vote_results %}
-                            {% for results in vote_results.values %}
-                                {% for result in results %}
-                                    <div class="table-row {% cycle 'row-1' 'row-2' %}">
-                                        <div class="col-position">{{ result.0 }}</div>
-                                        <div class="col-unit">{{ result.1 }}</div>
-                                        <div class="col-name">{{ result.2 }}</div>
-                                        <div class="col-party">{{ result.3 }}</div>
-                                        <div class="col-votes">{{ result.4 }}</div>
+                        {% if poll_results %}
+                            {% for key, value in poll_results.items %}
+                                {% if value.0.0 is None or value.0.1 is None or value.0.2 is None %}
+                                    <p>No votes have been cast for this poll</p>
+                                {% else %}
+                                    <div class="table-row">
+                                        <div class="col-position">{{ value.0 }}</div>
+                                        <div class="col-unit">{{ value.1 }}</div>
+                                        <div class="col-name">{{ value.2 }}</div>
                                     </div>
-                                {% empty %}
-                                    No candidates have ran for this position.
-                                {% endfor %}
+                                {% endif %}
                             {% endfor %}
                         {% else %}
-                            Please select a position to see the election results of.
+                            Please select a poll.
                         {% endif %}
                     </div>
-                    <canvas id="piechart">
-                    </canvas>
                 </div>
             </div>
         {% endif %}
