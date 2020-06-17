@@ -96,10 +96,15 @@ class VotersView(OfficerView):
         if ResultsView.is_election_ongoing() and not voting_status and eligibility_status:
             # Also check if his batch and college is in the election status
             if ElectionStatus.objects.filter(college=college, batch=int(username[:3])).count() > 0:
+
+                # Init email server
+
                 server = smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT)
                 server.ehlo()
                 server.starttls()
                 server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
+
+                # Create email with message and template
                 
                 msg = '''Subject: [COMELEC] Election is starting
 
