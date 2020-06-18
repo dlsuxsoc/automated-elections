@@ -1170,13 +1170,35 @@ class ResultsView(OfficerView):
                                 "	pn.'Candidate';\n"
                             )
 
+                            TOTAL_POLL_VOTES_QUERY = (
+                                "SELECT\n"
+                                "   p.'name' AS 'Question',\n"
+                                "   SUM((CASE WHEN ps.'answer' = 'yes' THEN 1 ELSE 0 END)) AS 'Yes',\n"
+                                "   SUM((CASE WHEN ps.'answer' = 'no' THEN 1 ELSE 0 END)) AS 'No'\n"
+                                "FROM\n"
+                                "   vote_pollset ps\n"
+                                "LEFT JOIN\n"
+                                "   vote_poll p\n"
+                                "ON\n"
+                                "   ps.'poll_id' = p.'id'\n"
+                                "GROUP BY\n"
+                                "   p.'id';\n"
+                            )
+
                             vote_results = {}
+                            poll_results = {}
 
                             with connection.cursor() as cursor:
                                 cursor.execute(TOTAL_VOTES_QUERY, [])
 
                                 columns = [col[0] for col in cursor.description]
                                 vote_results['results'] = cursor.fetchall()
+
+                            with connection.cursor() as cursor:
+                                cursor.execute(TOTAL_POLL_VOTES_QUERY, [])
+
+                                poll_columns = [col[0] for col in cursor.description]
+                                poll_results['results'] = cursor.fetchall()
 
                             # Create a response object, and classify it as a CSV response
                             response = HttpResponse(content_type='text/csv')
@@ -1190,8 +1212,13 @@ class ResultsView(OfficerView):
                             for row in vote_results['results']:
                                 writer.writerow(list(row))
 
+                            writer.writerow(poll_columns)
+
+                            for row in poll_results['results']:
+                                write.writerow(list(row))
+
                             # Clear all users who are voters
-                            # This also clears the following tables: voters, candidates, takes, vote set
+                            # This also clears the following tables: voters, candidates, takes, vote set, poll set
                             User.objects.filter(groups__name='voter').delete()
 
                             # Clear all issues
@@ -1199,6 +1226,9 @@ class ResultsView(OfficerView):
 
                             # Clear all votes
                             Vote.objects.all().delete()
+
+                            # Clear all polls
+                            Poll.objects.all().deleted()
 
                             # Clear all batch positions
                             Position.objects.filter(base_position__type=BasePosition.BATCH).delete()
