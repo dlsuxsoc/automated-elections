@@ -280,6 +280,11 @@ class VoteView(UserPassesTestMixin, View):
                     logout(request)
 
                     return redirect('logout:logout_voter')
+                except PollAnswerType.ValueError:
+                    # One of the votes for the polls is not a valid answer
+                    messages.error(request, 'Some of your answers to the polls do not exist')
+
+                    return self.get(request)
                 except Candidate.DoesNotExist:
                     # One of the votes do not represent a candidate
                     messages.error(request, 'One of your voted candidates do not exist.')
