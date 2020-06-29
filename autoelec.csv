@@ -1,5 +1,5 @@
 id_number,firstname,lastname,college
-11530642,,,CLA
+11530642,Independent,Candidate Two,CLA
 11820209,,,RVR-COB
 11607653,,,RVR-COB
 11941030,,,GCOE
@@ -16,5 +16,8 @@ id_number,firstname,lastname,college
 11919183,,,CLA
 11923784,,,CLA
 11934433,,,SOE
-11925248,,,CLA
-11919256,,,CLA
+11925248,Tapat,Candidate One,CLA
+11919256,Santugon,Candidate One,CLA
+11731788,Independent,Candidate One,CLA
+11821019,Tapat,Candidate Two,CCS
+11827211,Santugon,Candidate Two,CCS

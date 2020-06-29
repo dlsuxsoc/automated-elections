@@ -31,19 +31,13 @@ fp = open(settings.BASE_DIR + '/email_template.html', 'r')
 HTML_STR = fp.read()
 fp.close()
 
-def send_email(voter_id, voter_key = None):
+def send_email(voter_id, server, voter_key = None):
     if voter_key == None:
         voter_key = PasscodeView.generate_passcode()
 
         user = User.objects.get(username=voter_id)
         user.set_password(voter_key)
         user.save()
-
-    # Init email server
-    server = smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT)
-    server.ehlo()
-    server.starttls()
-    server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
 
     voter_email = voter_id + '@dlsu.edu.ph'
 
@@ -86,7 +80,6 @@ To vote, go to this link: https://some_link
 
     # Send the email to the user
     server.sendmail(settings.EMAIL_HOST_USER, voter_email, msgRoot.as_string())
-    server.quit()
 
 def officer_test_func(user):
     try:
@@ -160,7 +153,15 @@ class VotersView(OfficerView):
         if ResultsView.is_election_ongoing() and not voting_status and eligibility_status:
             # Also check if his batch and college is in the election status
             if ElectionStatus.objects.filter(college=college, batch=int(username[:3])).count() > 0:
-                send_email(username, password)
+                 # Init email server
+                server = smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT)
+                server.ehlo()
+                server.starttls()
+                server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
+                send_email(username, server, password)
+                # close server
+                server.quit()
+                
 
     # A convenience function for changing a voter
     @staticmethod
@@ -1020,8 +1021,21 @@ class ResultsView(OfficerView):
 
                         # Check whether batches were actually selected in the first place
                         if not empty:
-                            for voter in voters:
-                                send_email(voter['user__username'])
+
+                            # Init email server
+                            server = smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT)
+                            server.ehlo()
+                            server.starttls()
+                            server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
+
+                            for index, voter in enumerate(voters):
+                                send_email(voter['user__username'], server)
+                                console.log('Email sent to ' + voter['user__username'] + '.' + index + ' out of ' + len(voters) + ' sent.')
+
+
+                            # close server
+                            server.quit()
+
                             messages.success(request, 'The elections have now started.')
                         else:
                             messages.error(request,

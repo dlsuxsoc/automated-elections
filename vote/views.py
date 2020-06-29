@@ -270,7 +270,7 @@ class VoteView(UserPassesTestMixin, View):
                             actual_poll_vote.save()
 
                         # Send email receipt
-                        #self.send_email_receipt(request.user, votes, serial_number)
+                        self.send_email_receipt(request.user, votes, serial_number)
 
                         # Mark the voter as already voted
                         voter.voting_status = True
