@@ -128,7 +128,7 @@ LOGIN_REDIRECT_URL = '/'
 # Email settings
 EMAIL_HOST = 'smtp.gmail.com'
 
-EMAIL_HOST_USER = 'comelec.dlsu.autoelections.sysad@gmail.com'
+EMAIL_HOST_USER = 'dlsucomelec.automatedelections@gmail.com'
 
 EMAIL_HOST_PASSWORD = 'cHhem3l@ck:amino!'
 

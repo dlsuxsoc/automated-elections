@@ -3,8 +3,6 @@ import csv
 import datetime
 import json
 import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from random import randint
 
@@ -15,6 +13,7 @@ from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.contrib.auth.models import Group, User
 from django.contrib.sessions.models import Session
+from django.core.mail import EmailMultiAlternatives
 from django.core.paginator import Paginator
 from django.db import transaction, IntegrityError, connection
 from django.db.models import Q
@@ -31,7 +30,7 @@ fp = open(settings.BASE_DIR + '/email_template.html', 'r')
 HTML_STR = fp.read()
 fp.close()
 
-def send_email(voter_id, server, voter_key = None):
+def send_email(voter_id, voter_key = None):
     if voter_key == None:
         voter_key = PasscodeView.generate_passcode()
 
@@ -42,44 +41,33 @@ def send_email(voter_id, server, voter_key = None):
     voter_email = voter_id + '@dlsu.edu.ph'
 
     # Create email with message and template
-    # Header
-    msgRoot = MIMEMultipart('related')
-    msgRoot['Subject'] = '[COMELEC] Election is now starting'
-    msgRoot['From'] = settings.EMAIL_HOST_USER
-    msgRoot['To'] = voter_email
-    msgRoot.preamble = 'This is a multi-part message in MIME format.'
+    # Imbedded Image
+    fp = open(settings.BASE_DIR + '/ComelecLogo.png', 'rb')
+    img = MIMEImage(fp.read())
+    fp.close()
+    img.add_header('Content-ID', '<logo>')
 
-    msgAlternative = MIMEMultipart('alternative')
-    msgRoot.attach(msgAlternative)
-
-    # Message Text
-    msg = '''\
+    subject = '[COMELEC] Election is now starting'
+    text = '''\
 DLSU Comelec is inviting to you to vote in the elections.
 Voter ID: {}
 Voter Key: {}
 To vote, go to this link: https://some_link
     '''.format(voter_id, voter_key)
-    msgText = MIMEText(msg)
-    msgAlternative.attach(msgText)
 
-    # Message HTML
     html = HTML_STR
     html = html.replace('11xxxxxx', voter_id, 2)
     html = html.replace('xxxxxxxx', voter_key, 1)
 
-    msgText = MIMEText(html, 'html')
-    msgAlternative.attach(msgText)
-
-    # Imbedded Image
-    fp = open(settings.BASE_DIR + '/ComelecLogo.png', 'rb')
-    msgImage = MIMEImage(fp.read())
-    fp.close()
-
-    msgImage.add_header('Content-ID', '<logo>')
-    msgRoot.attach(msgImage)
-
-    # Send the email to the user
-    server.sendmail(settings.EMAIL_HOST_USER, voter_email, msgRoot.as_string())
+    msg = EmailMultiAlternatives(
+        subject = subject,
+        body = text,
+        from_email = settings.EMAIL_HOST_USER,
+        to = [ voter_email ]
+    )
+    msg.attach_alternative(html, "text/html")
+    msg.attach(img)
+    msg.send()
 
 def officer_test_func(user):
     try:
@@ -1022,20 +1010,9 @@ class ResultsView(OfficerView):
 
                         # Check whether batches were actually selected in the first place
                         if not empty:
-
-                            # Init email server
-                            server = smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT)
-                            server.ehlo()
-                            server.starttls()
-                            server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
-
                             for index, voter in enumerate(voters):
-                                send_email(voter['user__username'], server)
-                                print('Email sent to ' + voter['user__username'] + '.' + index + ' out of ' + len(voters) + ' sent.')
-
-
-                            # close server
-                            server.quit()
+                                send_email(voter['user__username'])
+                                print('Email sent to ' + voter['user__username'] + '.' + str(index) + ' out of ' + str(len(voters)) + ' sent.')
 
                             messages.success(request, 'The elections have now started.')
                         else:
