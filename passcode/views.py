@@ -159,6 +159,7 @@ class VotersView(OfficerView):
                 server.starttls()
                 server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
                 send_email(username, server, password)
+                print('Email sent to ' + username)
                 # close server
                 server.quit()
                 
@@ -1030,7 +1031,7 @@ class ResultsView(OfficerView):
 
                             for index, voter in enumerate(voters):
                                 send_email(voter['user__username'], server)
-                                console.log('Email sent to ' + voter['user__username'] + '.' + index + ' out of ' + len(voters) + ' sent.')
+                                print('Email sent to ' + voter['user__username'] + '.' + index + ' out of ' + len(voters) + ' sent.')
 
 
                             # close server
