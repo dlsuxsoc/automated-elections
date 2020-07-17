@@ -13,6 +13,7 @@ from django.db import transaction, IntegrityError
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.views import View
+from datetime import datetime
 
 # Sends an email receipt containing the voted candidates to the voter
 from vote.models import Issue, Candidate, Voter, Take, Vote, VoteSet, BasePosition, Position, Poll, PollSet, PollAnswerType
@@ -61,22 +62,22 @@ class VoteView(UserPassesTestMixin, View):
         to_email = [user.email]
         subject = '[COMELEC] Voter\'s receipt for ' + user.first_name + ' ' + user.last_name
 
-        candidates_voted = ''
+        # candidates_voted = ''
 
-        # Generate message for the candidates voted
-        for position_candidate in voted.values():
-            candidates_voted += position_candidate[0].__str__() + ": " + (
-                (position_candidate[1].voter.user.first_name + " " + position_candidate[1].voter.user.last_name) if
-                position_candidate[1] is not False else '(abstained)') + '\n'
+        # # Generate message for the candidates voted
+        # for position_candidate in voted.values():
+        #     candidates_voted += position_candidate[0].__str__() + ": " + (
+        #         (position_candidate[1].voter.user.first_name + " " + position_candidate[1].voter.user.last_name) if
+        #         position_candidate[1] is not False else '(abstained)') + '\n'
 
         # Append the serial number
         candidates_voted += '\nYour serial number is ' + serial_number + '.\n'
 
         message \
-            = '''Good day, {0},\n\nThank you for voting! You have voted for the following candidates:\n\n{1}''' \
+            = '''Good day, {0},\n\nThis is to confirm that you have successfully voted at {1}.\n\nThank you for voting!''' \
             .format(
             user.first_name,
-            candidates_voted)
+            datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
 
         # Send an email, but fail silently (accept exception, bust just show message)
         try:
