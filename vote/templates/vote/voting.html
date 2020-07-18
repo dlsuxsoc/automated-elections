@@ -69,14 +69,14 @@
                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; justify-items: center;">
                         <div class="candidate" style="grid-row-start:1; grid-column-start:1; ">
                             <h1 class="poll-choice">Yes</h1>
-                            <input type="radio" name="{{ poll.identifier }}"
-                                value="{{ poll.identifier }}-yes" id="{{ poll.identifier }}-yes">
+                            <input type="radio" name="{{ poll.identifier }}" value="{{ poll.identifier }}-yes"
+                                id="{{ poll.identifier }}-yes">
                             <label for="{{ poll.identifier }}-yes"></label>
                         </div>
                         <div class="candidate" style="grid-row-start:1; grid-column-start:3; ">
                             <h1 class="poll-choice">No</h1>
-                            <input type="radio" name="{{ poll.identifier }}"
-                                value="{{ poll.identifier }}-no" id="{{ poll.identifier }}-no">
+                            <input type="radio" name="{{ poll.identifier }}" value="{{ poll.identifier }}-no"
+                                id="{{ poll.identifier }}-no">
                             <label for="{{ poll.identifier }}-no"></label>
                         </div>
                     </div>
@@ -92,11 +92,6 @@
                 <div class="candidates-row clearfix">
                     <div class="candidate-position">
                         {{ position.base_position.name|upper }}
-                        <button type="button" id="abstain" class="abstain"
-                            onclick="abstain_candidate('{{ position.identifier }}')">
-                            Abstain
-                        </button>
-                        <input type="hidden" name="position" value="{{ position.identifier }}">
                     </div>
 
                     <!-- Candidate div -->
@@ -129,18 +124,33 @@
                                             >></a>
                                     </div>
                                     <input type="radio" name="{{ position.identifier }}"
+                                        onclick="candidate_select('{{ position.identifier }}-abstain-button')"
                                         value="{{ candidate.identifier }}" id="{{ candidate.identifier }}">
                                     <label for="{{ candidate.identifier }}"></label>
                                 </div>
                                 {% endfor %}
+
                             </div>
+                            <div class="abstain-div">
+                                <button type="button" id="{{ position.identifier }}-abstain-button"
+                                    class="abstain abstain-active"
+                                    onclick="abstain_candidate('{{ position.identifier }}')">
+                                    Abstain
+                                </button>
+                            </div>
+
                             <!-- End candidate div -->
                         </div>
+                        <!-- Abstain Option -->
+
+
+                        <input type="hidden" name="position" value="{{ position.identifier }}">
                         {% endfor %}
                         {% endif %}
                         {% endfor %}
 
-                        <button id="voting-submit" type="button" onclick="showVote('{{ positions_json }}', '{{ polls_json }}')">Submit my
+                        <button id="voting-submit" type="button"
+                            onclick="showVote('{{ positions_json }}', '{{ polls_json }}')">Submit my
                             vote</button>
 
                         <div id="overlay" onclick="removeHint()">

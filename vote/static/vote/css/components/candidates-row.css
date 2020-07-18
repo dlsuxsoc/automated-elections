@@ -10,6 +10,10 @@
     border: none;
 }
 
+.abstain-div{
+    margin-top: 50px;
+    margin-bottom: -35px;
+}
 .abstain {
     border: 0;
     background: none;
@@ -26,11 +30,14 @@
     cursor: pointer;
     -webkit-transition: all 0.2s ease;
     vertical-align: middle;
-    margin-left: 10px;
 }
 
 .abstain:hover {
     filter: brightness(110%);
+}
+
+.abstain-active{
+    text-decoration: underline;
 }
 
 .candidate-position {
