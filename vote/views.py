@@ -71,13 +71,14 @@ class VoteView(UserPassesTestMixin, View):
         #         position_candidate[1] is not False else '(abstained)') + '\n'
 
         # Append the serial number
-        candidates_voted += '\nYour serial number is ' + serial_number + '.\n'
+        # candidates_voted += '\nYour serial number is ' + serial_number + '.\n'
 
         message \
-            = '''Good day, {0},\n\nThis is to confirm that you have successfully voted at {1}.\n\nThank you for voting!''' \
+            = '''Good day, {0},\n\nThis is to confirm that you have successfully voted at {1}.\n\nThank you for voting!\nYour serial number is {2}.\n''' \
             .format(
             user.first_name,
-            datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+            datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+            serial_number)
 
         # Send an email, but fail silently (accept exception, bust just show message)
         try:
