@@ -1,7 +1,11 @@
 .col-position {
-    flex-basis: 50%;
+    flex-basis: 40%;
 }
 
 .col-unit {
-    flex-basis: 50%;
+    flex-basis: 40%;
+}
+
+.col-priority {
+    flex-basis: 20%;
 }

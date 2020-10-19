@@ -4,6 +4,7 @@ import uuid
 from django.contrib.auth.models import User
 from django.db import models
 
+from enum import Enum
 
 class College(models.Model):
     name = models.CharField(max_length=16, unique=True)
@@ -53,10 +54,12 @@ class BasePosition(models.Model):
 class Position(models.Model):
     base_position = models.ForeignKey(BasePosition, on_delete=models.CASCADE)
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE)
+    priority = models.IntegerField(default=100)
     identifier = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
 
     class Meta:
         unique_together = ('base_position', 'unit')
+        ordering = ['priority']
 
     def __str__(self):
         return ((self.unit.name + " ")
@@ -88,6 +91,7 @@ class Candidate(models.Model):
 
     class Meta:
         unique_together = ('position', 'party')
+        ordering = ['position__priority']
 
     def __str__(self):
         return self.voter.user.first_name + " " + self.voter.user.last_name \
@@ -100,7 +104,6 @@ class Issue(models.Model):
 
     def __str__(self):
         return self.name
-
 
 class Take(models.Model):
     candidate = models.ForeignKey(Candidate, on_delete=models.CASCADE)
@@ -126,6 +129,31 @@ class VoteSet(models.Model):
     vote = models.ForeignKey(Vote, on_delete=models.CASCADE)
     candidate = models.ForeignKey(Candidate, on_delete=models.CASCADE, null=True)
     position = models.ForeignKey(Position, on_delete=models.CASCADE, null=True)
+
+    def __str__(self):
+        return self.vote.voter_id_number + " voted for " \
+               + self.candidate.voter.user.first_name + " " + self.candidate.voter.user.last_name
+
+class Poll(models.Model):
+    name = models.CharField(max_length=64, unique=True)
+    identifier = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+
+    def __str__(self):
+        return self.name
+
+class PollAnswerType(Enum):
+    YES = "yes"
+    NO = "no"
+    ABSTAIN = "abstain"
+
+    @classmethod
+    def choices(cls):
+        return tuple((i.name, i.value) for i in cls)
+
+class PollSet(models.Model):
+    vote = models.ForeignKey(Vote, on_delete=models.CASCADE)
+    poll = models.ForeignKey(Poll, on_delete=models.CASCADE, null=True)
+    answer = models.CharField(max_length=7, choices=PollAnswerType.choices())
 
     def __str__(self):
         return self.vote.voter_id_number + " voted for " \

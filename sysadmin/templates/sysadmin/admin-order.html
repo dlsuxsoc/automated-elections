@@ -15,13 +15,14 @@
     <!-- HEADER BAR THING -->
     <div id="header-container">
         <img id="header-ballot" src="{% static 'sysadmin/assets/svg/ballot-white.svg' %}">
-        <a href="{% url 'sysadmin:voters' %}" id="selected">Voters List</a>
+        <a href="{% url 'sysadmin:voters' %}">Voters List</a>
         <a href="{% url 'sysadmin:candidates' %}">Candidates List</a>
         <a href="{% url 'sysadmin:officers' %}">Comelec Officers</a>
         <a href="{% url 'sysadmin:units' %}">Units</a>
         <a href="{% url 'sysadmin:positions' %}">Positions</a>
         <a href="{% url 'sysadmin:issues' %}">Issues</a>
         <a href="{% url 'sysadmin:polls' %}">Polls</a>
+        <!--<a href="{% url 'sysadmin:order' %}" id="selected">Position Order</a>-->
         <div id="user-container">
             <img id="user-icon" src="{% static 'sysadmin/assets/svg/user.svg' %}">
             <div id="user-name"> {{ user.first_name }} {{ user.last_name }}</div>
@@ -31,22 +32,21 @@
 
     <!-- TABS BUTTONS TO TRAVERSE THE DIFF SECTIONS -->
     <div id="tab-buttons-container">
-        <button class="tab-buttons" onclick="openTab(event, 'All')" id="tab-all">See all voters</button>
-        <button class="tab-buttons" onclick="openTab(event, 'Add')" id="tab-add">Add a voter</button>
-        <button class="tab-buttons" onclick="openTab(event, 'AddMany')" id="tab-bulk">Add voters in bulk</button>
+        <button class="tab-buttons" onclick="openTab(event, 'All')" id="tab-all">See all positions priority</button>
+        <button class="tab-buttons" onclick="openTab(event, 'Add')" id="tab-add">Add a position priority</button>
 
         <!-- SEARCH BAR AND DESELECT-DELETE TAKE UP THE SAME SPOT. THEY ARE ACTIVATED AND DEACTIVATED RESPECTIVELY-->
         <form action="" id="tab-search" method="GET">
-            <input id="search" type="text" name="query" placeholder="Search for a voter...">
+            <input id="search" type="text" name="query" placeholder="Search for a position...">
         </form>
 
         <!-- DESELECT-DELETE -->
         <!--<div id="deselect-delete">
         <button id="deselect">Deselect All  </button>-->
-        <form action="" id="delete-voters" method="POST">
+        <form action="" id="delete-position-priority" method="POST">
             {% csrf_token %}
             <input type="hidden" name="form-type" value="delete-voter">
-            <button type="button" onclick="delete_voters()" id="delete">Delete Selected Voter(s)</button>
+            <button type="button" onclick="delete_position_priority()" id="delete">Delete Selected Position Priority(s)</button>
         </form>
         <!--</div>-->
     </div>
@@ -192,89 +192,6 @@
                 <input class="button confirm" type="submit" value="Add new voter">
             </div>
 
-        </form>
-
-        <!-- THIRD TAB (BULK FORM TAB)-->
-        <form action="" id="AddMany" class="tab-content" method="POST" enctype="multipart/form-data">
-            {% csrf_token %}
-            <input type="hidden" name="form-type" value="add-bulk-voter">
-            <div class="info-fields-container">
-                <div class="info-label"> Upload the official CSV file containing the voters list below with the columns:
-                    <code>ID Number, Last Name, First Names, College</code>
-                </div>
-                <input type="file" class="info-input" name="voters-list" placeholder="Voters list" required="required"
-                    accept=".csv">
-                <div class="info-container">
-                    <div class="info-label"> Voting Status for all of them</div>
-                    <select class="info-input" name="voter-voting-status" required="required">
-                        <option>Hasn't voted yet</option>
-                        <option>Has already voted</option>
-                    </select>
-                </div>
-
-                <div class="info-container">
-                    <div class="info-label"> Eligibility Status for all of them</div>
-                    <select class="info-input" name="voter-eligibility-status" required="required">
-                        <option>Eligible</option>
-                        <option>Not eligible</option>
-                    </select>
-                </div>
-
-            </div>
-
-            <div class="info-buttons-container">
-                <!-- SUBMIT BUTTON FOR THE TAB -->
-                <input class="button confirm" type="submit" value="Add new voters">
-            </div>
-        </form>
-
-        <!-- THIRD HIDDEN TAB (EDIT TAB)-->
-        <form action="" id="Edit" class="tab-content" method="POST">
-            {% csrf_token %}
-            <div class="info-fields-container">
-                <input type="hidden" name="form-type" value="edit-voter">
-                <input type="hidden" name="edit-id" value="">
-                <input type="hidden" name="page" value="">
-                <div class="info-container">
-                    <div class="info-label"> First Names (w/ second & middle names)</div>
-                    <input type="text" class="info-input" name="voter-firstnames" id="edit-firstnames"
-                        disabled="disabled" value="">
-                </div>
-
-                <div class="info-container">
-                    <div class="info-label"> Last Name</div>
-                    <input type="text" class="info-input" name="voter-lastname" id="edit-lastname" disabled="disabled"
-                        value="">
-                </div>
-
-                <div class="info-container">
-                    <div class="info-label"> College</div>
-                    <select class="info-input" id="edit-college" name="voter-college" disabled="disabled">
-                        <option></option>
-                    </select>
-                </div>
-
-                <div class="info-container">
-                    <div class="info-label"> Voting Status</div>
-                    <select class="info-input" id="edit-voting-status" name="voter-voting-status" disabled="disabled">
-                        <option></option>
-                    </select>
-                </div>
-
-                <div class="info-container">
-                    <div class="info-label"> Eligibility Status</div>
-                    <select class="info-input" id="edit-eligibility-status" name="voter-eligibility-status">
-                        <option id="eligible">Eligible</option>
-                        <option id="not-eligible">Not eligible</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="info-buttons-container">
-                <button type="button" class="button cancel" onclick="resetField()">Cancel</button>
-                <!-- SUBMIT BUTTON FOR THE TAB -->
-                <input class="button confirm" type="submit" value="Save Changes">
-            </div>
         </form>
     </div>
 

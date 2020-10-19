@@ -19,6 +19,7 @@
     <a href="{% url 'sysadmin:units' %}">Units</a>
     <a href="{% url 'sysadmin:positions' %}" id="selected">Positions</a>
     <a href="{% url 'sysadmin:issues' %}">Issues</a>
+    <a href="{% url 'sysadmin:polls' %}">Polls</a>
     <div id="user-container">
         <img id="user-icon" src="{% static 'sysadmin/assets/svg/user.svg' %}">
         <div id="user-name"> {{ user.first_name }} {{ user.last_name }}</div>
@@ -65,6 +66,7 @@
                 <div class="col-checkbox"><input type="checkbox" id="toggle-all" onclick="toggle(this)"></div>
                 <div class="col-position">Position type</div>
                 <div class="col-unit">Unit name</div>
+                <div class="col-priority">Order priority</div>
             </div>
 
             <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
@@ -76,6 +78,7 @@
                         {{ position.base_position.name }}
                     </div>
                     <div class="col-unit">{{ position.unit.name }}</div>
+                    <div class="col-priority">{{ position.priority }}</div>
                 </div>
             {% endfor %}
         </div>

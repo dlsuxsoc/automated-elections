@@ -3,6 +3,7 @@
 <html>
 <head>
     <title></title>
+    <meta name="viewport" content="height=device-height, initial-scale=1">
 
     <!-- external links for typefaces -->
     <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,700" rel="stylesheet">
@@ -19,15 +20,13 @@
     <link href="{% static 'logout/css/components/instruction-cell.css' %}" rel="stylesheet" type="text/css"/>
     <link href="{% static 'logout/css/components/success-logos.css' %}" rel="stylesheet" type="text/css"/>
 
-    <!-- scripts -->
-
 </head>
 <body>
 <div id="success-container">
     <div id="success-title">Success!</div>
     <div id="success-subtitle">Thank you so much for voting!</div>
 
-    <div id="instruction-container" class="clearfix">
+    <!-- <div id="instruction-container" class="clearfix">
         <div class="instruction-cell">
             <img src="{% static 'logout/assets/svg/exit.svg' %}" class="instruction-img"/>
             <p class="instruction-text">You may now exit the polling booth.</p>
@@ -40,7 +39,7 @@
             <img src="{% static 'logout/assets/svg/id.svg' %}" class="instruction-img"/>
             <p class="instruction-text">Oh yeah! Don't forget your ID.</p>
         </div>
-    </div>
+    </div> -->
 
     <div id="success-link">
         Got it? <a href="{% url 'login:login' %}">Click here</a>

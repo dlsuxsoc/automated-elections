@@ -42,3 +42,38 @@
     -webkit-appearance: none;
     margin: 0;
 }
+
+.submit-btn{
+    /* color: whitesmoke;
+    background-color: var(--theme-lighter-green);
+    font-size: 1rem;
+    padding-top: .3rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-bottom: .2rem;
+    border: none;
+    border-radius: 5px;
+    box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19); */
+
+    background-color: #36A472;
+    color: white;
+    border-radius: 5px;
+    transition: background-color .2s ease-out;
+    width: 80px;
+    height: 35px;
+    font-size: 16px;
+    border: none;
+    outline: none;
+    box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+}
+
+.submit-btn:hover{
+    background-color: #358f66;
+    cursor: pointer;
+}
+
+@media screen and (max-width: 400px){
+    .input-field {
+        width: 300px;
+    }
+}

@@ -10,3 +10,10 @@
         bottom: 0;
     }
 }
+
+@media screen and (max-width: 400px) {
+    #success-org-logos {
+        width: 90%;
+        right: 5%;
+    }
+}

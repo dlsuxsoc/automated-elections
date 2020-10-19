@@ -37,7 +37,7 @@
 
 #cancel,
 #confirm {
-    background: none;
+    background-color: red;
     box-shadow: none;
     border-radius: 5px;
     font-family: 'Open Sans', sans-serif;

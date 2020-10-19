@@ -41,7 +41,7 @@
     text-decoration: underline;
 }
 
-@media screen and (max-height: 800px) {
+@media screen and (max-height: 600px) {
     #success-container {
         min-height: 480px;
         margin-top: 20%;

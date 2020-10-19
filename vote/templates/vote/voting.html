@@ -1,6 +1,7 @@
 {% load static %}
 <!DOCTYPE html>
 <html>
+
 <head>
     <title></title>
 
@@ -10,16 +11,16 @@
 
 
     <!-- elements -->
-    <link href="{% static 'vote/css/elements/body.css' %}" rel="stylesheet" type="text/css"/>
-    <link href="{% static 'vote/css/elements/root.css' %}" rel="stylesheet" type="text/css"/>
-    <link href="{% static 'vote/css/elements/link.css' %}" rel="stylesheet" type="text/css"/>
+    <link href="{% static 'vote/css/elements/body.css' %}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'vote/css/elements/root.css' %}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'vote/css/elements/link.css' %}" rel="stylesheet" type="text/css" />
 
     <!-- components -->
-    <link href="{% static 'vote/css/components/voting.css' %}" rel="stylesheet" type="text/css"/>
-    <link href="{% static 'vote/css/components/candidates-row.css' %}" rel="stylesheet" type="text/css"/>
-    <link href="{% static 'vote/css/components/candidates-form.css' %}" rel="stylesheet" type="text/css"/>
-    <link href="{% static 'vote/css/components/vote-summary.css' %}" rel="stylesheet" type="text/css"/>
-    <link href="{% static 'vote/css/components/read_more-modal.css' %}" rel="stylesheet" type="text/css"/>
+    <link href="{% static 'vote/css/components/voting.css' %}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'vote/css/components/candidates-row.css' %}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'vote/css/components/candidates-form.css' %}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'vote/css/components/vote-summary.css' %}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'vote/css/components/read_more-modal.css' %}" rel="stylesheet" type="text/css" />
 
     <!-- scripts -->
     <script src="{% static 'vote/js/abstain.js' %}" type="text/javascript"></script>
@@ -27,116 +28,180 @@
     <script src="{% static 'vote/js/read_more-modal.js' %}" type="text/javascript"></script>
 
 </head>
+
 <body>
-<div id="voting-container">
-    {% if messages %}
+    <div id="voting-container">
+        {% if messages %}
         <div>
             {% for message in messages %}
-                <p {% if message.tags %}id="{{ message.tags }}"{% endif %}>{{ message }}</p>
+            <p {% if message.tags %}id="{{ message.tags }}" {% endif %}>{{ message }}</p>
             {% endfor %}
         </div>
-    {% endif %}
-    <div id="voter-column">
-        <div class="voter-label">
-            Name
-        </div>
-        <div class="voter-info" id="voter-name">
-            {{ user.first_name }} {{ user.last_name }}
-        </div>
+        {% endif %}
+        <div id="voter-column">
+            <div class="voter-label">
+                Name
+            </div>
+            <div class="voter-info" id="voter-name">
+                {{ user.first_name }} {{ user.last_name }}
+            </div>
 
-        <div class="voter-label">
-            ID Number
+            <div class="voter-label">
+                ID Number
+            </div>
+            <div class="voter-info" id="voter-od">
+                {{ user.username }}
+            </div>
         </div>
-        <div class="voter-info" id="voter-od">
-            {{ user.username }}
-        </div>
-    </div>
-    <div id="candidates-column">
-        <form id="vote" method="POST" action="">
-            {% csrf_token %}
-            {% for position_type, candidates_per_position in candidates.items %}
-                {% if position_type %}
-                    <div class="candidate-category">
-                        {{ position_type|upper }}
+        <div id="candidates-column">
+            <form id="vote" method="POST" action="">
+                {% csrf_token %}
+                {% if polls %}
+                <div class="candidate-category">
+                    PLEBISCITE
+                </div>
+                {% for poll in polls %}
+                <div class="candidates-row clearfix">
+                    <div class="candidate-position">
+                        {{ poll.name }}
                     </div>
-                    {% for position, each_candidate in candidates_per_position.items %}
-                        <div class="candidates-row clearfix">
-                            <div class="candidate-position">
-                                {{ position.base_position.name|upper }}
-                                <button type="button" id="abstain" class="abstain"
-                                        onclick="abstain_candidate('{{ position.identifier }}')">
-                                    Abstain
-                                </button>
-                                <input type="hidden" name="position" value="{{ position.identifier }}">
-                            </div>
-                            {% for candidate in each_candidate %}
-                                <div class="candidate">
-                                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img"/>
-                                    <div class="candidate-name">{{ candidate.voter.user.first_name }} {{ candidate.voter.user.last_name }}</div>
+                    <input type="hidden" name="poll" value="{{ poll.identifier }}">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; justify-items: center;">
+                        <div class="candidate" style="grid-row-start:1; grid-column-start:1; ">
+                            <h1 class="poll-choice">Yes</h1>
+                            <input type="radio" name="{{ poll.identifier }}" value="{{ poll.identifier }}-yes"
+                                id="{{ poll.identifier }}-yes">
+                            <label for="{{ poll.identifier }}-yes"></label>
+                        </div>
+                        <div class="candidate" style="grid-row-start:1; grid-column-start:3; ">
+                            <h1 class="poll-choice">No</h1>
+                            <input type="radio" name="{{ poll.identifier }}" value="{{ poll.identifier }}-no"
+                                id="{{ poll.identifier }}-no">
+                            <label for="{{ poll.identifier }}-no"></label>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% endif %}
+                {% for position_type, candidates_per_position in candidates.items %}
+                {% if position_type %}
+                <div class="candidate-category">
+                    {{ position_type|upper }}
+                </div>
+                {% for position, each_candidate in candidates_per_position.items %}
+                <div class="candidates-row clearfix">
+                    <div class="candidate-position">
+                        {{ position.base_position.name|upper }}
+                    </div>
+
+                    <!-- Candidate div -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; justify-items: center;">
+                        {% for candidate in each_candidate %}
+
+                        {% if candidate.party.name == "Alyansang Tapat sa Lasallista" %}
+                        <div class="candidate" style="grid-row-start:1; grid-column-start:1; ">
+                            {% endif %}
+
+                            {% if candidate.party.name == "Santugon sa Tawag ng Panahon" %}
+                            <div class="candidate" style="grid-row-start:1; grid-column-start:3; ">
+                                {% endif %}
+
+                                {% if candidate.party %}{% else %}
+                                <div class="candidate" style="grid-column-start:2; ">{% endif %}
+
+
+                                    <img src="{% static 'vote/assets/svg/user.svg' %}" class="candidate-img" />
+                                    <div class="candidate-name">{{ candidate.voter.user.first_name }}
+                                        {{ candidate.voter.user.last_name }}</div>
                                     <div class="candidate-party">
                                         {% if candidate.party %}{{ candidate.party.name }}{% else %}
-                                            Independent{% endif %}</div>
+                                        Independent{% endif %}</div>
                                     <div class="candidate-response">
                                         <a id="response"
-                                           onclick="hintBrowser('{{ csrf_token }}', '{{ candidate.identifier }}')"
-                                           class="response-link button-read">Read the
+                                            onclick="hintBrowser('{{ csrf_token }}', '{{ candidate.identifier }}')"
+                                            class="response-link button-read">Read the
                                             response
                                             >></a>
                                     </div>
                                     <input type="radio" name="{{ position.identifier }}"
-                                           value="{{ candidate.identifier }}"
-                                           id="{{ candidate.identifier }}">
+                                        onclick="candidate_select('{{ position.identifier }}-abstain-button')"
+                                        value="{{ candidate.identifier }}" id="{{ candidate.identifier }}">
                                     <label for="{{ candidate.identifier }}"></label>
                                 </div>
-                            {% endfor %}
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            {% endfor %}
+                                {% endfor %}
 
-            <button id="voting-submit" type="button" onclick="showVote('{{ positions_json }}')">Submit my vote</button>
+                            </div>
+                            <div class="abstain-div">
+                                <button type="button" id="{{ position.identifier }}-abstain-button"
+                                    class="abstain abstain-active"
+                                    onclick="abstain_candidate('{{ position.identifier }}')">
+                                    Abstain
+                                </button>
+                            </div>
 
-            <div id="overlay" onclick="removeHint()">
-            </div>
-            <div id="modal-read">
-                <div class="takes-container">
-                    <div class="info-container">
-                        <div class="info-label"> Select an Issue</div>
-                        <input type="hidden" id="associated-candidate" name="candidate" value="">
-                        <select class="info-input" name="take-issue" id="issue-dropdown"
-                                onchange="change_take('{{ csrf_token }}')">
-                            {% for issue in issues %}
-                                <option>{{ issue.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div id="modal__content-read">
-                    <div>
-                        <blockquote class="blue" id="response-modal">
-                        </blockquote>
-                    </div>
-                </div>
-            </div>
+                            <!-- End candidate div -->
+                        </div>
+                        <!-- Abstain Option -->
 
-            <div id="vote-modal">
-                <div id="vote-summary">
-                    {% for position in positions %}
-                        <div class="candidate-row">
-                            <div class="candidate-position">{{ position.base_position.name }}</div>
-                            <div class="candidate-person" id="{{ position.identifier }}-summary"></div>
+
+                        <input type="hidden" name="position" value="{{ position.identifier }}">
+                        {% endfor %}
+                        {% endif %}
+                        {% endfor %}
+
+                        <button id="voting-submit" type="button"
+                            onclick="showVote('{{ positions_json }}', '{{ polls_json }}')">Submit my
+                            vote</button>
+
+                        <div id="overlay" onclick="removeHint()">
                         </div>
-                    {% endfor %}
-                    {% if positions %}
-                        <div id="summary-confirm" class="clearfix">
-                            <button type="button" id="cancel" onclick="closeModal(event)">Revise my votes</button>
-                            <input type="submit" id="confirm" value="Confirm my submission"/>
+                        <div id="modal-read">
+                            <div class="takes-container">
+                                <div class="info-container">
+                                    <div class="info-label"> Select an Issue</div>
+                                    <input type="hidden" id="associated-candidate" name="candidate" value="">
+                                    <select class="info-input" name="take-issue" id="issue-dropdown"
+                                        onchange="change_take('{{ csrf_token }}')">
+                                        {% for issue in issues %}
+                                        <option>{{ issue.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div id="modal__content-read">
+                                <div>
+                                    <blockquote class="blue" id="response-modal">
+                                    </blockquote>
+                                </div>
+                            </div>
                         </div>
-                    {% endif %}
-                </div>
-            </div>
-        </form>
+
+                        <div id="vote-modal">
+                            <div id="vote-summary">
+                                {% for position in positions %}
+                                <div class="candidate-row">
+                                    <div class="candidate-position">{{ position.base_position.name }}</div>
+                                    <div class="candidate-person" id="{{ position.identifier }}-summary"></div>
+                                </div>
+                                {% endfor %}
+                                {% for poll in polls %}
+                                <div class="candidate-row">
+                                    <div class="candidate-position">{{ poll }}</div>
+                                    <div class="candidate-person" id="{{ poll.identifier }}-summary"></div>
+                                </div>
+                                {% endfor %}
+                                {% if positions %}
+                                <div id="summary-confirm" class="clearfix">
+                                    <button type="button" id="cancel" onclick="closeModal(event)">Revise my
+                                        votes</button>
+                                    <input type="submit" id="confirm" value="Confirm my submission" />
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+            </form>
+        </div>
     </div>
-</div>
 </body>
+
 </html>

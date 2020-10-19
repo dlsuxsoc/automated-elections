@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Officer Dashboard</title>
+    <meta name="viewport" content="height=device-height, initial-scale=1">
 
     <!-- CSS LINKS -->
     <link rel="stylesheet" type="text/css" href="{% static 'passcode/css/components/officer.css' %}"/>
@@ -31,7 +32,8 @@
     <button class="tab-buttons" onclick="openTab(event, 'Controls')" id="tab-controls">Election controls</button>
     <button class="tab-buttons" onclick="openTab(event, 'Overview')" id="tab-overview">Overview of votes</button>
     <button class="tab-buttons" onclick="openTab(event, 'Underview')" id="tab-underview">Election results</button>
-    <button class="tab-buttons" onclick="openTab(event, 'Archive')" id="tab-archive">Archive election results</button>
+    <button class="tab-buttons" onclick="openTab(event, 'Poll')" id="tab-poll">Poll results</button>
+    <button class="tab-buttons" onclick="openTab(event, 'Archive')" id="tab-archive">Archive all results</button>
 
 </div>
 
@@ -337,6 +339,63 @@
         </div>
     </div>
 
+    <div id="Poll" class="tab-content" {% if poll_results is not False %}data-selected="selected"{% endif %}>
+        {% if election_ongoing is True %}
+            <img id="stop" src="{% static 'passcode/assets/svg/stop.svg' %}">
+            <header>Woah there!</header>
+            <div class="prohibited">
+                You may not view the results until the elections are done.
+            </div>
+        {% else %}
+            <div class="today-container">
+                <div class="today-stats">
+                    <div class="info-container">
+                        View votes per poll:
+                        <select id="poll-results" class="info-input" onchange="viewVotesForPoll()">
+                            <option disabled="disabled" {% if poll_identifier is False %}selected="selected"{% endif %}>
+                                (select a poll)
+                            </option>
+                            {% for poll in polls %}
+                                <option value="{{ poll.identifier }}"
+                                        {% if poll_identifier|stringformat:"s" == poll.identifier|stringformat:"s" %}selected="selected"{% endif %}>
+                                    {{ poll.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div id="table-container">
+                        <div class="table-row row-0">
+                            <div class="col-position">Question</div>
+                            <div class="col-unit">Yes</div>
+                            <div class="col-name">No</div>
+                        </div>
+
+                        <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
+                        {% if poll_results %}
+                            {% for key, value in poll_results.items %}
+                                {% if value.0.0 is None or value.0.1 is None or value.0.2 is None %}
+                                    <p>No votes have been cast for this poll</p>
+                                {% else %}
+                                    <div class="table-row">
+                                        <div class="col-position">{{ value.0 }}</div>
+                                        <div class="col-unit">{{ value.1 }}</div>
+                                        <div class="col-name">{{ value.2 }}</div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            Please select a poll.
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        <div id="logo">
+            <img width=500 height=50 src="{% static 'passcode/assets/svg/org-logos.svg' %}">
+        </div>
+    </div>
+
     <div id="Archive" class="tab-content">
         {% if election_ongoing is True %}
             <img id="stop" src="{% static 'passcode/assets/svg/stop.svg' %}">
@@ -352,7 +411,7 @@
                     Once you're done viewing the election results, reenter your password and click the
                     <b>archive button</b> to <b>archive</b> <i>all</i> the results to a CSV file. Archiving the
                     results
-                    will also clear <i>all</i> votes, voters, candidates, batch positions, batch units, and issues from
+                    will also clear <i>all</i> votes, voters, candidates, batch positions, batch units, issues, and polls from
                     this website.
                 </div>
                 <div class="controls">

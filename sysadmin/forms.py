@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 
-from vote.models import Issue, Unit, Position
+from vote.models import Issue, Unit, Position, Poll
 
 
 class IssueForm(forms.ModelForm):
@@ -10,6 +10,16 @@ class IssueForm(forms.ModelForm):
 
         widgets = {
             'name': forms.TextInput(attrs={'class': 'info-input', 'placeholder': 'Issue name'})
+        }
+
+        fields = '__all__'
+
+class PollForm(forms.ModelForm):
+    class Meta:
+        model = Poll
+
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'info-input', 'placeholder': 'Poll name'})
         }
 
         fields = '__all__'

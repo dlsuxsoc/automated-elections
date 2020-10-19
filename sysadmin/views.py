@@ -12,8 +12,8 @@ from django.shortcuts import render
 from django.views import View
 
 from passcode.views import PasscodeView, ResultsView
-from sysadmin.forms import IssueForm, OfficerForm, UnitForm, PositionForm
-from vote.models import Voter, College, Candidate, Position, Unit, Party, Issue, Take, BasePosition
+from sysadmin.forms import IssueForm, OfficerForm, UnitForm, PositionForm, PollForm
+from vote.models import Voter, College, Candidate, Position, Unit, Party, Issue, Take, BasePosition, Poll
 
 
 # Test function for this view
@@ -145,229 +145,230 @@ class VotersView(SysadminView):
     def post(self, request):
         form_type = request.POST.get('form-type', False)
 
-        # Only allow editing while there are no elections ongoing and there are no votes in the database
-        if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
-            if form_type is not False:
-                # The submitted form is for adding a voter
-                if form_type == 'add-voter':
-                    first_name = request.POST.get('voter-firstnames', False)
-                    last_name = request.POST.get('voter-lastname', False)
-                    username = request.POST.get('voter-id', False)
-                    college_name = request.POST.get('voter-college', False)
-                    voting_status_name = request.POST.get('voter-voting-status', False)
-                    eligibility_status_name = request.POST.get('voter-eligibility-status', False)
+        if form_type is False:
+            # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+            # message
+            messages.error(request, 'Invalid request.')
 
-                    if first_name is not False and last_name is not False and username is not False \
-                            and college_name is not False \
-                            and voting_status_name is not False and eligibility_status_name is not False:
+            context = self.display_objects(1)
+
+            return render(request, self.template_name, context)
+        
+        # The submitted form is for adding a voter/s
+        if form_type == 'add-voter':
+            first_name = request.POST.get('voter-firstnames', False)
+            last_name = request.POST.get('voter-lastname', False)
+            username = request.POST.get('voter-id', False)
+            college_name = request.POST.get('voter-college', False)
+            voting_status_name = request.POST.get('voter-voting-status', False)
+            eligibility_status_name = request.POST.get('voter-eligibility-status', False)
+
+            if first_name is not False and last_name is not False and username is not False \
+                    and college_name is not False \
+                    and voting_status_name is not False and eligibility_status_name is not False:
+                try:
+                    with transaction.atomic():
+                        # Create the voter
+                        self.create_voter(first_name, last_name, username, college_name, voting_status_name,
+                                            eligibility_status_name)
+
+                        # Display a success message
+                        messages.success(request, 'Voter successfully created.')
+                except IntegrityError:
+                    messages.error(request, 'A voter with that ID number already exists.')
+                except College.DoesNotExist:
+                    messages.error(request, 'That college does not exist.')
+
+                context = self.display_objects(1)
+
+                return render(request, self.template_name, context)
+            else:
+                # If the form type is unknown, it's an invalid request, so stay on the page and then show an
+                # error message
+                messages.error(request, 'Invalid request.')
+
+                context = self.display_objects(1)
+
+                return render(request, self.template_name, context)
+        elif form_type == 'add-bulk-voter':
+                # The submitted form is for adding voters in bulk
+                voting_status_name = request.POST.get('voter-voting-status', False)
+                eligibility_status_name = request.POST.get('voter-eligibility-status', False)
+
+                if request.FILES['voters-list'] is not None \
+                        and voting_status_name is not None \
+                        and eligibility_status_name is not None:
+                    # Get the file from the request object
+                    file = request.FILES['voters-list']
+
+                    # Load all rows from the uploaded file
+                    num_voters_added = 0
+                    has_passed_header = False
+
+                    # List of all voter information to be added
+                    voter_info = []
+
+                    # Either all voters are added, or none at all
+                    # Iterate all rows
+                    for row in file:
+                        # Convert the row to string
+                        row_str = row.decode('utf-8').strip()
+
+                        # Skip the first row (the header)
+                        if not has_passed_header:
+                            has_passed_header = True
+
+                            continue
+
+                        # Check for missing rows
                         try:
-                            with transaction.atomic():
-                                # Create the voter
-                                self.create_voter(first_name, last_name, username, college_name, voting_status_name,
-                                                  eligibility_status_name)
+                            voter_data_split = row_str.split(',', 4)
 
-                                # Display a success message
-                                messages.success(request, 'Voter successfully created.')
-                        except IntegrityError:
-                            messages.error(request, 'A voter with that ID number already exists.')
-                        except College.DoesNotExist:
-                            messages.error(request, 'That college does not exist.')
-
-                        context = self.display_objects(1)
-
-                        return render(request, self.template_name, context)
-                    else:
-                        # If the form type is unknown, it's an invalid request, so stay on the page and then show an
-                        # error message
-                        messages.error(request, 'Invalid request.')
-
-                        context = self.display_objects(1)
-
-                        return render(request, self.template_name, context)
-                elif form_type == 'edit-voter':
-                    # The submitted form is for editing a voter
-                    page = request.POST.get('page', False)
-                    voter_id = request.POST.get('edit-id', False)
-                    eligibility_status_name = request.POST.get('voter-eligibility-status', False)
-
-                    if page is not False and voter_id is not False and eligibility_status_name is not False:
-                        try:
-                            with transaction.atomic():
-                                # Edit the voter
-                                self.change_voter_eligibility(voter_id, eligibility_status_name)
-
-                                # Display a success message
-                                messages.success(request, 'Voter successfully edited.')
-                        except Voter.DoesNotExist:
-                            messages.error(request, 'No such voter exists.')
-
-                        context = self.display_objects(page)
-
-                        return render(request, self.template_name, context)
-                    else:
-                        # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
-                        # message
-                        messages.error(request, 'Invalid request.')
-
-                        context = self.display_objects(1)
-
-                        return render(request, self.template_name, context)
-                elif form_type == 'add-bulk-voter':
-                    # The submitted form is for adding voters in bulk
-                    voting_status_name = request.POST.get('voter-voting-status', False)
-                    eligibility_status_name = request.POST.get('voter-eligibility-status', False)
-
-                    if request.FILES['voters-list'] is not None \
-                            and voting_status_name is not None \
-                            and eligibility_status_name is not None:
-                        # Get the file from the request object
-                        file = request.FILES['voters-list']
-
-                        # Load all rows from the uploaded file
-                        num_voters_added = 0
-                        has_passed_header = False
-
-                        # List of all voter information to be added
-                        voter_info = []
-
-                        # Either all voters are added, or none at all
-                        # Iterate all rows
-                        for row in file:
-                            # Convert the row to string
-                            row_str = row.decode('utf-8').strip()
-
-                            # Skip the first row (the header)
-                            if not has_passed_header:
-                                has_passed_header = True
-
-                                continue
-
-                            # Check for missing rows
-                            try:
-                                voter_data_split = row_str.split(',', 4)
-
-                                if len(voter_data_split) != 4:
-                                    raise ValueError
-                            except ValueError:
-                                messages.error(request,
-                                               'There were missing fields in the uploaded list. No voters were'
-                                               ' added.')
-
-                                context = self.display_objects(1)
-
-                                return render(request, self.template_name, context)
-
-                            # Get specific values
-                            id_number = voter_data_split[0].strip()
-                            last_name = voter_data_split[1].strip()
-                            first_names = voter_data_split[2].strip()
-                            college = voter_data_split[3].strip()
-
-                            # If the inputs contain invalid data, stop processing immediately
-                            if User.objects.filter(username=id_number).count() > 0 \
-                                    or College.objects.filter(name=college).count() == 0:
-                                messages.error(request,
-                                               'The uploaded list contained invalid voter data or voters who were already'
-                                               ' added previously. No further voters were added. (Error at row ' + repr(
-                                                   num_voters_added + 2) + ')')
-
-                                context = self.display_objects(1)
-
-                                return render(request, self.template_name, context)
-
-                            # Add them to the list
-                            voter_info.append(
-                                {
-                                    'id_number': id_number,
-                                    'last_name': last_name,
-                                    'first_names': first_names,
-                                    'college': college,
-                                }
-                            )
-
-                            # Increment the added voter count
-                            num_voters_added += 1
-
-                        # If the file uploaded was empty
-                        if num_voters_added == 0:
+                            if len(voter_data_split) != 4:
+                                raise ValueError
+                        except ValueError:
                             messages.error(request,
-                                           'The uploaded list did not contain any voters.')
+                                            'There were missing fields in the uploaded list. No voters were'
+                                            ' added.')
 
-                        current_row = 0
+                            context = self.display_objects(1)
 
-                        try:
-                            for voter in voter_info:
-                                with transaction.atomic():
-                                    # Try to create the voter
-                                    self.create_voter(
-                                        voter['first_names'],
-                                        voter['last_name'],
-                                        voter['id_number'],
-                                        voter['college'],
-                                        voting_status_name,
-                                        eligibility_status_name
-                                    )
+                            return render(request, self.template_name, context)
 
-                                current_row += 1
+                        # Get specific values
+                        id_number = voter_data_split[0].strip()
+                        last_name = voter_data_split[1].strip()
+                        first_names = voter_data_split[2].strip()
+                        college = voter_data_split[3].strip()
 
-                            # Display a success message after all voters have been successfully added
-                            messages.success(request, 'All {0} voter(s) successfully added.'.format(num_voters_added))
-                        except IntegrityError:
-                            messages.error(request, 'A voter with that ID number already exists. (Error at row ' + repr(
-                                current_row) + ')')
-                        except College.DoesNotExist:
+                        # If the inputs contain invalid data, stop processing immediately
+                        if User.objects.filter(username=id_number).count() > 0 \
+                                or College.objects.filter(name=college).count() == 0:
                             messages.error(request,
-                                           'The uploaded list contained invalid voter data. No voters were added (Error'
-                                           ' at row ' + repr(current_row) + ')')
+                                            'The uploaded list contained invalid voter data or voters who were already'
+                                            ' added previously. No further voters were added. (Error at row ' + repr(
+                                                num_voters_added + 2) + ')')
 
-                        context = self.display_objects(1)
+                            context = self.display_objects(1)
 
-                        return render(request, self.template_name, context)
-                    else:
-                        # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
-                        # message
-                        messages.error(request, 'Invalid request.')
+                            return render(request, self.template_name, context)
 
-                        context = self.display_objects(1)
+                        # Add them to the list
+                        voter_info.append(
+                            {
+                                'id_number': id_number,
+                                'last_name': last_name,
+                                'first_names': first_names,
+                                'college': college,
+                            }
+                        )
 
-                        return render(request, self.template_name, context)
-                elif form_type == 'delete-voter':
-                    # The submitted form is for deleting voters
-                    voters_list = request.POST.getlist('voters')
+                        # Increment the added voter count
+                        num_voters_added += 1
 
-                    if voters_list is not False and len(voters_list) > 0:
-                        try:
-                            voters_deleted = 0
+                    # If the file uploaded was empty
+                    if num_voters_added == 0:
+                        messages.error(request,
+                                        'The uploaded list did not contain any voters.')
 
-                            # Try to delete each voter in the list
+                    current_row = 0
+
+                    try:
+                        for voter in voter_info:
                             with transaction.atomic():
-                                for voter in voters_list:
-                                    self.delete_voter(voter)
+                                # Try to create the voter
+                                self.create_voter(
+                                    voter['first_names'],
+                                    voter['last_name'],
+                                    voter['id_number'],
+                                    voter['college'],
+                                    voting_status_name,
+                                    eligibility_status_name
+                                )
 
-                                    voters_deleted += 1
+                            current_row += 1
 
-                                messages.success(request,
-                                                 "All {0} voter(s) successfully deleted.".format(voters_deleted))
-                        except Voter.DoesNotExist:
-                            # If the user does not exist
-                            messages.error(request,
-                                           'One of the selected users has not existed in the first place. '
-                                           'No voters were deleted.')
+                        # Display a success message after all voters have been successfully added
+                        messages.success(request, 'All {0} voter(s) successfully added.'.format(num_voters_added))
+                    except IntegrityError:
+                        messages.error(request, 'A voter with that ID number already exists. (Error at row ' + repr(
+                            current_row) + ')')
+                    except College.DoesNotExist:
+                        messages.error(request,
+                                        'The uploaded list contained invalid voter data. No voters were added (Error'
+                                        ' at row ' + repr(current_row) + ')')
 
-                        context = self.display_objects(1)
+                    context = self.display_objects(1)
 
-                        return render(request, self.template_name, context)
-                    else:
-                        # If the form type is unknown, it's an invalid request, so stay on the page and then show an
-                        # error message
-                        messages.error(request, 'Invalid request.')
-
-                        context = self.display_objects(1)
-
-                        return render(request, self.template_name, context)
+                    return render(request, self.template_name, context)
                 else:
                     # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
                     # message
+                    messages.error(request, 'Invalid request.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+            
+        # Only allow editing and deleting while there are no elections ongoing and there are no votes in the database
+        if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
+            if form_type == 'edit-voter':
+                # The submitted form is for editing a voter
+                page = request.POST.get('page', False)
+                voter_id = request.POST.get('edit-id', False)
+                eligibility_status_name = request.POST.get('voter-eligibility-status', False)
+
+                if page is not False and voter_id is not False and eligibility_status_name is not False:
+                    try:
+                        with transaction.atomic():
+                            # Edit the voter
+                            self.change_voter_eligibility(voter_id, eligibility_status_name)
+
+                            # Display a success message
+                            messages.success(request, 'Voter successfully edited.')
+                    except Voter.DoesNotExist:
+                        messages.error(request, 'No such voter exists.')
+
+                    context = self.display_objects(page)
+
+                    return render(request, self.template_name, context)
+                else:
+                    # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                    # message
+                    messages.error(request, 'Invalid request.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+            elif form_type == 'delete-voter':
+                # The submitted form is for deleting voters
+                voters_list = request.POST.getlist('voters')
+
+                if voters_list is not False and len(voters_list) > 0:
+                    try:
+                        voters_deleted = 0
+
+                        # Try to delete each voter in the list
+                        with transaction.atomic():
+                            for voter in voters_list:
+                                self.delete_voter(voter)
+
+                                voters_deleted += 1
+
+                            messages.success(request,
+                                                "All {0} voter(s) successfully deleted.".format(voters_deleted))
+                    except Voter.DoesNotExist:
+                        # If the user does not exist
+                        messages.error(request,
+                                        'One of the selected users has not existed in the first place. '
+                                        'No voters were deleted.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+                else:
+                    # If the form type is unknown, it's an invalid request, so stay on the page and then show an
+                    # error message
                     messages.error(request, 'Invalid request.')
 
                     context = self.display_objects(1)
@@ -771,80 +772,73 @@ class OfficersView(SysadminView):
 
         officer_form = OfficerForm(request.POST)
 
+        if form_type is False:
+            # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+            # message
+            messages.error(request, 'Invalid request.')
+
+            context = self.display_objects(1)
+
+            return render(request, self.template_name, context)
+        
+        if form_type == 'add-officer':
+            # The submitted form is for adding an officer
+            if officer_form.is_valid():
+                with transaction.atomic():
+                    # Save the form to the database if it is valid
+                    officer = officer_form.save()
+
+                    # Set the correctly hashed password
+                    officer.set_password(officer_form.cleaned_data['password'])
+
+                    # Add the officer to the COMELEC officer group
+                    group = Group.objects.get(name='comelec')
+                    group.user_set.add(officer)
+
+                    officer.save()
+
+                    messages.success(request, 'Officer successfully added.')
+
+                context = self.display_objects(1)
+
+                return render(request, self.template_name, context)
+                
         # Only allow editing while there are no elections ongoing and there are no votes in the database
         if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
-            if form_type is not False:
-                if form_type == 'add-officer':
-                    # The submitted form is for adding an officer
-                    if officer_form.is_valid():
+            if form_type == 'delete-officer':
+                # The submitted form is for deleting officers
+                officers_list = request.POST.getlist('officers')
+
+                if officers_list is not False and len(officers_list) > 0:
+                    try:
+                        officers_deleted = 0
+
+                        # Try to delete each voter in the list
                         with transaction.atomic():
-                            # Save the form to the database if it is valid
-                            officer = officer_form.save()
+                            for officer in officers_list:
+                                self.delete_officer(officer)
 
-                            # Set the correctly hashed password
-                            officer.set_password(officer_form.cleaned_data['password'])
+                                officers_deleted += 1
 
-                            # Add the officer to the COMELEC officer group
-                            group = Group.objects.get(name='comelec')
-                            group.user_set.add(officer)
-
-                            officer.save()
-
-                            messages.success(request, 'Officer successfully added.')
-
-                        context = self.display_objects(1)
-
-                        return render(request, self.template_name, context)
-                    else:
-                        # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
-                        # message
-                        messages.error(request, 'Could not add this officer.')
-
-                        context = self.display_objects(1)
-
-                        return render(request, self.template_name, context)
-                elif form_type == 'delete-officer':
-                    # The submitted form is for deleting officers
-                    officers_list = request.POST.getlist('officers')
-
-                    if officers_list is not False and len(officers_list) > 0:
-                        try:
-                            officers_deleted = 0
-
-                            # Try to delete each voter in the list
-                            with transaction.atomic():
-                                for officer in officers_list:
-                                    self.delete_officer(officer)
-
-                                    officers_deleted += 1
-
-                                messages.success(request,
-                                                 "All {0} officer(s) successfully deleted.".format(officers_deleted))
-                        except User.DoesNotExist:
-                            # If the user does not exist
-                            messages.error(request,
-                                           'One of the selected users has not existed in the first place. '
-                                           'No officers were deleted.')
-
-                        context = self.display_objects(1)
-
-                        return render(request, self.template_name, context)
-                    else:
-                        # If the form type is unknown, it's an invalid request, so stay on the page and then show an
-                        # error message
-                        messages.error(request, 'Invalid request.')
-
-                        context = self.display_objects(1)
-
-                        return render(request, self.template_name, context)
-                else:
-                    # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
-                    # message
-                    messages.error(request, 'Invalid request.')
+                            messages.success(request,
+                                                "All {0} officer(s) successfully deleted.".format(officers_deleted))
+                    except User.DoesNotExist:
+                        # If the user does not exist
+                        messages.error(request,
+                                        'One of the selected users has not existed in the first place. '
+                                        'No officers were deleted.')
 
                     context = self.display_objects(1)
 
                     return render(request, self.template_name, context)
+                else:
+                    # If the form type is unknown, it's an invalid request, so stay on the page and then show an
+                    # error message
+                    messages.error(request, 'Invalid request.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)    
             else:
                 # If no objects are received, it's an invalid request, so stay on the page and then show an error
                 # message
@@ -1193,7 +1187,7 @@ class IssueView(SysadminView):
                         context = self.display_objects(1)
 
                         return render(request, self.template_name, context)
-                elif form_type == 'delete-position':
+                elif form_type == 'delete-issues':
                     # The submitted form is for deleting issues
                     issues_list = request.POST.getlist('issues')
 
@@ -1277,3 +1271,129 @@ def json_take(request, candidate_id, issue):
 
     # Then return its response
     return JsonResponse({'response': take.response})
+
+class PollView(SysadminView):
+    template_name = 'sysadmin/admin-poll.html'
+
+    # A convenience function for deleting an poll
+    @staticmethod
+    def delete_poll(poll_id):
+        # Retrieve the poll
+        poll = Poll.objects.get(id=poll_id)
+
+        # Get rid of that issupolle
+        poll.delete()
+
+    def display_objects(self, page, query=False):
+        # Show everything if the query is empty
+        if query is False:
+            polls = Poll.objects.all().order_by('name')
+        else:
+            polls = Poll.objects.filter(name__icontains=query).order_by('name')
+
+        paginator = Paginator(polls, self.objects_per_page)
+        paginated_polls = paginator.get_page(page)
+
+        poll_form = PollForm()
+
+        context = {
+            'polls': paginated_polls,
+            'poll_form': poll_form
+        }
+
+        return context
+
+    def get(self, request):
+        page = request.GET.get('page', False)
+        query = request.GET.get('query', False)
+
+        context = self.display_objects(page if page is not False else 1, query)
+
+        return render(request, self.template_name, context)
+
+    def post(self, request):
+        form_type = request.POST.get('form-type', False)
+
+        poll_form = PollForm(request.POST)
+
+        # Only allow editing while there are no elections ongoing and there are no votes in the database
+        if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
+            if form_type is not False:
+                if form_type == 'add-poll':
+                    # The submitted form is for adding an poll
+                    if poll_form.is_valid():
+                        with transaction.atomic():
+                            # Save the form to the database if it is valid
+                            poll_form.save()
+
+                            messages.success(request, 'Poll successfully added.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                    else:
+                        # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                        # message
+                        messages.error(request, 'Could not add this poll.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                elif form_type == 'delete-polls':
+                    # The submitted form is for deleting polls
+                    polls_list = request.POST.getlist('polls')
+
+                    if polls_list is not False and len(polls_list) > 0:
+                        try:
+                            polls_deleted = 0
+
+                            # Try to delete each poll in the list
+                            with transaction.atomic():
+                                for poll in polls_list:
+                                    self.delete_poll(poll)
+
+                                    polls_deleted += 1
+
+                                messages.success(request,
+                                                 "All {0} poll(s) successfully deleted.".format(polls_deleted))
+                        except Poll.DoesNotExist:
+                            # If the position does not exist
+                            messages.error(request,
+                                           'One of the selected polls has not existed in the first place. '
+                                           'No polls were deleted.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                    else:
+                        # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                        # message
+                        messages.error(request, 'Invalid request.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                else:
+                    # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                    # message
+                    messages.error(request, 'Invalid request.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+            else:
+                # If no objects are received, it's an invalid request, so stay on the page and then show an error
+                # message
+                messages.error(request, 'Invalid request.')
+
+                context = self.display_objects(1)
+
+                return render(request, self.template_name, context)
+        else:
+            messages.error(request,
+                           'You cannot do that now because there are still votes being tracked. There may be '
+                           'elections still ongoing, or you haven\'t archived the votes yet.')
+
+            context = self.display_objects(1)
+
+            return render(request, self.template_name, context)

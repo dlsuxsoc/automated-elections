@@ -7,6 +7,15 @@ function viewVotesForPosition() {
     window.location.search = 'query=' + identifier;
 }
 
+function viewVotesForPoll() {
+    // Get the selected position identifier
+    let dropdown = document.getElementById('poll-results');
+    let identifier = dropdown.options[dropdown.selectedIndex].value;
+
+    // Reload page with query
+    window.location.search = 'pollquery=' + identifier;
+}
+
 function selectCollege(evt, col) {
     var i, tabcontent, tabButtons;
     tabcontent = document.getElementsByClassName("college-content");
@@ -103,4 +112,8 @@ function drawChart(results) {
     }
 }
 
-document.getElementById("tab-underview").click();
+if (document.getElementById("Poll").getAttribute("data-selected") === 'selected') {
+    document.getElementById("tab-poll").click();
+} else {
+    document.getElementById("tab-underview").click();
+}
