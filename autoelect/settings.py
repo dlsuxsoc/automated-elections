@@ -130,7 +130,7 @@ EMAIL_HOST = 'smtp.gmail.com'
 
 EMAIL_HOST_USER = 'dlsucomelec.automatedelections@gmail.com'
 
-EMAIL_HOST_PASSWORD = 'cHhem3l@ck:amino!'
+EMAIL_HOST_PASSWORD = 'gedksvmjpgnuczrd'
 
 EMAIL_PORT = 587
 
