@@ -365,9 +365,9 @@
                     </div>
                     <div id="table-container">
                         <div class="table-row row-0">
-                            <div class="col-position">Question</div>
-                            <div class="col-unit">Yes</div>
-                            <div class="col-name">No</div>
+                            <div class="col-question">Question</div>
+                            <div class="col-answer">Yes</div>
+                            <div class="col-answer">No</div>
                         </div>
 
                         <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
@@ -376,10 +376,10 @@
                                 {% if value.0.0 is None or value.0.1 is None or value.0.2 is None %}
                                     <p>No votes have been cast for this poll</p>
                                 {% else %}
-                                    <div class="table-row">
-                                        <div class="col-position">{{ value.0 }}</div>
-                                        <div class="col-unit">{{ value.1 }}</div>
-                                        <div class="col-name">{{ value.2 }}</div>
+                                    <div class="table-row {% cycle 'row-1' 'row-2' %}">
+                                        <div class="col-question">{{ value.0.0 }}</div>
+                                        <div class="col-answer">{{ value.0.1 }}</div>
+                                        <div class="col-answer">{{ value.0.2 }}</div>
                                     </div>
                                 {% endif %}
                             {% endfor %}

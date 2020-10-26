@@ -41,6 +41,14 @@
     flex-basis: 15%;
 }
 
+.col-question {
+    flex-basis: 80%;
+}
+
+.col-answer {
+    flex-basis: 10%;
+}
+
 .password-reauth {
     width: 60%;
     height: 40px;
