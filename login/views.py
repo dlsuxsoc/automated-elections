@@ -1,5 +1,8 @@
 # Create your views here.
+import requests
+
 from django.contrib import messages
+from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import Group
 from django.shortcuts import render, redirect
@@ -7,7 +10,6 @@ from django.views import View
 
 from passcode.views import ResultsView
 from vote.models import Voter, ElectionStatus
-
 
 class VoterLoginView(View):
     template_name = 'login/login.html'
@@ -137,44 +139,59 @@ class AdminLoginView(View):
     def post(self, request):
         username = request.POST.get('username', False)
         password = request.POST.get('password', False)
+        # Captcha validation
+        recaptcha_response = request.POST.get('g-recaptcha-response')
+        print(recaptcha_response)
+        print(settings.GOOGLE_RECAPTCHA_SECRET_KEY)
+        data = {
+            'secret': settings.GOOGLE_RECAPTCHA_SECRET_KEY,
+            'response': recaptcha_response
+        }
+        r = requests.post('https://www.google.com/recaptcha/api/siteverify', data=data)
+        result = r.json()
+        if result['success']:
+            # If the username and password objects exist in the request dictionary, then it is a valid login POST
+            if username is not False and password is not False:
+                # Authenticate the credentials
+                user = authenticate(request, username=username, password=password)
 
-        # If the username and password objects exist in the request dictionary, then it is a valid login POST
-        if username is not False and password is not False:
-            # Authenticate the credentials
-            user = authenticate(request, username=username, password=password)
+                # If the credentials are valid, try to log the user in and go straight to the voting page
+                if user is not None:
+                    # But only log the user in if the user is a COMELEC officer or a system administrator
+                    try:
+                        # If the user is a COMELEC officer, log the user in
+                        if Group.objects.get(name='comelec') in user.groups.all():
+                            login(request, user)
 
-            # If the credentials are valid, try to log the user in and go straight to the voting page
-            if user is not None:
-                # But only log the user in if the user is a COMELEC officer or a system administrator
-                try:
-                    # If the user is a COMELEC officer, log the user in
-                    if Group.objects.get(name='comelec') in user.groups.all():
-                        login(request, user)
+                            return redirect('passcode:passcode')
+                        # If the user is a system administrator, log the user in
+                        elif Group.objects.get(name='sysadmin') in user.groups.all():
+                            login(request, user)
 
-                        return redirect('passcode:passcode')
-                    # If the user is a system administrator, log the user in
-                    elif Group.objects.get(name='sysadmin') in user.groups.all():
-                        login(request, user)
+                            return redirect('sysadmin:voters')
+                        else:
+                            # If the user is not a COMELEC officer, stay on the login page and then show an error message
+                            messages.error(request, 'You are not allowed to log in here.')
 
-                        return redirect('sysadmin:voters')
-                    else:
-                        # If the user is not a COMELEC officer, stay on the login page and then show an error message
-                        messages.error(request, 'You are not allowed to log in here.')
+                            return render(request, self.template_name)
+                    except Group.DoesNotExist:
+                        # If the group does not exist, stay on the login page and then show an error message
+                        messages.error(request, 'Internal server error.')
 
                         return render(request, self.template_name)
-                except Group.DoesNotExist:
-                    # If the group does not exist, stay on the login page and then show an error message
-                    messages.error(request, 'Internal server error.')
+                else:
+                    # If the credentials aren't valid, stay on the login page and then show an error message
+                    messages.error(request, 'Incorrect username or password. Try again!')
 
                     return render(request, self.template_name)
             else:
-                # If the credentials aren't valid, stay on the login page and then show an error message
-                messages.error(request, 'Incorrect username or password. Try again!')
+                # If no objects are received, it's an invalid request, so stay on the login page and then show an error
+                # message
+                messages.error(request, 'Invalid request.')
 
                 return render(request, self.template_name)
-        else:
-            # If no objects are received, it's an invalid request, so stay on the login page and then show an error
-            # message
-            messages.error(request, 'Invalid request.')
+        else: 
+            #If the captcha was invalid then return the error 
+            messages.error(request, 'Invalid reCAPTCHA. Please try again.')
 
             return render(request, self.template_name)
