@@ -1,4 +1,5 @@
 {% load static %}
+{% load honeypot %}
 <!DOCTYPE html>
 <html>
 
@@ -40,7 +41,10 @@
             {% endif %}
 
             <form id="landing-form" method="POST" action="">
+                {% render_honeypot_field "idnumber" %}
+                {% render_honeypot_field "password1" %}
                 {% csrf_token %}
+                
                 <div class="input-field">
                     <input type="text" name="username" id="id-number" min="0" required="required"
                         onkeypress="return isNumberKey(event)" />
