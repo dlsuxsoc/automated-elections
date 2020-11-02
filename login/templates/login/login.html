@@ -42,7 +42,6 @@
 
             <form id="landing-form" method="POST" action="">
                 {% render_honeypot_field "idnumber" %}
-                {% render_honeypot_field "password1" %}
                 {% csrf_token %}
                 
                 <div class="input-field">
