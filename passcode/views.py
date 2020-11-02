@@ -146,7 +146,7 @@ class VotersView(OfficerView):
                 server.ehlo()
                 server.starttls()
                 server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
-                send_email(username, server, password)
+                send_email(username, password)
                 print('Email sent to ' + username)
                 # close server
                 server.quit()
