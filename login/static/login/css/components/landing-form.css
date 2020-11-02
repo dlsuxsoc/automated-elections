@@ -43,6 +43,10 @@
     margin: 0;
 }
 
+.g-recaptcha {
+    margin-bottom: 25px; 
+}
+
 .submit-btn{
     /* color: whitesmoke;
     background-color: var(--theme-lighter-green);
