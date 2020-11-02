@@ -40,7 +40,8 @@ INSTALLED_APPS = [
     'vote',
     'passcode',
     'sysadmin',
-    'honeypot'
+    'honeypot',
+    'admin_honeypot'
 ]
 
 MIDDLEWARE = [
