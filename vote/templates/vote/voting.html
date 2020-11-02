@@ -57,6 +57,7 @@
         <div id="candidates-column">
             <form id="vote" method="POST" action="">
                 {% render_honeypot_field "poll-answer" %}
+                {% render_honeypot_field "position-vote" %}
                 {% csrf_token %}
                 {% if polls %}
                 <div class="candidate-category">
