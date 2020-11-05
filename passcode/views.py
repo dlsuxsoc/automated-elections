@@ -951,6 +951,8 @@ class ResultsView(OfficerView):
 
         if form_type is not False:
             # The submitted form is for starting the elections
+            """
+            Can't be used in an online setting
             if form_type == 'start-elections':
                 # If the elections have already started, it can't be started again!
                 if self.is_election_ongoing():
@@ -1045,7 +1047,8 @@ class ResultsView(OfficerView):
                 context = self.display_objects(1)
 
                 return render(request, self.template_name, context)
-            elif form_type == 'archive':
+            """
+            if form_type == 'archive':
                 # If there are elections ongoing, no archiving may be done yet
                 if self.is_election_ongoing():
                     messages.error(request, 'You may not archive while the elections are ongoing.')

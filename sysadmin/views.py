@@ -1,9 +1,14 @@
 # Create your views here.
+import datetime
+from email.mime.image import MIMEImage
 
+from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import authenticate
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.contrib.auth.models import Group, User
+from django.core.mail import EmailMultiAlternatives
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Q
@@ -13,7 +18,7 @@ from django.views import View
 
 from passcode.views import PasscodeView, ResultsView
 from sysadmin.forms import IssueForm, OfficerForm, UnitForm, PositionForm, PollForm
-from vote.models import Voter, College, Candidate, Position, Unit, Party, Issue, Take, BasePosition, Poll
+from vote.models import Vote, Voter, College, Candidate, ElectionStatus, Position, Unit, Party, Issue, Take, BasePosition, Poll
 
 
 # Test function for this view
@@ -23,6 +28,49 @@ def sysadmin_test_func(user):
     except Group.DoesNotExist:
         return False
 
+# EMAIL BODY CONST
+fp = open(settings.BASE_DIR + '/email_template.html', 'r')
+HTML_STR = fp.read()
+fp.close()
+
+def send_email(voter_id, voter_key = None):
+    if voter_key == None:
+        voter_key = PasscodeView.generate_passcode()
+
+        user = User.objects.get(username=voter_id)
+        user.set_password(voter_key)
+        user.save()
+
+    voter_email = voter_id + '@dlsu.edu.ph'
+
+    # Create email with message and template
+    # Imbedded Image
+    fp = open(settings.BASE_DIR + '/ComelecLogo.png', 'rb')
+    img = MIMEImage(fp.read())
+    fp.close()
+    img.add_header('Content-ID', '<logo>')
+
+    subject = '[COMELEC] Election is now starting'
+    text = '''\
+DLSU Comelec is inviting to you to vote in the elections.
+Voter ID: {}
+Voter Key: {}
+To vote, go to this link: https://some_link
+    '''.format(voter_id, voter_key)
+
+    html = HTML_STR
+    html = html.replace('11xxxxxx', voter_id, 2)
+    html = html.replace('xxxxxxxx', voter_key, 1)
+
+    msg = EmailMultiAlternatives(
+        subject = subject,
+        body = text,
+        from_email = settings.EMAIL_HOST_USER,
+        to = [ voter_email ]
+    )
+    msg.attach_alternative(html, "text/html")
+    msg.attach(img)
+    msg.send()
 
 class RestrictedView(UserPassesTestMixin, View):
     # Check whether the user accessing this page is a system administrator or not
@@ -45,6 +93,165 @@ class SysadminView(RestrictedView):
 
     def post(self, request):
         pass
+
+class ElectionsView(SysadminView):
+    template_name = 'sysadmin/admin-elections.html'
+    
+    @staticmethod
+    def is_votes_empty():
+        return not Vote.objects.all().exists()
+
+    @staticmethod
+    def get_context():
+        # Retrieve all colleges
+        colleges = College.objects.all().order_by('name')
+
+        # Set a flag indicating whether elections have started or not
+        election_ongoing = ElectionStatus.objects.all().exists()
+
+        context = {}
+
+        if election_ongoing:
+            # Show the eligible batches when the elections are on
+            college_batch_dict = {}
+
+            college_batches = ElectionStatus.objects.all().order_by('college__name', '-batch')
+
+            for college_batch in college_batches:
+                if college_batch.college.name not in college_batch_dict.keys():
+                    college_batch_dict[college_batch.college.name] = []
+
+                college_batch_dict[college_batch.college.name].append(college_batch.batch)
+            
+            context = {
+                'college_batch_dict': college_batch_dict,
+                'election_ongoing': election_ongoing,
+                'colleges': colleges,
+            }
+        else:
+            # Get all batches from the batch of the current year until the batch of the year six years from the current
+            # year
+            current_year = datetime.datetime.now().year
+
+            batches = ['1' + str(year)[2:] for year in range(current_year, current_year - 6, -1)]
+            batches[-1] = batches[-1] + ' and below'
+
+            context = {
+                'election_ongoing': election_ongoing,
+                'colleges': colleges,
+                'batches': batches
+            }
+        
+        return context
+
+    def get(self, request):
+        context = self.get_context()
+
+        return render(request, self.template_name, context)
+
+    def post(self, request):
+        form_type = request.POST.get('form-type', False)
+
+        election_ongoing = ElectionStatus.objects.all().exists()
+
+        if form_type is not False:
+            # The submitted form is for starting the elections
+            if form_type == 'start-elections':
+                # If the elections have already started, it can't be started again!
+                if election_ongoing:
+                    messages.error(request, 'The elections have already been started.')
+                elif not self.is_votes_empty():
+                    # If there still are votes left from the previous elections, the elections can't be started yet
+                    messages.error(request,
+                                   'The votes from the previous election haven\'t been archived yet. Archive them '
+                                   'first before starting this election.')
+                else:
+                    # Only continue if the re-authentication password indeed matches the password of the current
+                    # COMELEC officer
+                    reauth_password = request.POST.get('reauth', False)
+
+                    if reauth_password is False \
+                            or authenticate(username=request.user.username, password=reauth_password) is None:
+                        messages.error(request,
+                                       'The elections weren\'t started because the password was incorrect. Try again.')
+                    else:
+                        college_batches = {}
+
+                        # Collect all batches per college
+                        for college in College.objects.all().order_by('name'):
+                            college_batches[college.name] = request.POST.getlist(college.name + '-batch')
+
+                        # Keep track of whether no checkboxes where checked
+                        empty = True
+
+                        # List of all voters
+                        voters = [ ]
+
+                        # Add each into the database
+                        for college, batches in college_batches.items():
+                            # Get the college object from the name
+                            try:
+                                college_object = College.objects.get(name=college)
+
+                                # Then use that object to create the an election status value for these specific batches
+                                for batch in batches:
+                                    empty = False
+
+                                    ElectionStatus.objects.create(college=college_object, batch=batch)
+                                    batch_voters = list(
+                                        Voter.objects.filter(
+                                            college=college_object,
+                                            user__username__startswith=str(batch),
+                                            voting_status=False,
+                                            eligibility_status=True
+                                        ).values('user__username')
+                                    )
+
+                                    # print(batch_voters)
+                                    voters += batch_voters
+                            except College.DoesNotExist:
+                                # If the college does not exist
+                                messages.error(request, 'Internal server error.')
+
+                        # Check whether batches were actually selected in the first place
+                        if not empty:
+                            for index, voter in enumerate(voters):
+                                send_email(voter['user__username'])
+                                print('Email sent to ' + voter['user__username'] + '.' + str(index) + ' out of ' + str(len(voters)) + ' sent.')
+
+                            messages.success(request, 'The elections have now started.')
+                        else:
+                            messages.error(request,
+                                           'The elections weren\'t started because there were no batches selected at'
+                                           ' all.')
+
+                context = self.get_context()
+
+                return render(request, self.template_name, context)
+            elif form_type == 'end-elections':
+                # If the elections have already ended, it can't be ended again!
+                if election_ongoing:
+                    # Only continue if the re-authentication password indeed matches the password of the current
+                    # COMELEC officer
+                    reauth_password = request.POST.get('reauth', False)
+
+                    if reauth_password is False \
+                            or authenticate(username=request.user.username, password=reauth_password) is None:
+                        messages.error(request,
+                                       'The elections weren\'t ended because the password was incorrect. Try again.')
+                    else:
+                        # Clear the entire election status table
+                        ElectionStatus.objects.all().delete()
+
+                        messages.success(request, 'The elections have now ended.')
+                else:
+                    messages.error(request, 'The elections have already been ended.')
+
+                context = self.get_context()
+
+                return render(request, self.template_name, context)
+
+        return render(request, self.template_name)
 
 
 class VotersView(SysadminView):

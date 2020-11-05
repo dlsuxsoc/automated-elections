@@ -62,7 +62,7 @@
             {% endif %}
         </div>
         <div class="controls-container">
-            <form action="" method="POST">
+            <!-- <form action="" method="POST"> -->
                 {% csrf_token %}
                 <input type="hidden" name="form-type"
                        value="{% if election_ongoing is False %}start-elections{% else %}end-elections{% endif %}">
@@ -97,7 +97,7 @@
                         {% endif %}
                     </div>
                 {% endfor %}
-                <div class="controls-instruction">
+                <!-- <div class="controls-instruction">
                     {% if election_ongoing is False %}
                         Once you're done, <b>reenter your password</b>, then click the <b>start
                         elections</b> button to commence the elections.
@@ -115,8 +115,8 @@
                     <input class="button {% if election_ongoing is False %}confirm{% else %}confirm-negative{% endif %}"
                            type="submit"
                            value="{% if election_ongoing is False %}Start elections{% else %}Stop elections{% endif %}">
-                </div>
-            </form>
+                </div> -->
+            <!-- </form> -->
         </div>
         <div id="logo">
             <img width=500 height=50 src="{% static 'passcode/assets/svg/org-logos.svg' %}">

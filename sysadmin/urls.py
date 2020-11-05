@@ -1,11 +1,14 @@
 from django.urls import path
 
-from sysadmin.views import VotersView, CandidatesView, OfficersView, UnitView, json_take, json_details, PositionView, \
+from sysadmin.views import ElectionsView, VotersView, CandidatesView, OfficersView, UnitView, json_take, json_details, PositionView, \
     IssueView, PollView
 
 app_name = 'sysadmin'
 
 urlpatterns = [
+    # /sysadmin/elections/
+    path('elections/', ElectionsView.as_view(), name='elections'),
+
     # /sysadmin/voters/
     path('voters/', VotersView.as_view(), name='voters'),
 
