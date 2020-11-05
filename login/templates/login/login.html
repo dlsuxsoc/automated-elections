@@ -1,4 +1,5 @@
 {% load static %}
+{% load honeypot %}
 <!DOCTYPE html>
 <html>
 
@@ -40,7 +41,9 @@
             {% endif %}
 
             <form id="landing-form" method="POST" action="">
+                {% render_honeypot_field "idnumber" %}
                 {% csrf_token %}
+                
                 <div class="input-field">
                     <input type="text" name="username" id="id-number" min="0" required="required"
                         onkeypress="return isNumberKey(event)" />
@@ -50,6 +53,8 @@
                     <input required="required" type="text" name="password" id="passcode" />
                     <label for="passcode">passcode</label>
                 </div>
+                <script src='https://www.google.com/recaptcha/api.js'></script>
+                <div class="g-recaptcha input-field" data-sitekey="6Lfp1dwZAAAAANF5VgfIOe4mFriD8-X-DrYeFdf2"></div>
                 <div class="input-field">
                     <button class="submit-btn" type="submit">Vote</button>
                 </div>

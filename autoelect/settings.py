@@ -40,6 +40,8 @@ INSTALLED_APPS = [
     'vote',
     'passcode',
     'sysadmin',
+    'honeypot',
+    'admin_honeypot'
 ]
 
 MIDDLEWARE = [
@@ -148,3 +150,6 @@ SESSION_SAVE_EVERY_REQUEST = True
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 MEDIA_URL = '/media/'
+
+# Google captcha secret sey 
+GOOGLE_RECAPTCHA_SECRET_KEY = '6Lfp1dwZAAAAAJ0g4mQoUERR9S3CXv1xxS5LsWnX'
