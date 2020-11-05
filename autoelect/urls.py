@@ -17,8 +17,11 @@ from django.contrib import admin
 from django.urls import path, include
 
 urlpatterns = [
-    # /admin/
-    path('admin/', admin.site.urls),
+    # Fake admin path /admin/
+    path('admin/', include('admin_honeypot.urls', namespace='admin_honeypot')),
+
+    # Actual admin path /rndadmin/
+    path('rndadmin/', admin.site.urls),
 
     # /login/
     path('login/', include('login.urls')),
