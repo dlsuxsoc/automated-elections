@@ -30,6 +30,7 @@ fp = open(settings.BASE_DIR + '/email_template.html', 'r')
 HTML_STR = fp.read()
 fp.close()
 
+# TODO: Make this async to message
 def send_email(voter_id, voter_key = None):
     if voter_key == None:
         voter_key = PasscodeView.generate_passcode()
