@@ -1,0 +1,114 @@
+{% load static %}
+<html>
+<head>
+    <title>Officer Dashboard</title>
+    <meta name="viewport" content="height=device-height, initial-scale=1">
+
+    <!-- CSS LINKS -->
+    <link rel="stylesheet" type="text/css" href="{% static 'passcode/css/components/officer.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'passcode/css/components/officer-results.css' %}"/>
+
+    <script src="{% static 'passcode/js/Chart.min.js' %}"></script>
+
+</head>
+<body {% if identifier %}onload="drawChart('{{ vote_results_json|escapejs }}')" {% endif %}>
+<!-- HEADER BAR THING -->
+<div id="header-container">
+    <img id="header-ballot" src="{% static 'sysadmin/assets/svg/ballot-white.svg' %}">
+    <a href="{% url 'sysadmin:elections' %}" id="selected">Election Control</a>
+    <a href="{% url 'sysadmin:voters' %}">Voters List</a>
+    <a href="{% url 'sysadmin:candidates' %}">Candidates List</a>
+    <a href="{% url 'sysadmin:officers' %}">Comelec Officers</a>
+    <a href="{% url 'sysadmin:units' %}">Units</a>
+    <a href="{% url 'sysadmin:positions' %}">Positions</a>
+    <a href="{% url 'sysadmin:issues' %}">Issues</a>
+    <a href="{% url 'sysadmin:polls' %}">Polls</a>
+    <div id="user-container">
+        <img id="user-icon" src="{% static 'sysadmin/assets/svg/user.svg' %}">
+        <div id="user-name"> {{ user.first_name }} {{ user.last_name }}</div>
+        <a id="log-out" href="{% url 'logout:logout' %}">Logout</a>
+    </div>
+</div>
+
+<!-- CONTAINER WHERE TABS WILL OCCUPY -->
+<div id="tab-container">
+    <div style="margin-top: 100px;">
+    </div>
+    {% if messages %}
+        <div>
+            {% for message in messages %}
+                <p {% if message.tags %}id="{{ message.tags }}"{% endif %}>{{ message }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="controls-container">
+        <form action="" method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="form-type"
+                    value="{% if election_ongoing is False %}start-elections{% else %}end-elections{% endif %}">
+
+            {% for college in colleges %}
+                <div class="controls-header">
+                    {{ college.name }}
+                </div>
+                <div class="controls">
+                    {% if election_ongoing is False %}
+                        {% for batch in batches %}
+                            <li class="batch-checkboxes">
+                                <input id="{{ college.name }}-{{ batch }}" name="{{ college.name }}-batch"
+                                        type="checkbox" value="{{ batch }}">
+                                <label for="{{ college.name }}-{{ batch }}">{{ batch }}</label>
+                            </li>
+                        {% endfor %}
+                    {% else %}
+                        <b>Batches eligible for this college:</b>
+                        {% for college_key, batch_val in college_batch_dict.items %}
+                            {% if college_key == college.name %}
+                                {% for batch in batch_val %}
+                                    <li class="batch-checkboxes">
+                                        {{ batch }}{% if not forloop.last %},{% endif %}</li>
+                                {% endfor %}
+                            {% else %}
+                                {% if college.name not in college_batch_dict.keys and forloop.last %}
+                                    <li class="batch-checkboxes">None.</li>
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            {% endfor %}
+            <div class="controls-instruction">
+                {% if election_ongoing is False %}
+                    Once you're done, <b>reenter your password</b>, then click the <b>start
+                    elections</b> button to commence the elections.
+                    <br>
+                {% else %}
+                    Reenter your password, then click the <b>stop elections</b> button to end the elections.
+                    Only stop the elections when you're sure that you will, because this cannot be undone.
+                {% endif %}
+            </div>
+            <div class="controls">
+                <label class="info-label" for="reauth">Reenter your password</label>
+                <br>
+                <input id="reauth" class="password-reauth" type="password" name="reauth" required="required">
+                <br>
+                <input class="button {% if election_ongoing is False %}confirm{% else %}confirm-negative{% endif %}"
+                        type="submit"
+                        value="{% if election_ongoing is False %}Start elections{% else %}Stop elections{% endif %}">
+            </div>
+        </form>
+    </div>
+    <div id="logo">
+        <img width=500 height=50 src="{% static 'passcode/assets/svg/org-logos.svg' %}">
+    </div>
+</div>
+
+
+</body>
+
+<!-- JAVASCRIPT LINK-->
+<script src="{% static 'passcode/js/officer-results.js' %}"></script>
+</html>
+
+

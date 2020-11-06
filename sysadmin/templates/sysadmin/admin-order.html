@@ -15,6 +15,7 @@
     <!-- HEADER BAR THING -->
     <div id="header-container">
         <img id="header-ballot" src="{% static 'sysadmin/assets/svg/ballot-white.svg' %}">
+        <a href="{% url 'sysadmin:elections' %}">Election Status</a>
         <a href="{% url 'sysadmin:voters' %}">Voters List</a>
         <a href="{% url 'sysadmin:candidates' %}">Candidates List</a>
         <a href="{% url 'sysadmin:officers' %}">Comelec Officers</a>
