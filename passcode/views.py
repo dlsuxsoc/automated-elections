@@ -1333,11 +1333,10 @@ class PasscodeView(UserPassesTestMixin, View):
                 voter = Voter.objects.get(user__username=id_number)
 
                 # Check if that user is eligible at all
-                if voter.eligibility_status and ElectionStatus.objects.filter(
-                        college__name=voter.college.name).count() > 0:
+                if voter.eligibility_status and voter.batch() in [e.batch for e in ElectionStatus.objects.filter(
+                    college__name=voter.college.name)]:
                     # Check if that user has already voted
                     if not voter.voting_status:
-                        # FIXME: is_currently_in() does not work yet
                         # Check if that user is currently logged in
                         if not self.is_currently_in(user.id):
                             # Generate a passcode
