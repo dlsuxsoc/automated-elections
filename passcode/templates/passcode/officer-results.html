@@ -35,8 +35,6 @@
     <button class="tab-buttons" onclick="openTab(event, 'Overview')" id="tab-overview">Overview of votes</button>
     <button class="tab-buttons" onclick="openTab(event, 'Underview')" id="tab-underview">Election results</button>
     <button class="tab-buttons" onclick="openTab(event, 'Poll')" id="tab-poll">Poll results</button>
-    <button class="tab-buttons" onclick="openTab(event, 'Archive')" id="tab-archive">Archive all results</button>
-
 </div>
 
 <!-- CONTAINER WHERE TABS WILL OCCUPY -->
@@ -383,41 +381,6 @@
                     </div>
                 </div>
             </div>
-        {% endif %}
-
-        <div id="logo">
-            <img width=500 height=50 src="{% static 'passcode/assets/svg/org-logos.svg' %}">
-        </div>
-    </div>
-
-    <div id="Archive" class="tab-content">
-        {% if election_ongoing is True %}
-            <img id="stop" src="{% static 'passcode/assets/svg/stop.svg' %}">
-            <header>Woah there!</header>
-            <div class="prohibited">
-                You may not archive any results until the elections are done.
-            </div>
-        {% else %}
-            <form method="POST" action="">
-                {% csrf_token %}
-                <input type="hidden" name="form-type" value="archive">
-                <div class="controls-instruction">
-                    Once you're done viewing the election results, reenter your password and click the
-                    <b>archive button</b> to <b>archive</b> <i>all</i> the results to a CSV file. Archiving the
-                    results
-                    will also clear <i>all</i> votes, voters, candidates, batch positions, batch units, issues, and polls from
-                    this website.
-                </div>
-                <div class="controls">
-                    <label class="info-label" for="reauth-archive">Reenter your password</label>
-                    <br>
-                    <input id="reauth-archive" class="password-reauth" type="password" name="reauth-archive"
-                           required="required">
-                    <br>
-                    <input class="button {% if election_ongoing is False %}confirm{% else %}confirm-negative{% endif %}"
-                           type="submit" value="Archive election results">
-                </div>
-            </form>
         {% endif %}
 
         <div id="logo">

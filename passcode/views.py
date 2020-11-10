@@ -1048,7 +1048,7 @@ class ResultsView(OfficerView):
                 context = self.display_objects(1)
 
                 return render(request, self.template_name, context)
-            """
+            
             if form_type == 'archive':
                 # If there are elections ongoing, no archiving may be done yet
                 if self.is_election_ongoing():
@@ -1203,15 +1203,21 @@ class ResultsView(OfficerView):
                             # Then write the results to a CSV file
                             writer = csv.writer(response)
 
+                            writer.writerow(["Election Results"])
+
                             writer.writerow(columns)
 
                             for row in vote_results['results']:
                                 writer.writerow(list(row))
 
+                            writer.writerow("")
+
+                            writer.writerow(["Poll Results"])
+
                             writer.writerow(poll_columns)
 
                             for row in poll_results['results']:
-                                write.writerow(list(row))
+                                writer.writerow(list(row))
 
                             # Clear all users who are voters
                             # This also clears the following tables: voters, candidates, takes, vote set, poll set
@@ -1224,7 +1230,7 @@ class ResultsView(OfficerView):
                             Vote.objects.all().delete()
 
                             # Clear all polls
-                            Poll.objects.all().deleted()
+                            Poll.objects.all().delete()
 
                             # Clear all batch positions
                             Position.objects.filter(base_position__type=BasePosition.BATCH).delete()
@@ -1242,6 +1248,7 @@ class ResultsView(OfficerView):
                 context = self.display_objects(1)
 
                 return render(request, self.template_name, context)
+            """
         else:
             # If no objects are received, it's an invalid request, so stay on the page and then show an error
             # message
