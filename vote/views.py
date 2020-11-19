@@ -1,6 +1,8 @@
 # Create your views here.
 import json
 import traceback
+from datetime import datetime
+from email.mime.image import MIMEImage
 
 from django.conf import settings
 from django.contrib import messages
@@ -8,12 +10,11 @@ from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.contrib.auth.models import Group
 from django.contrib.auth import logout
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
 from django.db import transaction, IntegrityError
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.views import View
-from datetime import datetime
 
 # Sends an email receipt containing the voted candidates to the voter
 from vote.models import Issue, Candidate, Voter, Take, Vote, VoteSet, BasePosition, Position, Poll, PollSet, PollAnswerType
@@ -28,7 +29,6 @@ def vote_test_func(user):
             return False
     else:
         return False
-
 
 class VoteView(UserPassesTestMixin, View):
     template_name = 'vote/voting.html'
@@ -58,32 +58,75 @@ class VoteView(UserPassesTestMixin, View):
     # Sends an email receipt to the voter
     @staticmethod
     def send_email_receipt(user, voted, serial_number):
-        from_email = settings.EMAIL_HOST_USER
-        to_email = [user.email]
-        subject = '[COMELEC] Voter\'s receipt for ' + user.first_name + ' ' + user.last_name
+        # Email template
+        fp = open(settings.BASE_DIR + '/email_receipt_template.html', 'r')
+        HTML_STR = fp.read()
+        fp.close()
 
-        # candidates_voted = ''
+        # Add image to email 
+        fp = open(settings.BASE_DIR + '/ComelecLogo.png', 'rb')
+        img = MIMEImage(fp.read())
+        fp.close()
+        img.add_header('Content-ID', '<logo>')
 
-        # # Generate message for the candidates voted
-        # for position_candidate in voted.values():
-        #     candidates_voted += position_candidate[0].__str__() + ": " + (
-        #         (position_candidate[1].voter.user.first_name + " " + position_candidate[1].voter.user.last_name) if
-        #         position_candidate[1] is not False else '(abstained)') + '\n'
+        # Prepare the email contents  
+        voter_name = user.first_name + ' ' + user.last_name
+        current_time = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        to_email = user.email
+        subject = '[COMELEC] Voter\'s receipt for ' + voter_name
 
-        # Append the serial number
-        # candidates_voted += '\nYour serial number is ' + serial_number + '.\n'
+        # Format the list of candidates voted 
+        candidates_text = ''
+        candidates_html = ''
+        # Generate message for the candidates voted
+        for position_candidate in voted.values():
+            # Extract candidate info 
+            candidate_position = position_candidate[0].__str__()
+            candidate_voted = (position_candidate[1].voter.user.first_name + " " + position_candidate[1].voter.user.last_name) if \
+                position_candidate[1] is not False else '(abstained)'
+            # Append in plaintext 
+            candidates_text += candidate_position + ": " + candidate_voted + '\n'
+            # Append in html 
+            candidates_html += '''\
+                <tr style="border: 1px solid black;">
+                    <td style="font-weight: bold; border: 1px solid black;"> 
+                        <p>{}:</p>
+                    </td>
+                    <td style="border: 1px solid black;">
+                        <p>{}</p>
+                    </td>
+                </tr>
+            '''.format(candidate_position, candidate_voted)
 
+        # Replace the HTML in the email template
+        html = HTML_STR
+        html = html.replace('VOTERNAME', voter_name, 1)
+        html = html.replace('CANDIDATESLIST', candidates_html, 1)
+        html = html.replace('SERIALNUMBER', serial_number, 1)
+        html = html.replace('TIMESTAMP', current_time, 1)
+
+        # Alternate plaintext email message
         message \
-            = '''Good day, {0},\n\nThis is to confirm that you have successfully voted at {1}.\n\nThank you for voting!\nYour serial number is {2}.\n''' \
+            = '''Good day, {0},\n\nThis is to confirm that you have successfully voted at {1}. Here are the candidates you voted for:\n {2} \n\nThank you for voting!\nYour serial number is {3}.\n''' \
             .format(
             user.first_name,
-            datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+            current_time,
+            candidates_text, 
             serial_number)
 
         # Send an email, but fail silently (accept exception, bust just show message)
         try:
-            send_mail(subject=subject, from_email=from_email, recipient_list=to_email, message=message,
-                      fail_silently=False)
+            msg = EmailMultiAlternatives(
+                    subject = subject,
+                    body = message,
+                    from_email = settings.EMAIL_HOST_USER,
+                    to = [ to_email ]
+                )
+            msg.attach_alternative(html, "text/html")
+            msg.attach(img)
+            msg.send()
+            # send_mail(subject=subject, from_email=from_email, recipient_list=to_email, message=message,
+            #           fail_silently=False)
         except Exception:
             # Show the exception in the server, but mask it from the user
             print("Email send failure.")
@@ -209,8 +252,6 @@ class VoteView(UserPassesTestMixin, View):
             if polls is not False and len(polls) > 0:
                 for poll in polls:
                     poll_votes.append((poll, request.POST.get(poll)[request.POST.get(poll).rfind('-')+1:],))
-            
-            print(poll_votes)
 
             # Proceed only when there are no duplicate votes and positions
             if self.contains_duplicates(votes) and self.contains_duplicates(poll_votes):
