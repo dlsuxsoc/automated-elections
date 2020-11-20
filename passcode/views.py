@@ -1291,6 +1291,22 @@ class PasscodeView(UserPassesTestMixin, View):
 
         return passcode
 
+    @staticmethod
+    def is_eligible(voter):
+        status = ElectionStatus.objects.filter(college__name=voter.college.name)
+        batch = voter.batch()
+        flag = False
+
+        for s in status:
+            if batch == s.batch:
+                flag = True
+                break
+            if "and below" in s.batch and int(batch) <= int(s.batch[:3]):
+                flag = True
+                break
+
+        return voter.eligibility_status and flag
+
     # Check whether the user accessing this page is a COMELEC officer or not
     def test_func(self):
         try:
@@ -1333,8 +1349,7 @@ class PasscodeView(UserPassesTestMixin, View):
                 voter = Voter.objects.get(user__username=id_number)
 
                 # Check if that user is eligible at all
-                if voter.eligibility_status and voter.batch() in [e.batch for e in ElectionStatus.objects.filter(
-                    college__name=voter.college.name)]:
+                if self.is_eligible(voter):
                     # Check if that user has already voted
                     if not voter.voting_status:
                         # Check if that user is currently logged in
