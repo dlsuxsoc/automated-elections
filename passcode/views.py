@@ -23,7 +23,7 @@ from django.utils import timezone
 from django.views import View
 
 # Test function for this view
-from vote.models import Voter, College, Candidate, ElectionStatus, Vote, Position, Issue, BasePosition, Unit, Poll
+from vote.models import Voter, College, Candidate, ElectionStatus, Vote, Position, Issue, BasePosition, Unit, Poll, ElectionState, Election
 
 # EMAIL BODY CONST
 fp = open(settings.BASE_DIR + '/email_template.html', 'r')
@@ -139,7 +139,7 @@ class VotersView(OfficerView):
         Voter.objects.create(user=user, college=college,
                              voting_status=voting_status, eligibility_status=eligibility_status)
         
-        if ResultsView.is_election_ongoing() and not voting_status and eligibility_status:
+        if ResultsView.get_election_state() == 'ongoing' and not voting_status and eligibility_status:
             # Also check if his batch and college is in the election status
             if ElectionStatus.objects.filter(college=college, batch=int(username[:3])).count() > 0:
                  # Init email server
@@ -505,10 +505,10 @@ class ResultsView(OfficerView):
         colleges = College.objects.all().order_by('name')
 
         # Set a flag indicating whether elections have started or not
-        election_ongoing = self.is_election_ongoing()
+        election_state = self.get_election_state()
 
         # Show the checkbox page when the elections aren't on
-        if not election_ongoing:
+        if election_state == ElectionState.FINISHED.value:
             # Get all batches from the batch of the current year until the batch of the year six years from the current
             # year
             current_year = datetime.datetime.now().year
@@ -666,7 +666,7 @@ class ResultsView(OfficerView):
                 poll_results_json = json.dumps(poll_results_json)
 
             context = {
-                'election_ongoing': election_ongoing,
+                'election_state': election_state,
                 'colleges': colleges,
                 'batches': batches,
                 'positions': positions,
@@ -894,7 +894,7 @@ class ResultsView(OfficerView):
                     college_batch_results[eligible_college.name] = cursor.fetchall()
 
             context = {
-                'election_ongoing': election_ongoing,
+                'election_state': election_state,
                 'colleges': colleges,
                 'college_batch_dict': college_batch_dict,
                 'overall_votes': overall_votes,
@@ -912,9 +912,16 @@ class ResultsView(OfficerView):
 
         return context
 
+    # @staticmethod
+    # def is_election_ongoing():
+    #     return ElectionStatus.objects.all().exists()
+
     @staticmethod
-    def is_election_ongoing():
-        return ElectionStatus.objects.all().exists()
+    def get_election_state():
+        try:
+            return Election.objects.latest('timestamp').state
+        except:
+            return None
 
     @staticmethod
     def is_votes_empty():

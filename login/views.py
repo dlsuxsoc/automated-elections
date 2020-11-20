@@ -9,7 +9,7 @@ from django.shortcuts import render, redirect
 from django.views import View
 
 from passcode.views import ResultsView
-from vote.models import Voter, ElectionStatus
+from vote.models import Voter, ElectionStatus, ElectionState
 
 class VoterLoginView(View):
     template_name = 'login/login.html'
@@ -50,7 +50,7 @@ class VoterLoginView(View):
         result = r.json()
         if result['success']:
             # Log in only if there are actually elections ongoing
-            if ResultsView.is_election_ongoing():
+            if ResultsView.get_election_state() == ElectionState.ONGOING.value:
                 # If the username and password objects exist in the request dictionary, then it is a valid login POST
                 if id_number is not False and password is not False:
                     # Authenticate the credentials
@@ -117,7 +117,10 @@ class VoterLoginView(View):
 
                     return render(request, self.template_name)
             else:
-                messages.error(request, 'There are no elections currently ongoing.')
+                if ResultsView.get_election_state() == ElectionState.PAUSED.value:
+                    messages.error(request, 'The elections are currently paused. Check again tomorrow!')
+                else:
+                    messages.error(request, 'There are no elections currently ongoing.')
         else: 
             messages.error(request, 'Invalid reCAPTCHA. Please try again.')    
         return render(request, self.template_name)
