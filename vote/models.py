@@ -75,6 +75,9 @@ class Voter(models.Model):
     def __str__(self):
         return "(" + self.user.username + ") " + self.user.first_name + " " + self.user.last_name
 
+    def batch(self):
+        return self.user.username[:3]
+
 
 class Party(models.Model):
     name = models.CharField(max_length=32, unique=True)
