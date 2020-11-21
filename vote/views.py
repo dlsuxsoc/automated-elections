@@ -75,43 +75,18 @@ class VoteView(UserPassesTestMixin, View):
         to_email = user.email
         subject = '[COMELEC] Voter\'s receipt for ' + voter_name
 
-        # Format the list of candidates voted 
-        candidates_text = ''
-        candidates_html = ''
-        # Generate message for the candidates voted
-        for position_candidate in voted.values():
-            # Extract candidate info 
-            candidate_position = position_candidate[0].__str__()
-            candidate_voted = (position_candidate[1].voter.user.first_name + " " + position_candidate[1].voter.user.last_name) if \
-                position_candidate[1] is not False else '(abstained)'
-            # Append in plaintext 
-            candidates_text += candidate_position + ": " + candidate_voted + '\n'
-            # Append in html 
-            candidates_html += '''\
-                <tr style="border: 1px solid black;">
-                    <td style="font-weight: bold; border: 1px solid black;"> 
-                        <p>{}:</p>
-                    </td>
-                    <td style="border: 1px solid black;">
-                        <p>{}</p>
-                    </td>
-                </tr>
-            '''.format(candidate_position, candidate_voted)
-
         # Replace the HTML in the email template
         html = HTML_STR
         html = html.replace('VOTERNAME', voter_name, 1)
-        html = html.replace('CANDIDATESLIST', candidates_html, 1)
         html = html.replace('SERIALNUMBER', serial_number, 1)
         html = html.replace('TIMESTAMP', current_time, 1)
 
         # Alternate plaintext email message
         message \
-            = '''Good day, {0},\n\nThis is to confirm that you have successfully voted at {1}. Here are the candidates you voted for:\n {2} \n\nThank you for voting!\nYour serial number is {3}.\n''' \
+            = '''Good day, {0},\n\nThis is to confirm that you have successfully voted at {1}. \n\nThank you for voting!\nYour serial number is {2}.\n''' \
             .format(
             user.first_name,
-            current_time,
-            candidates_text, 
+            current_time, 
             serial_number)
 
         # Send an email, but fail silently (accept exception, bust just show message)
