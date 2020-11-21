@@ -40,8 +40,6 @@ class VoterLoginView(View):
         password = request.POST.get('password', False)
         # Captcha validation
         recaptcha_response = request.POST.get('g-recaptcha-response')
-        print(recaptcha_response)
-        print(settings.GOOGLE_RECAPTCHA_SECRET_KEY)
         data = {
             'secret': settings.GOOGLE_RECAPTCHA_SECRET_KEY,
             'response': recaptcha_response
@@ -152,8 +150,6 @@ class AdminLoginView(View):
         password = request.POST.get('password', False)
         # Captcha validation
         recaptcha_response = request.POST.get('g-recaptcha-response')
-        print(recaptcha_response)
-        print(settings.GOOGLE_RECAPTCHA_SECRET_KEY)
         data = {
             'secret': settings.GOOGLE_RECAPTCHA_SECRET_KEY,
             'response': recaptcha_response
