@@ -198,15 +198,28 @@ class ElectionsView(SysadminView):
                                     empty = False
 
                                     ElectionStatus.objects.create(college=college_object, batch=batch)
-                                    batch_voters = list(
-                                        Voter.objects.filter(
-                                            college=college_object,
-                                            user__username__startswith=str(batch),
-                                            voting_status=False,
-                                            eligibility_status=True
-                                        ).values('user__username')
-                                    )
-
+                                    # Include all ID numbers below the specified batch number e.g. <= 115XXXXX
+                                    if 'and below' in batch: 
+                                        starting_batch = batch.split()[0]
+                                        starting_batch += "99999"
+                                        batch_voters = list(
+                                            Voter.objects.filter(
+                                                college=college_object,
+                                                user__username__lte=starting_batch,
+                                                voting_status=False,
+                                                eligibility_status=True
+                                            ).values('user__username')
+                                        )
+                                    # Include just the batch e.g. 118XXXXX
+                                    else: 
+                                        batch_voters = list(
+                                            Voter.objects.filter(
+                                                college=college_object,
+                                                user__username__startswith=str(batch),
+                                                voting_status=False,
+                                                eligibility_status=True
+                                            ).values('user__username')
+                                        )
                                     # print(batch_voters)
                                     voters += batch_voters
                             except College.DoesNotExist:
