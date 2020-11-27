@@ -464,7 +464,7 @@ class ElectionsView(SysadminView):
                 if election_state == ElectionState.ONGOING.value:
                     # Only continue if the re-authentication password indeed matches the password of the current
                     # COMELEC officer
-                    reauth_password = request.POST.get('reauth-pause-play', False)
+                    reauth_password = request.POST.get('reauth', False)
 
                     if reauth_password is False \
                             or authenticate(username=request.user.username, password=reauth_password) is None:
@@ -488,7 +488,7 @@ class ElectionsView(SysadminView):
                 if election_state == ElectionState.PAUSED.value:
                     # Only continue if the re-authentication password indeed matches the password of the current
                     # COMELEC officer
-                    reauth_password = request.POST.get('reauth-pause-play', False)
+                    reauth_password = request.POST.get('reauth', False)
 
                     if reauth_password is False \
                             or authenticate(username=request.user.username, password=reauth_password) is None:

@@ -62,7 +62,7 @@
             <div class="controls-container">
                 <form action="" method="POST">
                     {% csrf_token %}
-                    <input type="hidden" name="form-type"
+                    <input type="hidden" name="form-type" id="election-form-type"
                             value="{% if not election_state or election_state == 'archived' %}start-elections{% elif election_state == 'ongoing' or election_state == 'paused' %}end-elections{% endif %}">
 
                     <div class="controls-header">
@@ -122,30 +122,14 @@
                             <input class="button {% if not election_state or election_state == 'archived' %}confirm{% else %}confirm-negative{% endif %}"
                                     type="submit"
                                     value="{% if not election_state or election_state == 'archived' %}Start elections{% else %}Stop elections{% endif %}">
+                            {% if election_state == 'ongoing' or election_state == 'paused' %}
+                                <input class="button {% if election_state == 'paused' %}confirm{% else %}confirm-negative{% endif %}"
+                                        type="submit" onclick="pausePlay('{{ election_state }}')"
+                                        value="{% if election_state == 'paused' %}Resume elections{% else %}Pause elections{% endif %}">
+                            {% endif %}
                         </div>
                     {% endif %}
                 </form>
-                {% if election_state == 'ongoing' or election_state == 'paused' %}
-                    <form action="" method="POST">
-                        {% csrf_token %}
-                        <input type="hidden" name="form-type"
-                            value="{% if election_state == 'ongoing' %}pause-elections{% else %}resume-elections{% endif %}">
-                        <div class="controls-instruction">
-                            Reenter your password, then click the <b>{% if election_state == 'ongoing' %}pause
-                            {% else %}resume{% endif %} elections</b> button to {% if election_state == 'ongoing' %}pause
-                            {% else %}resume{% endif %} the elections.
-                        </div>
-                        <div class="controls">
-                            <label class="info-label" for="reauth-pause-play">Reenter your password</label>
-                            <br>
-                            <input id="reauth-pause-play" class="password-reauth" type="password" name="reauth-pause-play" required="required">
-                            <br>
-                            <input class="button {% if election_state == 'paused' %}confirm{% else %}confirm-negative{% endif %}"
-                                    type="submit"
-                                    value="{% if election_state == 'paused' %}Resume elections{% else %}Pause elections{% endif %}">
-                        </div>
-                    </form>
-                {% endif %}
             </div>
         {% endif %}
         <div id="logo">
