@@ -52,94 +52,102 @@
     {% endif %}
 
     <div id="Controls" class="tab-content">
-        <div class="controls-container">
-            <form action="" method="POST">
-                {% csrf_token %}
-                <input type="hidden" name="form-type"
-                        value="{% if not election_state or election_state == 'archived' %}start-elections{% elif election_state == 'ongoing' or election_state == 'paused' %}end-elections{% endif %}">
-
-                <div class="controls-header">
-                    Colleges
-                    <input type="button" class="smallbutton" onclick="selectAll()"
-                        value="Select All">
-                </div>
-                </br>
-                {% for college in colleges %}
-                    <div class="controls-header">
-                        {{ college.name }}
-                        <input type="button" class="smallbutton" onclick="selectAllCollege('{{ college.name }}-batch')"
-                            value="Select {{ college.name }}">
-                    </div>
-                    <div class="controls">
-                        {% if not election_state or election_state == 'archived'%}
-                            {% for batch in batches %}
-                                <li class="batch-checkboxes">
-                                    <input id="{{ college.name }}-{{ batch }}" name="{{ college.name }}-batch"
-                                            type="checkbox" value="{{ batch }}">
-                                    <label for="{{ college.name }}-{{ batch }}">{{ batch }}</label>
-                                </li>
-                            {% endfor %}
-                        {% else %}
-                            <b>Batches eligible for this college:</b>
-                            {% for college_key, batch_val in college_batch_dict.items %}
-                                {% if college_key == college.name %}
-                                    {% for batch in batch_val %}
-                                        <li class="batch-checkboxes">
-                                            {{ batch }}{% if not forloop.last %},{% endif %}</li>
-                                    {% endfor %}
-                                {% else %}
-                                    {% if college.name not in college_batch_dict.keys and forloop.last %}
-                                        <li class="batch-checkboxes">None.</li>
-                                    {% endif %}
-                                {% endif %}
-                            {% endfor %}
-                        {% endif %}
-                    </div>
-                {% endfor %}
-                {% if not election_state or election_state == 'archived' or election_state == 'ongoing' or election_state == 'paused' %}
-                    <div class="controls-instruction">
-                        {% if not election_state or election_state == 'archived' %}
-                            Once you're done, <b>reenter your password</b>, then click the <b>start
-                            elections</b> button to commence the elections.
-                            <br>
-                        {% else %}
-                            Reenter your password, then click the <b>stop elections</b> button to end the elections.
-                            Only stop the elections when you're sure that you will, because this cannot be undone.
-                        {% endif %}
-                    </div>
-                    <div class="controls">
-                        <label class="info-label" for="reauth">Reenter your password</label>
-                        <br>
-                        <input id="reauth" class="password-reauth" type="password" name="reauth" required="required">
-                        <br>
-                        <input class="button {% if not election_state or election_state == 'archived' %}confirm{% else %}confirm-negative{% endif %}"
-                                type="submit"
-                                value="{% if not election_state or election_state == 'archived' %}Start elections{% else %}Stop elections{% endif %}">
-                    </div>
-                {% endif %}
-            </form>
-            {% if election_state == 'ongoing' or election_state == 'paused' %}
+        {% if election_state == 'finished' or election_state == 'blocked' %}
+            <img id="stop" src="{% static 'passcode/assets/svg/stop.svg' %}">
+            <header>Woah there!</header>
+            <div class="prohibited">
+                You may not start any elections until the results are archived.
+            </div>
+        {% else %}
+            <div class="controls-container">
                 <form action="" method="POST">
                     {% csrf_token %}
                     <input type="hidden" name="form-type"
-                        value="{% if election_state == 'ongoing' %}pause-elections{% else %}resume-elections{% endif %}">
-                    <div class="controls-instruction">
-                        Reenter your password, then click the <b>{% if election_state == 'ongoing' %}pause
-                        {% else %}resume{% endif %} elections</b> button to {% if election_state == 'ongoing' %}pause
-                        {% else %}resume{% endif %} the elections.
+                            value="{% if not election_state or election_state == 'archived' %}start-elections{% elif election_state == 'ongoing' or election_state == 'paused' %}end-elections{% endif %}">
+
+                    <div class="controls-header">
+                        Colleges
+                        <input type="button" class="smallbutton" onclick="selectAll()"
+                            value="Select All">
                     </div>
-                    <div class="controls">
-                        <label class="info-label" for="reauth-pause-play">Reenter your password</label>
-                        <br>
-                        <input id="reauth-pause-play" class="password-reauth" type="password" name="reauth-pause-play" required="required">
-                        <br>
-                        <input class="button {% if election_state == 'paused' %}confirm{% else %}confirm-negative{% endif %}"
-                                type="submit"
-                                value="{% if election_state == 'paused' %}Resume elections{% else %}Pause elections{% endif %}">
-                    </div>
+                    </br>
+                    {% for college in colleges %}
+                        <div class="controls-header">
+                            {{ college.name }}
+                            <input type="button" class="smallbutton" onclick="selectAllCollege('{{ college.name }}-batch')"
+                                value="Select {{ college.name }}">
+                        </div>
+                        <div class="controls">
+                            {% if not election_state or election_state == 'archived'%}
+                                {% for batch in batches %}
+                                    <li class="batch-checkboxes">
+                                        <input id="{{ college.name }}-{{ batch }}" name="{{ college.name }}-batch"
+                                                type="checkbox" value="{{ batch }}">
+                                        <label for="{{ college.name }}-{{ batch }}">{{ batch }}</label>
+                                    </li>
+                                {% endfor %}
+                            {% else %}
+                                <b>Batches eligible for this college:</b>
+                                {% for college_key, batch_val in college_batch_dict.items %}
+                                    {% if college_key == college.name %}
+                                        {% for batch in batch_val %}
+                                            <li class="batch-checkboxes">
+                                                {{ batch }}{% if not forloop.last %},{% endif %}</li>
+                                        {% endfor %}
+                                    {% else %}
+                                        {% if college.name not in college_batch_dict.keys and forloop.last %}
+                                            <li class="batch-checkboxes">None.</li>
+                                        {% endif %}
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                    {% if not election_state or election_state == 'archived' or election_state == 'ongoing' or election_state == 'paused' %}
+                        <div class="controls-instruction">
+                            {% if not election_state or election_state == 'archived' %}
+                                Once you're done, <b>reenter your password</b>, then click the <b>start
+                                elections</b> button to commence the elections.
+                                <br>
+                            {% else %}
+                                Reenter your password, then click the <b>stop elections</b> button to end the elections.
+                                Only stop the elections when you're sure that you will, because this cannot be undone.
+                            {% endif %}
+                        </div>
+                        <div class="controls">
+                            <label class="info-label" for="reauth">Reenter your password</label>
+                            <br>
+                            <input id="reauth" class="password-reauth" type="password" name="reauth" required="required">
+                            <br>
+                            <input class="button {% if not election_state or election_state == 'archived' %}confirm{% else %}confirm-negative{% endif %}"
+                                    type="submit"
+                                    value="{% if not election_state or election_state == 'archived' %}Start elections{% else %}Stop elections{% endif %}">
+                        </div>
+                    {% endif %}
                 </form>
-            {% endif %}
-        </div>
+                {% if election_state == 'ongoing' or election_state == 'paused' %}
+                    <form action="" method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="form-type"
+                            value="{% if election_state == 'ongoing' %}pause-elections{% else %}resume-elections{% endif %}">
+                        <div class="controls-instruction">
+                            Reenter your password, then click the <b>{% if election_state == 'ongoing' %}pause
+                            {% else %}resume{% endif %} elections</b> button to {% if election_state == 'ongoing' %}pause
+                            {% else %}resume{% endif %} the elections.
+                        </div>
+                        <div class="controls">
+                            <label class="info-label" for="reauth-pause-play">Reenter your password</label>
+                            <br>
+                            <input id="reauth-pause-play" class="password-reauth" type="password" name="reauth-pause-play" required="required">
+                            <br>
+                            <input class="button {% if election_state == 'paused' %}confirm{% else %}confirm-negative{% endif %}"
+                                    type="submit"
+                                    value="{% if election_state == 'paused' %}Resume elections{% else %}Pause elections{% endif %}">
+                        </div>
+                    </form>
+                {% endif %}
+            </div>
+        {% endif %}
         <div id="logo">
             <img width=500 height=50 src="{% static 'passcode/assets/svg/org-logos.svg' %}">
         </div>
