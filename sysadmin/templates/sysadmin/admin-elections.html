@@ -7,8 +7,10 @@
     <!-- CSS LINKS -->
     <link rel="stylesheet" type="text/css" href="{% static 'passcode/css/components/officer.css' %}"/>
     <link rel="stylesheet" type="text/css" href="{% static 'passcode/css/components/officer-results.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'sysadmin/css/components/admin.css' %}"/>
 
     <script src="{% static 'passcode/js/Chart.min.js' %}"></script>
+    <script src="{% static 'sysadmin/js/elections.js' %}"></script>
 
 </head>
 <body {% if identifier %}onload="drawChart('{{ vote_results_json|escapejs }}')" {% endif %}>
@@ -56,9 +58,17 @@
                 <input type="hidden" name="form-type"
                         value="{% if not election_state or election_state == 'archived' %}start-elections{% elif election_state == 'ongoing' or election_state == 'paused' %}end-elections{% endif %}">
 
+                <div class="controls-header">
+                    Colleges
+                    <input type="button" class="smallbutton" onclick="selectAll()"
+                        value="Select All">
+                </div>
+                </br>
                 {% for college in colleges %}
                     <div class="controls-header">
                         {{ college.name }}
+                        <input type="button" class="smallbutton" onclick="selectAllCollege('{{ college.name }}-batch')"
+                            value="Select {{ college.name }}">
                     </div>
                     <div class="controls">
                         {% if not election_state or election_state == 'archived'%}
