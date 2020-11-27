@@ -16,6 +16,7 @@ from django.db.models import Q
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from django.views import View
+from zipfile import ZipFile, ZIP_DEFLATED
 
 from passcode.views import PasscodeView, ResultsView
 from sysadmin.forms import IssueForm, OfficerForm, UnitForm, PositionForm, PollForm
@@ -400,28 +401,39 @@ class ElectionsView(SysadminView):
                                 poll_columns = [col[0] for col in cursor.description]
                                 poll_results['results'] = cursor.fetchall()
 
-                            # Create a response object, and classify it as a CSV response
-                            response = HttpResponse(content_type='text/csv')
-                            response['Content-Disposition'] = 'attachment; filename="Election and Poll Results.csv"'
-
                             # Then write the results to a CSV file
-                            writer = csv.writer(response)
+                            # writer = csv.writer(response)
 
-                            writer.writerow(["Election Results"])
+                            # writer.writerow(["Election Results"])
 
-                            writer.writerow(columns)
+                            with open('Election Results.csv', 'w', newline='', encoding='utf-8') as csvFile:
+                                electionWriter = csv.writer(csvFile,)
 
-                            for row in vote_results['results']:
-                                writer.writerow(list(row))
+                                electionWriter.writerow(columns)
 
-                            writer.writerow("")
+                                for row in vote_results['results']:
+                                    electionWriter.writerow(list(row))
 
-                            writer.writerow(["Poll Results"])
+                            # writer.writerow("")
 
-                            writer.writerow(poll_columns)
+                            # writer.writerow(["Poll Results"])
 
-                            for row in poll_results['results']:
-                                writer.writerow(list(row))
+                            with open('Poll Results.csv', 'w', newline='', encoding='utf-8') as csvFile:
+                                pollWriter = csv.writer(csvFile,)
+
+                                pollWriter.writerow(poll_columns)
+
+                                for row in poll_results['results']:
+                                    pollWriter.writerow(list(row))
+
+                            electionPollZip = ZipFile('Election and Poll Results.zip', 'w')
+                            electionPollZip.write('Election Results.csv', compress_type=ZIP_DEFLATED)
+                            electionPollZip.write('Poll Results.csv', compress_type=ZIP_DEFLATED)
+                            electionPollZip.close()
+
+                            # Create a response object, and classify it as a ZIP response
+                            response = HttpResponse(open('Election and Poll Results.zip', 'rb').read(), content_type='application/x-zip-compressed')
+                            response['Content-Disposition'] = 'attachment; filename="Election and Poll Results.zip"'
 
                             # Clear all users who are voters
                             # This also clears the following tables: voters, candidates, takes, vote set, poll set
