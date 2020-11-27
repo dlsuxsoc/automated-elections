@@ -1,4 +1,4 @@
-function abstain_candidate(choice) {
+function abstain(choice) {
     // Get all relevant inputs to be unchecked with the given name
     let inputs = document.getElementsByName(choice);
     let button = event.srcElement
@@ -11,8 +11,7 @@ function abstain_candidate(choice) {
     button.classList.add("abstain-active")
 }
 
-function candidate_select(abstainBtn) {
+function select(abstainBtn) {
     let button = document.getElementById(abstainBtn)
     button.classList.remove("abstain-active")
-
 }

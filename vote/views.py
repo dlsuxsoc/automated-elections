@@ -208,7 +208,9 @@ class VoteView(UserPassesTestMixin, View):
 
             if polls is not False and len(polls) > 0:
                 for poll in polls:
-                    poll_votes.append((poll, request.POST.get(poll)[request.POST.get(poll).rfind('-')+1:],))
+                    poll_vote = request.POST.get(poll, "abstain")
+                    if poll_vote == "yes" or poll_vote == "no" or poll_vote == "abstain":
+                        poll_votes.append((poll, poll_vote,))
 
             # Proceed only when there are no duplicate votes and positions
             if self.contains_duplicates(votes) and self.contains_duplicates(poll_votes):
