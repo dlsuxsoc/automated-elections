@@ -20,7 +20,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 from passcode.views import PasscodeView, ResultsView
 from sysadmin.forms import IssueForm, OfficerForm, UnitForm, PositionForm, PollForm
-from vote.models import Vote, Voter, College, Candidate, ElectionStatus, Position, Unit, Party, Issue, Take, BasePosition, Poll
+from vote.models import Vote, Voter, College, Candidate, ElectionStatus, Position, Unit, Party, Issue, Take, BasePosition, Poll, Election, ElectionState
 
 
 # Test function for this view
@@ -104,16 +104,36 @@ class ElectionsView(SysadminView):
         return not Vote.objects.all().exists()
 
     @staticmethod
+    def get_election_state():
+        try:
+            return Election.objects.latest('timestamp').state
+        except:
+            return None
+
+    @staticmethod
     def get_context():
         # Retrieve all colleges
         colleges = College.objects.all().order_by('name')
 
         # Set a flag indicating whether elections have started or not
-        election_ongoing = ElectionStatus.objects.all().exists()
+        election_state = ElectionsView.get_election_state()
 
         context = {}
 
-        if election_ongoing:
+        if not election_state or election_state == ElectionState.ARCHIVED.value:
+            # Get all batches from the batch of the current year until the batch of the year six years from the current
+            # year
+            current_year = datetime.datetime.now().year
+
+            batches = ['1' + str(year)[2:] for year in range(current_year, current_year - 6, -1)]
+            batches[-1] = batches[-1] + ' and below'
+
+            context = {
+                'election_state': election_state,
+                'colleges': colleges,
+                'batches': batches,
+            }
+        else:
             # Show the eligible batches when the elections are on
             college_batch_dict = {}
 
@@ -127,21 +147,8 @@ class ElectionsView(SysadminView):
             
             context = {
                 'college_batch_dict': college_batch_dict,
-                'election_ongoing': election_ongoing,
+                'election_state': election_state,
                 'colleges': colleges,
-            }
-        else:
-            # Get all batches from the batch of the current year until the batch of the year six years from the current
-            # year
-            current_year = datetime.datetime.now().year
-
-            batches = ['1' + str(year)[2:] for year in range(current_year, current_year - 6, -1)]
-            batches[-1] = batches[-1] + ' and below'
-
-            context = {
-                'election_ongoing': election_ongoing,
-                'colleges': colleges,
-                'batches': batches
             }
         
         return context
@@ -154,16 +161,13 @@ class ElectionsView(SysadminView):
     def post(self, request):
         form_type = request.POST.get('form-type', False)
 
-        election_ongoing = ElectionStatus.objects.all().exists()
+        election_state = ElectionsView.get_election_state()
 
         if form_type is not False:
             # The submitted form is for starting the elections
             if form_type == 'start-elections':
                 # If the elections have already started, it can't be started again!
-                if election_ongoing:
-                    messages.error(request, 'The elections have already been started.')
-                elif not self.is_votes_empty():
-                    # If there still are votes left from the previous elections, the elections can't be started yet
+                if (election_state and election_state != ElectionState.ARCHIVED.value) or not self.is_votes_empty():
                     messages.error(request,
                                    'The votes from the previous election haven\'t been archived yet. Archive them '
                                    'first before starting this election.')
@@ -198,6 +202,8 @@ class ElectionsView(SysadminView):
                                 # Then use that object to create the an election status value for these specific batches
                                 for batch in batches:
                                     empty = False
+
+                                    Election.objects.create(state=ElectionState.ONGOING.value)
 
                                     ElectionStatus.objects.create(college=college_object, batch=batch)
                                     # Include all ID numbers below the specified batch number e.g. <= 115XXXXX
@@ -246,7 +252,7 @@ class ElectionsView(SysadminView):
 
             elif form_type == 'end-elections':
                 # If the elections have already ended, it can't be ended again!
-                if election_ongoing:
+                if election_state == ElectionState.ONGOING.value or election_state == ElectionState.PAUSED.value:
                     # Only continue if the re-authentication password indeed matches the password of the current
                     # COMELEC officer
                     reauth_password = request.POST.get('reauth', False)
@@ -259,6 +265,10 @@ class ElectionsView(SysadminView):
                         # Clear the entire election status table
                         ElectionStatus.objects.all().delete()
 
+                        e = Election.objects.latest('timestamp')
+                        e.state = ElectionState.BLOCKED.value
+                        e.save()
+
                         messages.success(request, 'The elections have now ended.')
                 else:
                     messages.error(request, 'The elections have already been ended.')
@@ -267,10 +277,10 @@ class ElectionsView(SysadminView):
 
                 return render(request, self.template_name, context)
 
-            elif form_type == 'archive':
+            elif form_type == 'archive-results':
                 # If there are elections ongoing, no archiving may be done yet
-                if election_ongoing:
-                    messages.error(request, 'You may not archive while the elections are ongoing.')
+                if election_state != ElectionState.FINISHED.value:
+                    messages.error(request, 'You may not archive while the elections are not yet finished.')
 
                     context = self.display_objects(1)
 
@@ -448,6 +458,10 @@ class ElectionsView(SysadminView):
                             response = HttpResponse(open('Election and Poll Results.zip', 'rb').read(), content_type='application/x-zip-compressed')
                             response['Content-Disposition'] = 'attachment; filename="Election and Poll Results.zip"'
 
+                            e = Election.objects.latest('timestamp')
+                            e.state = ElectionState.ARCHIVED.value
+                            e.save()
+
                             # Clear all users who are voters
                             # This also clears the following tables: voters, candidates, takes, vote set, poll set
                             User.objects.filter(groups__name='voter').delete()
@@ -469,6 +483,79 @@ class ElectionsView(SysadminView):
 
                             # Show a Save As box so the user may download it
                             return response
+            
+            elif form_type == "pause-elections":
+                # If the elections have already ended, it can't be ended again!
+                if election_state == ElectionState.ONGOING.value:
+                    # Only continue if the re-authentication password indeed matches the password of the current
+                    # COMELEC officer
+                    reauth_password = request.POST.get('reauth', False)
+
+                    if reauth_password is False \
+                            or authenticate(username=request.user.username, password=reauth_password) is None:
+                        messages.error(request,
+                                       'The elections weren\'t paused because the password was incorrect. Try again.')
+                    else:
+                        e = Election.objects.latest('timestamp')
+                        e.state = ElectionState.PAUSED.value
+                        e.save()
+
+                        messages.success(request, 'The elections have now been paused.')
+                else:
+                    messages.error(request, 'The elections are not currently ongoing.')
+
+                context = self.get_context()
+
+                return render(request, self.template_name, context)
+
+            elif form_type == "resume-elections":
+                # If the elections have already ended, it can't be ended again!
+                if election_state == ElectionState.PAUSED.value:
+                    # Only continue if the re-authentication password indeed matches the password of the current
+                    # COMELEC officer
+                    reauth_password = request.POST.get('reauth', False)
+
+                    if reauth_password is False \
+                            or authenticate(username=request.user.username, password=reauth_password) is None:
+                        messages.error(request,
+                                       'The elections weren\'t resumed because the password was incorrect. Try again.')
+                    else:
+                        e = Election.objects.latest('timestamp')
+                        e.state = ElectionState.ONGOING.value
+                        e.save()
+
+                        messages.success(request, 'The elections have now been resumed.')
+                else:
+                    messages.error(request, 'The elections are not currently paused.')
+
+                context = self.get_context()
+
+                return render(request, self.template_name, context)
+
+            elif form_type == "unblock-results":
+                # If the elections have already ended, it can't be ended again!
+                if election_state == ElectionState.BLOCKED.value:
+                    # Only continue if the re-authentication password indeed matches the password of the current
+                    # COMELEC officer
+                    reauth_password = request.POST.get('reauth-unblock', False)
+
+                    if reauth_password is False \
+                            or authenticate(username=request.user.username, password=reauth_password) is None:
+                        messages.error(request,
+                                       'The elections results weren\'t unblocked because the password was incorrect. Try again.')
+                    else:
+                        e = Election.objects.latest('timestamp')
+                        e.state = ElectionState.FINISHED.value
+                        e.save()
+
+                        messages.success(request, 'The elections results have been unblocked.')
+                else:
+                    messages.error(request, 'The elections are not yet over.')
+
+                context = self.get_context()
+
+                return render(request, self.template_name, context)
+            
             else:
                 # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
                 # message
@@ -745,7 +832,7 @@ class VotersView(SysadminView):
                     return render(request, self.template_name, context)
             
         # Only allow editing and deleting while there are no elections ongoing and there are no votes in the database
-        if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
+        if (not ResultsView.get_election_state() or ResultsView.get_election_state() == ElectionState.ARCHIVED.value) and ResultsView.is_votes_empty():
             if form_type == 'edit-voter':
                 # The submitted form is for editing a voter
                 page = request.POST.get('page', False)
@@ -943,7 +1030,7 @@ class CandidatesView(SysadminView):
         issue_form = IssueForm(request.POST)
 
         # Only allow editing while there are no elections ongoing and there are no votes in the database
-        if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
+        if (not ResultsView.get_election_state() or ResultsView.get_election_state() == ElectionState.ARCHIVED.value) and ResultsView.is_votes_empty():
             if form_type is not False:
                 # The submitted form is for adding a candidate
                 if form_type == 'add-candidate':
@@ -1238,7 +1325,7 @@ class OfficersView(SysadminView):
                 return render(request, self.template_name, context)
                 
         # Only allow editing while there are no elections ongoing and there are no votes in the database
-        if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
+        if (not ResultsView.get_election_state() or ResultsView.get_election_state() == ElectionState.ARCHIVED.value) and ResultsView.is_votes_empty():
             if form_type == 'delete-officer':
                 # The submitted form is for deleting officers
                 officers_list = request.POST.getlist('officers')
@@ -1341,7 +1428,7 @@ class UnitView(SysadminView):
         unit_form = UnitForm(request.POST)
 
         # Only allow editing while there are no elections ongoing and there are no votes in the database
-        if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
+        if (not ResultsView.get_election_state() or ResultsView.get_election_state() == ElectionState.ARCHIVED.value) and ResultsView.is_votes_empty():
             if form_type is not False:
                 if form_type == 'add-unit':
                     # The submitted form is for adding a unit
@@ -1472,7 +1559,7 @@ class PositionView(SysadminView):
         position_form = PositionForm(request.POST)
 
         # Only allow editing while there are no elections ongoing and there are no votes in the database
-        if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
+        if (not ResultsView.get_election_state() or ResultsView.get_election_state() == ElectionState.ARCHIVED.value) and ResultsView.is_votes_empty():
             if form_type is not False:
                 if form_type == 'add-position':
                     # The submitted form is for adding a position
@@ -1599,7 +1686,7 @@ class IssueView(SysadminView):
         issue_form = IssueForm(request.POST)
 
         # Only allow editing while there are no elections ongoing and there are no votes in the database
-        if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
+        if (not ResultsView.get_election_state() or ResultsView.get_election_state() == ElectionState.ARCHIVED.value) and ResultsView.is_votes_empty():
             if form_type is not False:
                 if form_type == 'add-issue':
                     # The submitted form is for adding an issue
@@ -1751,7 +1838,7 @@ class PollView(SysadminView):
         poll_form = PollForm(request.POST)
 
         # Only allow editing while there are no elections ongoing and there are no votes in the database
-        if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
+        if (not ResultsView.get_election_state() or ResultsView.get_election_state() == ElectionState.ARCHIVED.value) and ResultsView.is_votes_empty():
             if form_type is not False:
                 if form_type == 'add-poll':
                     # The submitted form is for adding an poll

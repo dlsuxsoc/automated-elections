@@ -71,16 +71,25 @@
                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; justify-items: center;">
                         <div class="candidate" style="grid-row-start:1; grid-column-start:1; ">
                             <h1 class="poll-choice">Yes</h1>
-                            <input type="radio" name="{{ poll.identifier }}" value="{{ poll.identifier }}-yes"
-                                id="{{ poll.identifier }}-yes">
+                            <input type="radio" name="{{ poll.identifier }}" value="yes"
+                                id="{{ poll.identifier }}-yes"
+                                onclick="select('{{ poll.identifier }}-abstain-button')">
                             <label for="{{ poll.identifier }}-yes"></label>
                         </div>
                         <div class="candidate" style="grid-row-start:1; grid-column-start:3; ">
                             <h1 class="poll-choice">No</h1>
-                            <input type="radio" name="{{ poll.identifier }}" value="{{ poll.identifier }}-no"
-                                id="{{ poll.identifier }}-no">
+                            <input type="radio" name="{{ poll.identifier }}" value="no"
+                                id="{{ poll.identifier }}-no"
+                                onclick="select('{{ poll.identifier }}-abstain-button')">
                             <label for="{{ poll.identifier }}-no"></label>
                         </div>
+                    </div>
+                    <div class="abstain-div">
+                        <button type="button" id="{{ poll.identifier }}-abstain-button"
+                            class="abstain abstain-active"
+                            onclick="abstain('{{ poll.identifier }}')">
+                            Abstain
+                        </button>
                     </div>
                 </div>
                 {% endfor %}
@@ -126,7 +135,7 @@
                                             >></a>
                                     </div>
                                     <input type="radio" name="{{ position.identifier }}"
-                                        onclick="candidate_select('{{ position.identifier }}-abstain-button')"
+                                        onclick="select('{{ position.identifier }}-abstain-button')"
                                         value="{{ candidate.identifier }}" id="{{ candidate.identifier }}">
                                     <label for="{{ candidate.identifier }}"></label>
                                 </div>
@@ -136,7 +145,7 @@
                             <div class="abstain-div">
                                 <button type="button" id="{{ position.identifier }}-abstain-button"
                                     class="abstain abstain-active"
-                                    onclick="abstain_candidate('{{ position.identifier }}')">
+                                    onclick="abstain('{{ position.identifier }}')">
                                     Abstain
                                 </button>
                             </div>

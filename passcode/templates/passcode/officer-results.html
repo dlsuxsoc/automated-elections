@@ -29,7 +29,7 @@
 
 <!-- TABS BUTTONS TO TRAVERSE THE DIFF SECTIONS -->
 <div id="tab-buttons-container">
-    {% if election_ongoing %}
+    {% if election_state == 'ongoing' or election_state == 'paused' %}
         <button class="tab-buttons" onclick="openTab(event, 'Controls')" id="tab-controls">Voters</button>
     {% endif %}
     <button class="tab-buttons" onclick="openTab(event, 'Overview')" id="tab-overview">Overview of votes</button>
@@ -47,10 +47,10 @@
         </div>
     {% endif %}
     
-    {% if election_ongoing %}
+    {% if election_state == 'ongoing' or election_state == 'paused' %}
         <div id="Controls" class="tab-content">
             <div class="controls-instruction">
-                {% if election_ongoing is False %}
+                <!-- {% if election_ongoing is False %}
                     Select which batches under certain colleges will be eligible for the next elections.
                     <br>
                     Make sure you've covered <b>all the eligible batches</b>, you won't be able to change them after you've
@@ -60,13 +60,13 @@
                     Also make sure that you've actually <b>added candidates</b> to run for the pertinent batches.
                 {% else %}
                     Elections are currently ongoing.
-                {% endif %}
+                {% endif %} -->
             </div>
             <div class="controls-container">
                 <!-- <form action="" method="POST"> -->
-                    {% csrf_token %}
+                    <!-- {% csrf_token %}
                     <input type="hidden" name="form-type"
-                        value="{% if election_ongoing is False %}start-elections{% else %}end-elections{% endif %}">
+                        value="{% if election_ongoing is False %}start-elections{% else %}end-elections{% endif %}"> -->
 
                     {% for college in colleges %}
                         <div class="controls-header">
@@ -269,7 +269,7 @@
     </div>
 
     <div id="Underview" class="tab-content">
-        {% if election_ongoing is True %}
+        {% if election_state != 'finished' %}
             <img id="stop" src="{% static 'passcode/assets/svg/stop.svg' %}">
             <header>Woah there!</header>
             <div class="prohibited">
@@ -332,7 +332,7 @@
     </div>
 
     <div id="Poll" class="tab-content" {% if poll_results is not False %}data-selected="selected"{% endif %}>
-        {% if election_ongoing is True %}
+        {% if election_state != 'finished' %}
             <img id="stop" src="{% static 'passcode/assets/svg/stop.svg' %}">
             <header>Woah there!</header>
             <div class="prohibited">
