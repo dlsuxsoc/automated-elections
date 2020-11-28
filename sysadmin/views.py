@@ -1,4 +1,5 @@
 # Create your views here.
+import csv
 import datetime
 from email.mime.image import MIMEImage
 
@@ -10,11 +11,12 @@ from django.contrib.auth.mixins import UserPassesTestMixin
 from django.contrib.auth.models import Group, User
 from django.core.mail import EmailMultiAlternatives
 from django.core.paginator import Paginator
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, transaction, connection
 from django.db.models import Q
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from django.views import View
+from zipfile import ZipFile, ZIP_DEFLATED
 
 from passcode.views import PasscodeView, ResultsView
 from sysadmin.forms import IssueForm, OfficerForm, UnitForm, PositionForm, PollForm
@@ -241,6 +243,7 @@ class ElectionsView(SysadminView):
                 context = self.get_context()
 
                 return render(request, self.template_name, context)
+
             elif form_type == 'end-elections':
                 # If the elections have already ended, it can't be ended again!
                 if election_ongoing:
@@ -261,6 +264,217 @@ class ElectionsView(SysadminView):
                     messages.error(request, 'The elections have already been ended.')
 
                 context = self.get_context()
+
+                return render(request, self.template_name, context)
+
+            elif form_type == 'archive':
+                # If there are elections ongoing, no archiving may be done yet
+                if election_ongoing:
+                    messages.error(request, 'You may not archive while the elections are ongoing.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+                elif self.is_votes_empty():
+                    # If there no votes to archive, what's the point?
+                    messages.error(request,
+                                   'There aren\'t any election results to archive yet.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+                else:
+                    # The submitted form is for archiving the election results
+                    # Only continue if the re-authentication password indeed matches the password of the current
+                    # COMELEC officer
+                    reauth_password = request.POST.get('reauth-archive', False)
+
+                    if reauth_password is False \
+                            or authenticate(username=request.user.username, password=reauth_password) is None:
+                        messages.error(request,
+                                       'The election results weren\'t archived because the password was incorrect. '
+                                       'Try again.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                    else:
+                        with transaction.atomic():
+                            # Count the votes of all candidates
+                            TOTAL_VOTES_QUERY = (
+                                "WITH all_candidates AS (\n"
+                                "	SELECT\n"
+                                "		c.id AS 'CandidateID',\n"
+                                "		c.position_id AS 'PositionID',\n"
+                                "		IFNULL(vs.position_id, NULL) AS 'HasBeenVoted'\n"
+                                "	FROM\n"
+                                "		vote_candidate c\n"
+                                "	LEFT JOIN\n"
+                                "		vote_voteset vs ON c.id = vs.candidate_id\n"
+                                "	UNION ALL\n"
+                                "	SELECT\n"
+                                "		vs.candidate_id AS 'CandidateID',\n"
+                                "		vs.position_id AS 'PositionID',\n"
+                                "		IFNULL(vs.position_id, NULL) AS 'HasBeenVoted'\n"
+                                "	FROM\n"
+                                "		vote_voteset vs\n"
+                                "	WHERE\n"
+                                "		vs.candidate_id IS NULL\n"
+                                "),\n"
+                                "raw_count_position AS (\n"
+                                "	SELECT\n"
+                                "		bp.name AS 'Position',\n"
+                                "		u.name AS 'Unit',\n"
+                                "		ac.'CandidateID' AS 'CandidateID',\n"
+                                "		COUNT(ac.'HasBeenVoted') AS 'Votes'\n"
+                                "	FROM\n"
+                                "		all_candidates ac\n"
+                                "	LEFT JOIN\n"
+                                "		vote_position p ON ac.'PositionID' = p.id\n"
+                                "	LEFT JOIN\n"
+                                "		vote_baseposition bp ON p.base_position_id = bp.id\n"
+                                "	LEFT JOIN\n"
+                                "		vote_unit u ON p.unit_id = u.id\n"
+                                "	GROUP BY\n"
+                                "		ac.'PositionID', ac.'CandidateID'\n"
+                                "),\n"
+                                "candidate_name AS (\n"
+                                "	SELECT\n"
+                                "		rcp.'Position',\n"
+                                "		rcp.'Unit',\n"
+                                "		IFNULL(u.first_name || ' ' || u.last_name, '(abstained)') AS 'Candidate',\n"
+                                "		p.name AS 'Party',\n"
+                                "		rcp.'Votes'\n"
+                                "	FROM\n"
+                                "		raw_count_position rcp\n"
+                                "	LEFT JOIN\n"
+                                "		vote_candidate c ON rcp.'CandidateID' = c.id\n"
+                                "	LEFT JOIN\n"
+                                "		vote_voter v ON c.voter_id = v.id\n"
+                                "	LEFT JOIN\n"
+                                "		auth_user u ON v.user_id = u.id\n"
+                                "	LEFT JOIN\n"
+                                "		vote_party p ON c.party_id = p.id\n"
+                                "),\n"
+                                "party_name AS (\n"
+                                "	SELECT\n"
+                                "		cn.'Position' AS 'Position',\n"
+                                "		cn.'Unit' AS 'Unit',\n"
+                                "		cn.'Candidate' AS 'Candidate',\n"
+                                "		CASE cn.'Candidate'\n"
+                                "			WHEN '(abstained)' THEN '(abstained)'\n"
+                                "			ELSE IFNULL(cn.'Party', 'Independent')\n"
+                                "		END AS 'Party',\n"
+                                "		cn.'Votes' AS 'Votes'\n"
+                                "	FROM\n"
+                                "		candidate_name cn\n"
+                                ")\n"
+                                "SELECT\n"
+                                "	pn.'Position' AS 'Position',\n"
+                                "	pn.'Unit' AS 'Unit',\n"
+                                "	pn.'Candidate' AS 'Candidate',\n"
+                                "	pn.'Party' AS 'Party',\n"
+                                "	pn.'Votes' AS 'Votes'\n"
+                                "FROM\n"
+                                "	party_name pn\n"
+                                "ORDER BY\n"
+                                "	pn.'Position',\n"
+                                "	pn.'Unit',\n"
+                                "	pn.'Votes' DESC,\n"
+                                "	pn.'Candidate';\n"
+                            )
+
+                            TOTAL_POLL_VOTES_QUERY = (
+                                "SELECT\n"
+                                "   p.'name' AS 'Question',\n"
+                                "   SUM((CASE WHEN ps.'answer' = 'yes' THEN 1 ELSE 0 END)) AS 'Yes',\n"
+                                "   SUM((CASE WHEN ps.'answer' = 'no' THEN 1 ELSE 0 END)) AS 'No'\n"
+                                "FROM\n"
+                                "   vote_pollset ps\n"
+                                "LEFT JOIN\n"
+                                "   vote_poll p\n"
+                                "ON\n"
+                                "   ps.'poll_id' = p.'id'\n"
+                                "GROUP BY\n"
+                                "   p.'id';\n"
+                            )
+
+                            vote_results = {}
+                            poll_results = {}
+
+                            with connection.cursor() as cursor:
+                                cursor.execute(TOTAL_VOTES_QUERY, [])
+
+                                columns = [col[0] for col in cursor.description]
+                                vote_results['results'] = cursor.fetchall()
+
+                            with connection.cursor() as cursor:
+                                cursor.execute(TOTAL_POLL_VOTES_QUERY, [])
+
+                                poll_columns = [col[0] for col in cursor.description]
+                                poll_results['results'] = cursor.fetchall()
+
+                            # Then write the results to a CSV file
+                            # writer = csv.writer(response)
+
+                            # writer.writerow(["Election Results"])
+
+                            with open('Election Results.csv', 'w', newline='', encoding='utf-8') as csvFile:
+                                electionWriter = csv.writer(csvFile,)
+
+                                electionWriter.writerow(columns)
+
+                                for row in vote_results['results']:
+                                    electionWriter.writerow(list(row))
+
+                            # writer.writerow("")
+
+                            # writer.writerow(["Poll Results"])
+
+                            with open('Poll Results.csv', 'w', newline='', encoding='utf-8') as csvFile:
+                                pollWriter = csv.writer(csvFile,)
+
+                                pollWriter.writerow(poll_columns)
+
+                                for row in poll_results['results']:
+                                    pollWriter.writerow(list(row))
+
+                            electionPollZip = ZipFile('Election and Poll Results.zip', 'w')
+                            electionPollZip.write('Election Results.csv', compress_type=ZIP_DEFLATED)
+                            electionPollZip.write('Poll Results.csv', compress_type=ZIP_DEFLATED)
+                            electionPollZip.close()
+
+                            # Create a response object, and classify it as a ZIP response
+                            response = HttpResponse(open('Election and Poll Results.zip', 'rb').read(), content_type='application/x-zip-compressed')
+                            response['Content-Disposition'] = 'attachment; filename="Election and Poll Results.zip"'
+
+                            # Clear all users who are voters
+                            # This also clears the following tables: voters, candidates, takes, vote set, poll set
+                            User.objects.filter(groups__name='voter').delete()
+
+                            # Clear all issues
+                            Issue.objects.all().delete()
+
+                            # Clear all votes
+                            Vote.objects.all().delete()
+
+                            # Clear all polls
+                            Poll.objects.all().delete()
+
+                            # Clear all batch positions
+                            Position.objects.filter(base_position__type=BasePosition.BATCH).delete()
+
+                            # Clear all batch units
+                            Unit.objects.filter(college__isnull=False, batch__isnull=False)
+
+                            # Show a Save As box so the user may download it
+                            return response
+            else:
+                # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                # message
+                messages.error(request, 'Invalid request.')
+
+                context = self.display_objects(1)
 
                 return render(request, self.template_name, context)
 
