@@ -133,7 +133,9 @@ class VoteView(UserPassesTestMixin, View):
         # Get the batch of the current voter
         batch = voter.user.username[:3]
 
-        if batch not in self.context_cache[college]:
+        if batch in self.context_cache[college]:
+            print('Cached {} {}'.format(college, batch))
+        else:
             # Get all candidates
             candidates = {}
 
