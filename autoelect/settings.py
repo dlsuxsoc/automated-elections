@@ -158,3 +158,29 @@ MEDIA_URL = '/media/'
 
 # Google captcha secret sey 
 GOOGLE_RECAPTCHA_SECRET_KEY = env('GOOGLE_RECAPTCHA_SECRET_KEY')
+
+# Logging settings
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'default': {
+            'format': '[%(asctime)s] %(message)s'
+        }
+    },
+    'handlers': {
+        'httpFile': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs/http.log'),
+            'formatter': 'default',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['httpFile'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}
