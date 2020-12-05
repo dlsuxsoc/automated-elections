@@ -7,3 +7,5 @@
 .idea/
 
 test.py
+
+autoelect/.env
