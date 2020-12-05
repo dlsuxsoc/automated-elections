@@ -454,6 +454,10 @@ class ElectionsView(SysadminView):
                             electionPollZip.write('Poll Results.csv', compress_type=ZIP_DEFLATED)
                             electionPollZip.close()
 
+                            dbBackupZip = ZipFile('dbBackup.zip', 'w')
+                            dbBackupZip.write('db.sqlite3', compress_type=ZIP_DEFLATED)
+                            dbBackupZip.close()
+
                             # Create a response object, and classify it as a ZIP response
                             response = HttpResponse(open('Election and Poll Results.zip', 'rb').read(), content_type='application/x-zip-compressed')
                             response['Content-Disposition'] = 'attachment; filename="Election and Poll Results.zip"'
