@@ -1,0 +1,216 @@
+{% load static %}
+<html>
+<head>
+    <title>Officer Dashboard</title>
+    <meta name="viewport" content="height=device-height, initial-scale=1">
+
+    <!-- CSS LINKS -->
+    <link rel="stylesheet" type="text/css" href="{% static 'passcode/css/components/officer.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'passcode/css/components/officer-results.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'sysadmin/css/components/admin.css' %}"/>
+
+    <script src="{% static 'passcode/js/Chart.min.js' %}"></script>
+    <script src="{% static 'sysadmin/js/elections.js' %}"></script>
+
+</head>
+<body {% if identifier %}onload="drawChart('{{ vote_results_json|escapejs }}')" {% endif %}>
+<!-- HEADER BAR THING -->
+<div id="header-container">
+    <img id="header-ballot" src="{% static 'sysadmin/assets/svg/ballot-white.svg' %}">
+    <a href="{% url 'sysadmin:elections' %}" id="selected">Election Status</a>
+    <a href="{% url 'sysadmin:voters' %}">Voters List</a>
+    <a href="{% url 'sysadmin:candidates' %}">Candidates List</a>
+    <a href="{% url 'sysadmin:officers' %}">Comelec Officers</a>
+    <a href="{% url 'sysadmin:units' %}">Units</a>
+    <a href="{% url 'sysadmin:positions' %}">Positions</a>
+    <a href="{% url 'sysadmin:issues' %}">Issues</a>
+    <a href="{% url 'sysadmin:polls' %}">Polls</a>
+    <div id="user-container">
+        <img id="user-icon" src="{% static 'sysadmin/assets/svg/user.svg' %}">
+        <div id="user-name"> {{ user.first_name }} {{ user.last_name }}</div>
+        <a id="log-out" href="{% url 'logout:logout' %}">Logout</a>
+    </div>
+</div>
+
+<!-- TABS BUTTONS TO TRAVERSE THE DIFF SECTIONS -->
+<div id="tab-buttons-container">
+    <button class="tab-buttons active" onclick="openTab(event, 'Controls')" id="tab-controls">Election Control</button>
+    <button class="tab-buttons" onclick="openTab(event, 'Unblock')" id="tab-archive">Unblock Results</button>
+    <button class="tab-buttons" onclick="openTab(event, 'Archive')" id="tab-archive">Archive all results</button>
+</div>
+
+<!-- CONTAINER WHERE TABS WILL OCCUPY -->
+<div id="tab-container">
+    <div style="margin-top: 100px;">
+    </div>
+    {% if messages %}
+        <div>
+            {% for message in messages %}
+                <p {% if message.tags %}id="{{ message.tags }}"{% endif %}>{{ message }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div id="Controls" class="tab-content">
+        {% if election_state == 'finished' or election_state == 'blocked' %}
+            <img id="stop" src="{% static 'passcode/assets/svg/stop.svg' %}">
+            <header>Woah there!</header>
+            <div class="prohibited">
+                You may not start any elections until the results are archived.
+            </div>
+        {% else %}
+            <div class="controls-container">
+                <form action="" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="form-type" id="election-form-type"
+                            value="{% if not election_state or election_state == 'archived' %}start-elections{% elif election_state == 'ongoing' or election_state == 'paused' %}end-elections{% endif %}">
+
+                    <div class="controls-header">
+                        Colleges
+                        <input type="button" class="smallbutton" onclick="selectAll()"
+                            value="Select All">
+                    </div>
+                    </br>
+                    {% for college in colleges %}
+                        <div class="controls-header">
+                            {{ college.name }}
+                            <input type="button" class="smallbutton" onclick="selectAllCollege('{{ college.name }}-batch')"
+                                value="Select {{ college.name }}">
+                        </div>
+                        <div class="controls">
+                            {% if not election_state or election_state == 'archived'%}
+                                {% for batch in batches %}
+                                    <li class="batch-checkboxes">
+                                        <input id="{{ college.name }}-{{ batch }}" name="{{ college.name }}-batch"
+                                                type="checkbox" value="{{ batch }}">
+                                        <label for="{{ college.name }}-{{ batch }}">{{ batch }}</label>
+                                    </li>
+                                {% endfor %}
+                            {% else %}
+                                <b>Batches eligible for this college:</b>
+                                {% for college_key, batch_val in college_batch_dict.items %}
+                                    {% if college_key == college.name %}
+                                        {% for batch in batch_val %}
+                                            <li class="batch-checkboxes">
+                                                {{ batch }}{% if not forloop.last %},{% endif %}</li>
+                                        {% endfor %}
+                                    {% else %}
+                                        {% if college.name not in college_batch_dict.keys and forloop.last %}
+                                            <li class="batch-checkboxes">None.</li>
+                                        {% endif %}
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                    {% if not election_state or election_state == 'archived' or election_state == 'ongoing' or election_state == 'paused' %}
+                        <div class="controls-instruction">
+                            {% if not election_state or election_state == 'archived' %}
+                                Once you're done, <b>reenter your password</b>, then click the <b>start
+                                elections</b> button to commence the elections.
+                                <br>
+                            {% else %}
+                                Reenter your password, then click the <b>stop elections</b> button to end the elections.
+                                Only stop the elections when you're sure that you will, because this cannot be undone.
+                            {% endif %}
+                        </div>
+                        <div class="controls">
+                            <label class="info-label" for="reauth">Reenter your password</label>
+                            <br>
+                            <input id="reauth" class="password-reauth" type="password" name="reauth" required="required">
+                            <br>
+                            <input class="button {% if not election_state or election_state == 'archived' %}confirm{% else %}confirm-negative{% endif %}"
+                                    type="submit"
+                                    value="{% if not election_state or election_state == 'archived' %}Start elections{% else %}Stop elections{% endif %}">
+                            {% if election_state == 'ongoing' or election_state == 'paused' %}
+                                <input class="button {% if election_state == 'paused' %}confirm{% else %}confirm-negative{% endif %}"
+                                        type="submit" onclick="pausePlay('{{ election_state }}')"
+                                        value="{% if election_state == 'paused' %}Resume elections{% else %}Pause elections{% endif %}">
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </form>
+            </div>
+        {% endif %}
+        <div id="logo">
+            <img width=500 height=50 src="{% static 'passcode/assets/svg/org-logos.svg' %}">
+        </div>
+    </div>
+
+    <div id="Archive" class="tab-content" style="display: none">
+        {% if election_state != 'finished' %}
+            <img id="stop" src="{% static 'passcode/assets/svg/stop.svg' %}">
+            <header>Woah there!</header>
+            <div class="prohibited">
+                You may not archive any results until the elections are done.
+            </div>
+        {% else %}
+            <form method="POST" action="">
+                {% csrf_token %}
+                <input type="hidden" name="form-type" value="archive-results">
+                <div class="controls-instruction">
+                    Once you're done viewing the election results, reenter your password and click the
+                    <b>archive button</b> to <b>archive</b> <i>all</i> the results to a CSV file. Archiving the
+                    results
+                    will also clear <i>all</i> votes, voters, candidates, batch positions, batch units, issues, and polls from
+                    this website.
+                </div>
+                <div class="controls">
+                    <label class="info-label" for="reauth-archive">Reenter your password</label>
+                    <br>
+                    <input id="reauth-archive" class="password-reauth" type="password" name="reauth-archive"
+                           required="required">
+                    <br>
+                    <input class="button confirm"
+                           type="submit" value="Archive election results">
+                </div>
+            </form>
+        {% endif %}
+
+        <div id="logo">
+            <img width=500 height=50 src="{% static 'passcode/assets/svg/org-logos.svg' %}">
+        </div>
+    </div>
+
+    <div id="Unblock" class="tab-content" style="display: none">
+        {% if election_state != 'blocked' %}
+            <img id="stop" src="{% static 'passcode/assets/svg/stop.svg' %}">
+            <header>Woah there!</header>
+            <div class="prohibited">
+                The elections have not ended yet.
+            </div>
+        {% else %}
+            <form method="POST" action="">
+                {% csrf_token %}
+                <input type="hidden" name="form-type" value="unblock-results">
+                <div class="controls-instruction">
+                    Once you're ready to view the election results, reenter your password and click the
+                    <b>Unblock button</b> to <b>unblock</b> the election results.
+
+                    This <b>cannot</b> be undone!
+                </div>
+                <div class="controls">
+                    <label class="info-label" for="reauth-unblock">Reenter your password</label>
+                    <br>
+                    <input id="reauth-unblock" class="password-reauth" type="password" name="reauth-unblock"
+                           required="required">
+                    <br>
+                    <input class="button confirm" type="submit" value="Unblock election results">
+                </div>
+            </form>
+        {% endif %}
+
+        <div id="logo">
+            <img width=500 height=50 src="{% static 'passcode/assets/svg/org-logos.svg' %}">
+        </div>
+    </div>
+</div>
+
+
+</body>
+
+<!-- JAVASCRIPT LINK-->
+<script src="{% static 'passcode/js/officer-results.js' %}"></script>
+</html>
+
+

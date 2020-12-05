@@ -23,13 +23,14 @@ from django.utils import timezone
 from django.views import View
 
 # Test function for this view
-from vote.models import Voter, College, Candidate, ElectionStatus, Vote, Position, Issue, BasePosition, Unit, Poll
+from vote.models import Voter, College, Candidate, ElectionStatus, Vote, Position, Issue, BasePosition, Unit, Poll, ElectionState, Election
 
 # EMAIL BODY CONST
 fp = open(settings.BASE_DIR + '/email_template.html', 'r')
 HTML_STR = fp.read()
 fp.close()
 
+# TODO: Make this async to message
 def send_email(voter_id, voter_key = None):
     if voter_key == None:
         voter_key = PasscodeView.generate_passcode()
@@ -138,7 +139,7 @@ class VotersView(OfficerView):
         Voter.objects.create(user=user, college=college,
                              voting_status=voting_status, eligibility_status=eligibility_status)
         
-        if ResultsView.is_election_ongoing() and not voting_status and eligibility_status:
+        if ResultsView.get_election_state() == 'ongoing' and not voting_status and eligibility_status:
             # Also check if his batch and college is in the election status
             if ElectionStatus.objects.filter(college=college, batch=int(username[:3])).count() > 0:
                  # Init email server
@@ -504,10 +505,10 @@ class ResultsView(OfficerView):
         colleges = College.objects.all().order_by('name')
 
         # Set a flag indicating whether elections have started or not
-        election_ongoing = self.is_election_ongoing()
+        election_state = self.get_election_state()
 
         # Show the checkbox page when the elections aren't on
-        if not election_ongoing:
+        if election_state == ElectionState.FINISHED.value:
             # Get all batches from the batch of the current year until the batch of the year six years from the current
             # year
             current_year = datetime.datetime.now().year
@@ -665,7 +666,7 @@ class ResultsView(OfficerView):
                 poll_results_json = json.dumps(poll_results_json)
 
             context = {
-                'election_ongoing': election_ongoing,
+                'election_state': election_state,
                 'colleges': colleges,
                 'batches': batches,
                 'positions': positions,
@@ -893,7 +894,7 @@ class ResultsView(OfficerView):
                     college_batch_results[eligible_college.name] = cursor.fetchall()
 
             context = {
-                'election_ongoing': election_ongoing,
+                'election_state': election_state,
                 'colleges': colleges,
                 'college_batch_dict': college_batch_dict,
                 'overall_votes': overall_votes,
@@ -911,9 +912,16 @@ class ResultsView(OfficerView):
 
         return context
 
+    # @staticmethod
+    # def is_election_ongoing():
+    #     return ElectionStatus.objects.all().exists()
+
     @staticmethod
-    def is_election_ongoing():
-        return ElectionStatus.objects.all().exists()
+    def get_election_state():
+        try:
+            return Election.objects.latest('timestamp').state
+        except:
+            return None
 
     @staticmethod
     def is_votes_empty():
@@ -951,6 +959,8 @@ class ResultsView(OfficerView):
 
         if form_type is not False:
             # The submitted form is for starting the elections
+            """
+            Can't be used in an online setting
             if form_type == 'start-elections':
                 # If the elections have already started, it can't be started again!
                 if self.is_election_ongoing():
@@ -1045,7 +1055,8 @@ class ResultsView(OfficerView):
                 context = self.display_objects(1)
 
                 return render(request, self.template_name, context)
-            elif form_type == 'archive':
+            
+            if form_type == 'archive':
                 # If there are elections ongoing, no archiving may be done yet
                 if self.is_election_ongoing():
                     messages.error(request, 'You may not archive while the elections are ongoing.')
@@ -1199,15 +1210,21 @@ class ResultsView(OfficerView):
                             # Then write the results to a CSV file
                             writer = csv.writer(response)
 
+                            writer.writerow(["Election Results"])
+
                             writer.writerow(columns)
 
                             for row in vote_results['results']:
                                 writer.writerow(list(row))
 
+                            writer.writerow("")
+
+                            writer.writerow(["Poll Results"])
+
                             writer.writerow(poll_columns)
 
                             for row in poll_results['results']:
-                                write.writerow(list(row))
+                                writer.writerow(list(row))
 
                             # Clear all users who are voters
                             # This also clears the following tables: voters, candidates, takes, vote set, poll set
@@ -1220,7 +1237,7 @@ class ResultsView(OfficerView):
                             Vote.objects.all().delete()
 
                             # Clear all polls
-                            Poll.objects.all().deleted()
+                            Poll.objects.all().delete()
 
                             # Clear all batch positions
                             Position.objects.filter(base_position__type=BasePosition.BATCH).delete()
@@ -1238,6 +1255,7 @@ class ResultsView(OfficerView):
                 context = self.display_objects(1)
 
                 return render(request, self.template_name, context)
+            """
         else:
             # If no objects are received, it's an invalid request, so stay on the page and then show an error
             # message
@@ -1287,6 +1305,22 @@ class PasscodeView(UserPassesTestMixin, View):
 
         return passcode
 
+    @staticmethod
+    def is_eligible(voter):
+        status = ElectionStatus.objects.filter(college__name=voter.college.name)
+        batch = voter.batch()
+        flag = False
+
+        for s in status:
+            if batch == s.batch:
+                flag = True
+                break
+            if "and below" in s.batch and int(batch) <= int(s.batch[:3]):
+                flag = True
+                break
+
+        return voter.eligibility_status and flag
+
     # Check whether the user accessing this page is a COMELEC officer or not
     def test_func(self):
         try:
@@ -1329,11 +1363,9 @@ class PasscodeView(UserPassesTestMixin, View):
                 voter = Voter.objects.get(user__username=id_number)
 
                 # Check if that user is eligible at all
-                if voter.eligibility_status and ElectionStatus.objects.filter(
-                        college__name=voter.college.name).count() > 0:
+                if self.is_eligible(voter):
                     # Check if that user has already voted
                     if not voter.voting_status:
-                        # FIXME: is_currently_in() does not work yet
                         # Check if that user is currently logged in
                         if not self.is_currently_in(user.id):
                             # Generate a passcode

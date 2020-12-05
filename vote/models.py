@@ -13,6 +13,25 @@ class College(models.Model):
         return self.name
 
 
+class ElectionState(Enum):
+    ONGOING = "ongoing"
+    PAUSED = "paused"
+    BLOCKED = "blocked"
+    FINISHED = "finished"
+    ARCHIVED = "archived"
+
+    @classmethod
+    def choices(cls):
+        return tuple((i.name, i.value) for i in cls)
+
+
+class Election(models.Model):
+    state = models.CharField(max_length=20, choices=ElectionState.choices())
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return str(self.timestamp) + " elections is currently " + self.state
+
 class ElectionStatus(models.Model):
     batch = models.CharField(max_length=4)
     college = models.ForeignKey(College, on_delete=models.CASCADE)
@@ -74,6 +93,9 @@ class Voter(models.Model):
 
     def __str__(self):
         return "(" + self.user.username + ") " + self.user.first_name + " " + self.user.last_name
+
+    def batch(self):
+        return self.user.username[:3]
 
 
 class Party(models.Model):
@@ -157,4 +179,4 @@ class PollSet(models.Model):
 
     def __str__(self):
         return self.vote.voter_id_number + " voted for " \
-               + self.candidate.voter.user.first_name + " " + self.candidate.voter.user.last_name
+               + self.answer + " in " + self.poll.name

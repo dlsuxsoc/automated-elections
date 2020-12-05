@@ -1,19 +1,26 @@
 # Create your views here.
+import csv
+import datetime
+from email.mime.image import MIMEImage
 
+from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import authenticate
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.contrib.auth.models import Group, User
+from django.core.mail import EmailMultiAlternatives
 from django.core.paginator import Paginator
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, transaction, connection
 from django.db.models import Q
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from django.views import View
+from zipfile import ZipFile, ZIP_DEFLATED
 
 from passcode.views import PasscodeView, ResultsView
 from sysadmin.forms import IssueForm, OfficerForm, UnitForm, PositionForm, PollForm
-from vote.models import Voter, College, Candidate, Position, Unit, Party, Issue, Take, BasePosition, Poll
+from vote.models import Vote, Voter, College, Candidate, ElectionStatus, Position, Unit, Party, Issue, Take, BasePosition, Poll, Election, ElectionState
 
 
 # Test function for this view
@@ -23,6 +30,49 @@ def sysadmin_test_func(user):
     except Group.DoesNotExist:
         return False
 
+# EMAIL BODY CONST
+fp = open(settings.BASE_DIR + '/email_template.html', 'r')
+HTML_STR = fp.read()
+fp.close()
+
+def send_email(voter_id, voter_key = None):
+    if voter_key == None:
+        voter_key = PasscodeView.generate_passcode()
+
+        user = User.objects.get(username=voter_id)
+        user.set_password(voter_key)
+        user.save()
+
+    voter_email = voter_id + '@dlsu.edu.ph'
+
+    # Create email with message and template
+    # Imbedded Image
+    fp = open(settings.BASE_DIR + '/ComelecLogo.png', 'rb')
+    img = MIMEImage(fp.read())
+    fp.close()
+    img.add_header('Content-ID', '<logo>')
+
+    subject = '[COMELEC] Election is now starting'
+    text = '''\
+DLSU Comelec is inviting to you to vote in the elections.
+Voter ID: {}
+Voter Key: {}
+To vote, go to this link: https://some_link
+    '''.format(voter_id, voter_key)
+
+    html = HTML_STR
+    html = html.replace('11xxxxxx', voter_id, 2)
+    html = html.replace('xxxxxxxx', voter_key, 1)
+
+    msg = EmailMultiAlternatives(
+        subject = subject,
+        body = text,
+        from_email = settings.EMAIL_HOST_USER,
+        to = [ voter_email ]
+    )
+    msg.attach_alternative(html, "text/html")
+    msg.attach(img)
+    msg.send()
 
 class RestrictedView(UserPassesTestMixin, View):
     # Check whether the user accessing this page is a system administrator or not
@@ -45,6 +95,477 @@ class SysadminView(RestrictedView):
 
     def post(self, request):
         pass
+
+class ElectionsView(SysadminView):
+    template_name = 'sysadmin/admin-elections.html'
+    
+    @staticmethod
+    def is_votes_empty():
+        return not Vote.objects.all().exists()
+
+    @staticmethod
+    def get_election_state():
+        try:
+            return Election.objects.latest('timestamp').state
+        except:
+            return None
+
+    @staticmethod
+    def get_context():
+        # Retrieve all colleges
+        colleges = College.objects.all().order_by('name')
+
+        # Set a flag indicating whether elections have started or not
+        election_state = ElectionsView.get_election_state()
+
+        context = {}
+
+        if not election_state or election_state == ElectionState.ARCHIVED.value:
+            # Get all batches from the batch of the current year until the batch of the year six years from the current
+            # year
+            current_year = datetime.datetime.now().year
+
+            batches = ['1' + str(year)[2:] for year in range(current_year, current_year - 6, -1)]
+            batches[-1] = batches[-1] + ' and below'
+
+            context = {
+                'election_state': election_state,
+                'colleges': colleges,
+                'batches': batches,
+            }
+        else:
+            # Show the eligible batches when the elections are on
+            college_batch_dict = {}
+
+            college_batches = ElectionStatus.objects.all().order_by('college__name', '-batch')
+
+            for college_batch in college_batches:
+                if college_batch.college.name not in college_batch_dict.keys():
+                    college_batch_dict[college_batch.college.name] = []
+
+                college_batch_dict[college_batch.college.name].append(college_batch.batch)
+            
+            context = {
+                'college_batch_dict': college_batch_dict,
+                'election_state': election_state,
+                'colleges': colleges,
+            }
+        
+        return context
+
+    def get(self, request):
+        context = self.get_context()
+
+        return render(request, self.template_name, context)
+
+    def post(self, request):
+        form_type = request.POST.get('form-type', False)
+
+        election_state = ElectionsView.get_election_state()
+
+        if form_type is not False:
+            # The submitted form is for starting the elections
+            if form_type == 'start-elections':
+                # If the elections have already started, it can't be started again!
+                if (election_state and election_state != ElectionState.ARCHIVED.value) or not self.is_votes_empty():
+                    messages.error(request,
+                                   'The votes from the previous election haven\'t been archived yet. Archive them '
+                                   'first before starting this election.')
+                else:
+                    # Only continue if the re-authentication password indeed matches the password of the current
+                    # COMELEC officer
+                    reauth_password = request.POST.get('reauth', False)
+
+                    if reauth_password is False \
+                            or authenticate(username=request.user.username, password=reauth_password) is None:
+                        messages.error(request,
+                                       'The elections weren\'t started because the password was incorrect. Try again.')
+                    else:
+                        college_batches = {}
+
+                        # Collect all batches per college
+                        for college in College.objects.all().order_by('name'):
+                            college_batches[college.name] = request.POST.getlist(college.name + '-batch')
+
+                        # Keep track of whether no checkboxes where checked
+                        empty = True
+
+                        # List of all voters
+                        voters = [ ]
+
+                        # Add each into the database
+                        for college, batches in college_batches.items():
+                            # Get the college object from the name
+                            try:
+                                college_object = College.objects.get(name=college)
+
+                                # Then use that object to create the an election status value for these specific batches
+                                for batch in batches:
+                                    empty = False
+
+                                    Election.objects.create(state=ElectionState.ONGOING.value)
+
+                                    ElectionStatus.objects.create(college=college_object, batch=batch)
+                                    # Include all ID numbers below the specified batch number e.g. <= 115XXXXX
+                                    if 'and below' in batch: 
+                                        starting_batch = batch.split()[0]
+                                        starting_batch += "99999"
+                                        batch_voters = list(
+                                            Voter.objects.filter(
+                                                college=college_object,
+                                                user__username__lte=starting_batch,
+                                                voting_status=False,
+                                                eligibility_status=True
+                                            ).values('user__username')
+                                        )
+                                    # Include just the batch e.g. 118XXXXX
+                                    else: 
+                                        batch_voters = list(
+                                            Voter.objects.filter(
+                                                college=college_object,
+                                                user__username__startswith=str(batch),
+                                                voting_status=False,
+                                                eligibility_status=True
+                                            ).values('user__username')
+                                        )
+                                    # print(batch_voters)
+                                    voters += batch_voters
+                            except College.DoesNotExist:
+                                # If the college does not exist
+                                messages.error(request, 'Internal server error.')
+
+                        # Check whether batches were actually selected in the first place
+                        if not empty:
+                            for index, voter in enumerate(voters):
+                                send_email(voter['user__username'])
+                                print('Email sent to ' + voter['user__username'] + '.' + str(index) + ' out of ' + str(len(voters)) + ' sent.')
+
+                            messages.success(request, 'The elections have now started.')
+                        else:
+                            messages.error(request,
+                                           'The elections weren\'t started because there were no batches selected at'
+                                           ' all.')
+
+                context = self.get_context()
+
+                return render(request, self.template_name, context)
+
+            elif form_type == 'end-elections':
+                # If the elections have already ended, it can't be ended again!
+                if election_state == ElectionState.ONGOING.value or election_state == ElectionState.PAUSED.value:
+                    # Only continue if the re-authentication password indeed matches the password of the current
+                    # COMELEC officer
+                    reauth_password = request.POST.get('reauth', False)
+
+                    if reauth_password is False \
+                            or authenticate(username=request.user.username, password=reauth_password) is None:
+                        messages.error(request,
+                                       'The elections weren\'t ended because the password was incorrect. Try again.')
+                    else:
+                        # Clear the entire election status table
+                        ElectionStatus.objects.all().delete()
+
+                        e = Election.objects.latest('timestamp')
+                        e.state = ElectionState.BLOCKED.value
+                        e.save()
+
+                        messages.success(request, 'The elections have now ended.')
+                else:
+                    messages.error(request, 'The elections have already been ended.')
+
+                context = self.get_context()
+
+                return render(request, self.template_name, context)
+
+            elif form_type == 'archive-results':
+                # If there are elections ongoing, no archiving may be done yet
+                if election_state != ElectionState.FINISHED.value:
+                    messages.error(request, 'You may not archive while the elections are not yet finished.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+                elif self.is_votes_empty():
+                    # If there no votes to archive, what's the point?
+                    messages.error(request,
+                                   'There aren\'t any election results to archive yet.')
+
+                    context = self.display_objects(1)
+
+                    return render(request, self.template_name, context)
+                else:
+                    # The submitted form is for archiving the election results
+                    # Only continue if the re-authentication password indeed matches the password of the current
+                    # COMELEC officer
+                    reauth_password = request.POST.get('reauth-archive', False)
+
+                    if reauth_password is False \
+                            or authenticate(username=request.user.username, password=reauth_password) is None:
+                        messages.error(request,
+                                       'The election results weren\'t archived because the password was incorrect. '
+                                       'Try again.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                    else:
+                        with transaction.atomic():
+                            # Count the votes of all candidates
+                            TOTAL_VOTES_QUERY = (
+                                "WITH all_candidates AS (\n"
+                                "	SELECT\n"
+                                "		c.id AS 'CandidateID',\n"
+                                "		c.position_id AS 'PositionID',\n"
+                                "		IFNULL(vs.position_id, NULL) AS 'HasBeenVoted'\n"
+                                "	FROM\n"
+                                "		vote_candidate c\n"
+                                "	LEFT JOIN\n"
+                                "		vote_voteset vs ON c.id = vs.candidate_id\n"
+                                "	UNION ALL\n"
+                                "	SELECT\n"
+                                "		vs.candidate_id AS 'CandidateID',\n"
+                                "		vs.position_id AS 'PositionID',\n"
+                                "		IFNULL(vs.position_id, NULL) AS 'HasBeenVoted'\n"
+                                "	FROM\n"
+                                "		vote_voteset vs\n"
+                                "	WHERE\n"
+                                "		vs.candidate_id IS NULL\n"
+                                "),\n"
+                                "raw_count_position AS (\n"
+                                "	SELECT\n"
+                                "		bp.name AS 'Position',\n"
+                                "		u.name AS 'Unit',\n"
+                                "		ac.'CandidateID' AS 'CandidateID',\n"
+                                "		COUNT(ac.'HasBeenVoted') AS 'Votes'\n"
+                                "	FROM\n"
+                                "		all_candidates ac\n"
+                                "	LEFT JOIN\n"
+                                "		vote_position p ON ac.'PositionID' = p.id\n"
+                                "	LEFT JOIN\n"
+                                "		vote_baseposition bp ON p.base_position_id = bp.id\n"
+                                "	LEFT JOIN\n"
+                                "		vote_unit u ON p.unit_id = u.id\n"
+                                "	GROUP BY\n"
+                                "		ac.'PositionID', ac.'CandidateID'\n"
+                                "),\n"
+                                "candidate_name AS (\n"
+                                "	SELECT\n"
+                                "		rcp.'Position',\n"
+                                "		rcp.'Unit',\n"
+                                "		IFNULL(u.first_name || ' ' || u.last_name, '(abstained)') AS 'Candidate',\n"
+                                "		p.name AS 'Party',\n"
+                                "		rcp.'Votes'\n"
+                                "	FROM\n"
+                                "		raw_count_position rcp\n"
+                                "	LEFT JOIN\n"
+                                "		vote_candidate c ON rcp.'CandidateID' = c.id\n"
+                                "	LEFT JOIN\n"
+                                "		vote_voter v ON c.voter_id = v.id\n"
+                                "	LEFT JOIN\n"
+                                "		auth_user u ON v.user_id = u.id\n"
+                                "	LEFT JOIN\n"
+                                "		vote_party p ON c.party_id = p.id\n"
+                                "),\n"
+                                "party_name AS (\n"
+                                "	SELECT\n"
+                                "		cn.'Position' AS 'Position',\n"
+                                "		cn.'Unit' AS 'Unit',\n"
+                                "		cn.'Candidate' AS 'Candidate',\n"
+                                "		CASE cn.'Candidate'\n"
+                                "			WHEN '(abstained)' THEN '(abstained)'\n"
+                                "			ELSE IFNULL(cn.'Party', 'Independent')\n"
+                                "		END AS 'Party',\n"
+                                "		cn.'Votes' AS 'Votes'\n"
+                                "	FROM\n"
+                                "		candidate_name cn\n"
+                                ")\n"
+                                "SELECT\n"
+                                "	pn.'Position' AS 'Position',\n"
+                                "	pn.'Unit' AS 'Unit',\n"
+                                "	pn.'Candidate' AS 'Candidate',\n"
+                                "	pn.'Party' AS 'Party',\n"
+                                "	pn.'Votes' AS 'Votes'\n"
+                                "FROM\n"
+                                "	party_name pn\n"
+                                "ORDER BY\n"
+                                "	pn.'Position',\n"
+                                "	pn.'Unit',\n"
+                                "	pn.'Votes' DESC,\n"
+                                "	pn.'Candidate';\n"
+                            )
+
+                            TOTAL_POLL_VOTES_QUERY = (
+                                "SELECT\n"
+                                "   p.'name' AS 'Question',\n"
+                                "   SUM((CASE WHEN ps.'answer' = 'yes' THEN 1 ELSE 0 END)) AS 'Yes',\n"
+                                "   SUM((CASE WHEN ps.'answer' = 'no' THEN 1 ELSE 0 END)) AS 'No'\n"
+                                "FROM\n"
+                                "   vote_pollset ps\n"
+                                "LEFT JOIN\n"
+                                "   vote_poll p\n"
+                                "ON\n"
+                                "   ps.'poll_id' = p.'id'\n"
+                                "GROUP BY\n"
+                                "   p.'id';\n"
+                            )
+
+                            vote_results = {}
+                            poll_results = {}
+
+                            with connection.cursor() as cursor:
+                                cursor.execute(TOTAL_VOTES_QUERY, [])
+
+                                columns = [col[0] for col in cursor.description]
+                                vote_results['results'] = cursor.fetchall()
+
+                            with connection.cursor() as cursor:
+                                cursor.execute(TOTAL_POLL_VOTES_QUERY, [])
+
+                                poll_columns = [col[0] for col in cursor.description]
+                                poll_results['results'] = cursor.fetchall()
+
+                            # Then write the results to a CSV file
+                            # writer = csv.writer(response)
+
+                            # writer.writerow(["Election Results"])
+
+                            with open('Election Results.csv', 'w', newline='', encoding='utf-8') as csvFile:
+                                electionWriter = csv.writer(csvFile,)
+
+                                electionWriter.writerow(columns)
+
+                                for row in vote_results['results']:
+                                    electionWriter.writerow(list(row))
+
+                            # writer.writerow("")
+
+                            # writer.writerow(["Poll Results"])
+
+                            with open('Poll Results.csv', 'w', newline='', encoding='utf-8') as csvFile:
+                                pollWriter = csv.writer(csvFile,)
+
+                                pollWriter.writerow(poll_columns)
+
+                                for row in poll_results['results']:
+                                    pollWriter.writerow(list(row))
+
+                            electionPollZip = ZipFile('Election and Poll Results.zip', 'w')
+                            electionPollZip.write('Election Results.csv', compress_type=ZIP_DEFLATED)
+                            electionPollZip.write('Poll Results.csv', compress_type=ZIP_DEFLATED)
+                            electionPollZip.close()
+
+                            # Create a response object, and classify it as a ZIP response
+                            response = HttpResponse(open('Election and Poll Results.zip', 'rb').read(), content_type='application/x-zip-compressed')
+                            response['Content-Disposition'] = 'attachment; filename="Election and Poll Results.zip"'
+
+                            e = Election.objects.latest('timestamp')
+                            e.state = ElectionState.ARCHIVED.value
+                            e.save()
+
+                            # Clear all users who are voters
+                            # This also clears the following tables: voters, candidates, takes, vote set, poll set
+                            User.objects.filter(groups__name='voter').delete()
+
+                            # Clear all issues
+                            Issue.objects.all().delete()
+
+                            # Clear all votes
+                            Vote.objects.all().delete()
+
+                            # Clear all polls
+                            Poll.objects.all().delete()
+
+                            # Clear all batch positions
+                            Position.objects.filter(base_position__type=BasePosition.BATCH).delete()
+
+                            # Clear all batch units
+                            Unit.objects.filter(college__isnull=False, batch__isnull=False)
+
+                            # Show a Save As box so the user may download it
+                            return response
+            
+            elif form_type == "pause-elections":
+                # If the elections have already ended, it can't be ended again!
+                if election_state == ElectionState.ONGOING.value:
+                    # Only continue if the re-authentication password indeed matches the password of the current
+                    # COMELEC officer
+                    reauth_password = request.POST.get('reauth', False)
+
+                    if reauth_password is False \
+                            or authenticate(username=request.user.username, password=reauth_password) is None:
+                        messages.error(request,
+                                       'The elections weren\'t paused because the password was incorrect. Try again.')
+                    else:
+                        e = Election.objects.latest('timestamp')
+                        e.state = ElectionState.PAUSED.value
+                        e.save()
+
+                        messages.success(request, 'The elections have now been paused.')
+                else:
+                    messages.error(request, 'The elections are not currently ongoing.')
+
+                context = self.get_context()
+
+                return render(request, self.template_name, context)
+
+            elif form_type == "resume-elections":
+                # If the elections have already ended, it can't be ended again!
+                if election_state == ElectionState.PAUSED.value:
+                    # Only continue if the re-authentication password indeed matches the password of the current
+                    # COMELEC officer
+                    reauth_password = request.POST.get('reauth', False)
+
+                    if reauth_password is False \
+                            or authenticate(username=request.user.username, password=reauth_password) is None:
+                        messages.error(request,
+                                       'The elections weren\'t resumed because the password was incorrect. Try again.')
+                    else:
+                        e = Election.objects.latest('timestamp')
+                        e.state = ElectionState.ONGOING.value
+                        e.save()
+
+                        messages.success(request, 'The elections have now been resumed.')
+                else:
+                    messages.error(request, 'The elections are not currently paused.')
+
+                context = self.get_context()
+
+                return render(request, self.template_name, context)
+
+            elif form_type == "unblock-results":
+                # If the elections have already ended, it can't be ended again!
+                if election_state == ElectionState.BLOCKED.value:
+                    # Only continue if the re-authentication password indeed matches the password of the current
+                    # COMELEC officer
+                    reauth_password = request.POST.get('reauth-unblock', False)
+
+                    if reauth_password is False \
+                            or authenticate(username=request.user.username, password=reauth_password) is None:
+                        messages.error(request,
+                                       'The elections results weren\'t unblocked because the password was incorrect. Try again.')
+                    else:
+                        e = Election.objects.latest('timestamp')
+                        e.state = ElectionState.FINISHED.value
+                        e.save()
+
+                        messages.success(request, 'The elections results have been unblocked.')
+                else:
+                    messages.error(request, 'The elections are not yet over.')
+
+                context = self.get_context()
+
+                return render(request, self.template_name, context)
+            
+            else:
+                # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                # message
+                messages.error(request, 'Invalid request.')
+
+                context = self.display_objects(1)
+
+                return render(request, self.template_name, context)
+
+        return render(request, self.template_name)
 
 
 class VotersView(SysadminView):
@@ -311,7 +832,7 @@ class VotersView(SysadminView):
                     return render(request, self.template_name, context)
             
         # Only allow editing and deleting while there are no elections ongoing and there are no votes in the database
-        if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
+        if (not ResultsView.get_election_state() or ResultsView.get_election_state() == ElectionState.ARCHIVED.value) and ResultsView.is_votes_empty():
             if form_type == 'edit-voter':
                 # The submitted form is for editing a voter
                 page = request.POST.get('page', False)
@@ -509,7 +1030,7 @@ class CandidatesView(SysadminView):
         issue_form = IssueForm(request.POST)
 
         # Only allow editing while there are no elections ongoing and there are no votes in the database
-        if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
+        if (not ResultsView.get_election_state() or ResultsView.get_election_state() == ElectionState.ARCHIVED.value) and ResultsView.is_votes_empty():
             if form_type is not False:
                 # The submitted form is for adding a candidate
                 if form_type == 'add-candidate':
@@ -804,7 +1325,7 @@ class OfficersView(SysadminView):
                 return render(request, self.template_name, context)
                 
         # Only allow editing while there are no elections ongoing and there are no votes in the database
-        if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
+        if (not ResultsView.get_election_state() or ResultsView.get_election_state() == ElectionState.ARCHIVED.value) and ResultsView.is_votes_empty():
             if form_type == 'delete-officer':
                 # The submitted form is for deleting officers
                 officers_list = request.POST.getlist('officers')
@@ -907,7 +1428,7 @@ class UnitView(SysadminView):
         unit_form = UnitForm(request.POST)
 
         # Only allow editing while there are no elections ongoing and there are no votes in the database
-        if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
+        if (not ResultsView.get_election_state() or ResultsView.get_election_state() == ElectionState.ARCHIVED.value) and ResultsView.is_votes_empty():
             if form_type is not False:
                 if form_type == 'add-unit':
                     # The submitted form is for adding a unit
@@ -1038,7 +1559,7 @@ class PositionView(SysadminView):
         position_form = PositionForm(request.POST)
 
         # Only allow editing while there are no elections ongoing and there are no votes in the database
-        if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
+        if (not ResultsView.get_election_state() or ResultsView.get_election_state() == ElectionState.ARCHIVED.value) and ResultsView.is_votes_empty():
             if form_type is not False:
                 if form_type == 'add-position':
                     # The submitted form is for adding a position
@@ -1165,7 +1686,7 @@ class IssueView(SysadminView):
         issue_form = IssueForm(request.POST)
 
         # Only allow editing while there are no elections ongoing and there are no votes in the database
-        if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
+        if (not ResultsView.get_election_state() or ResultsView.get_election_state() == ElectionState.ARCHIVED.value) and ResultsView.is_votes_empty():
             if form_type is not False:
                 if form_type == 'add-issue':
                     # The submitted form is for adding an issue
@@ -1317,7 +1838,7 @@ class PollView(SysadminView):
         poll_form = PollForm(request.POST)
 
         # Only allow editing while there are no elections ongoing and there are no votes in the database
-        if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
+        if (not ResultsView.get_election_state() or ResultsView.get_election_state() == ElectionState.ARCHIVED.value) and ResultsView.is_votes_empty():
             if form_type is not False:
                 if form_type == 'add-poll':
                     # The submitted form is for adding an poll
