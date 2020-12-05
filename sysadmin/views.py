@@ -282,7 +282,7 @@ class ElectionsView(SysadminView):
                 if election_state != ElectionState.FINISHED.value:
                     messages.error(request, 'You may not archive while the elections are not yet finished.')
 
-                    context = self.display_objects(1)
+                    context = self.get_context()
 
                     return render(request, self.template_name, context)
                 elif self.is_votes_empty():
@@ -290,7 +290,7 @@ class ElectionsView(SysadminView):
                     messages.error(request,
                                    'There aren\'t any election results to archive yet.')
 
-                    context = self.display_objects(1)
+                    context = self.get_context()
 
                     return render(request, self.template_name, context)
                 else:
@@ -305,7 +305,7 @@ class ElectionsView(SysadminView):
                                        'The election results weren\'t archived because the password was incorrect. '
                                        'Try again.')
 
-                        context = self.display_objects(1)
+                        context = self.get_context()
 
                         return render(request, self.template_name, context)
                     else:
@@ -565,7 +565,7 @@ class ElectionsView(SysadminView):
                 # message
                 messages.error(request, 'Invalid request.')
 
-                context = self.display_objects(1)
+                context = self.get_context()
 
                 return render(request, self.template_name, context)
 
