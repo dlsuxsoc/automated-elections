@@ -1,6 +1,7 @@
 # Create your views here.
 import csv
 import datetime
+import smtplib
 from email.mime.image import MIMEImage
 
 from django.conf import settings
@@ -606,6 +607,22 @@ class VotersView(SysadminView):
         # Create the voter using the created user
         Voter.objects.create(user=user, college=college,
                              voting_status=voting_status, eligibility_status=eligibility_status)
+
+        election_state = ResultsView.get_election_state()
+
+        if (election_state == ElectionState.ONGOING.value or election_state == ElectionState.PAUSED.value) \
+                and not voting_status and eligibility_status:
+            # Also check if his batch and college is in the election status
+            if ElectionStatus.objects.filter(college=college, batch=int(username[:3])).count() > 0:
+                 # Init email server
+                server = smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT)
+                server.ehlo()
+                server.starttls()
+                server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
+                send_email(username, password)
+                print('Email sent to ' + username)
+                # close server
+                server.quit()
 
     # A convenience function for changing a voter
     @staticmethod

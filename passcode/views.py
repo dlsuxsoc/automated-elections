@@ -139,7 +139,10 @@ class VotersView(OfficerView):
         Voter.objects.create(user=user, college=college,
                              voting_status=voting_status, eligibility_status=eligibility_status)
         
-        if ResultsView.get_election_state() == 'ongoing' and not voting_status and eligibility_status:
+        election_state = ResultsView.get_election_state()
+
+        if (election_state == ElectionState.ONGOING.value or election_state == ElectionState.PAUSED.value) \
+                and not voting_status and eligibility_status:
             # Also check if his batch and college is in the election status
             if ElectionStatus.objects.filter(college=college, batch=int(username[:3])).count() > 0:
                  # Init email server
@@ -212,64 +215,35 @@ class VotersView(OfficerView):
     def post(self, request):
         form_type = request.POST.get('form-type', False)
 
-        # The submitted form is for adding a voter
-        if form_type == 'add-voter':
-            first_name = request.POST.get('voter-firstnames', False)
-            last_name = request.POST.get('voter-lastname', False)
-            username = request.POST.get('voter-id', False)
-            college_name = request.POST.get('voter-college', False)
-            voting_status_name = request.POST.get('voter-voting-status', False)
-            eligibility_status_name = request.POST.get('voter-eligibility-status', False)
-
-            if first_name is not False and last_name is not False and username is not False \
-                    and college_name is not False \
-                    and voting_status_name is not False and eligibility_status_name is not False:
-                try:
-                    with transaction.atomic():
-                        # Create the voter
-                        self.create_voter(first_name, last_name, username, college_name, voting_status_name,
-                                            eligibility_status_name)
-
-                        # Display a success message
-                        messages.success(request, 'Voter successfully created.')
-                except IntegrityError:
-                    messages.error(request, 'A voter with that ID number already exists.')
-                except College.DoesNotExist:
-                    messages.error(request, 'That college does not exist.')
-
-                context = self.display_objects(1)
-
-                return render(request, self.template_name, context)
-            else:
-                # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
-                # message
-                messages.error(request, 'Invalid request.')
-
-                context = self.display_objects(1)
-
-                return render(request, self.template_name, context)
-
         # Only allow editing while there are no elections ongoing and there are no votes in the database
         # if not ResultsView.is_election_ongoing() and ResultsView.is_votes_empty():
         if form_type is not False:
-            if form_type == 'edit-voter':
-                # The submitted form is for editing a voter
-                page = request.POST.get('page', False)
-                voter_id = request.POST.get('edit-id', False)
+             # The submitted form is for adding a voter
+            if form_type == 'add-voter':
+                first_name = request.POST.get('voter-firstnames', False)
+                last_name = request.POST.get('voter-lastname', False)
+                username = request.POST.get('voter-id', False)
+                college_name = request.POST.get('voter-college', False)
+                voting_status_name = request.POST.get('voter-voting-status', False)
                 eligibility_status_name = request.POST.get('voter-eligibility-status', False)
 
-                if page is not False and voter_id is not False and eligibility_status_name is not False:
+                if first_name is not False and last_name is not False and username is not False \
+                        and college_name is not False \
+                        and voting_status_name is not False and eligibility_status_name is not False:
                     try:
                         with transaction.atomic():
-                            # Edit the voter
-                            self.change_voter_eligibility(voter_id, eligibility_status_name)
+                            # Create the voter
+                            self.create_voter(first_name, last_name, username, college_name, voting_status_name,
+                                                eligibility_status_name)
 
                             # Display a success message
-                            messages.success(request, 'Voter successfully edited.')
-                    except Voter.DoesNotExist:
-                        messages.error(request, 'No such voter exists.')
+                            messages.success(request, 'Voter successfully created.')
+                    except IntegrityError:
+                        messages.error(request, 'A voter with that ID number already exists.')
+                    except College.DoesNotExist:
+                        messages.error(request, 'That college does not exist.')
 
-                    context = self.display_objects(page)
+                    context = self.display_objects(1)
 
                     return render(request, self.template_name, context)
                 else:
@@ -399,32 +373,75 @@ class VotersView(OfficerView):
                     context = self.display_objects(1)
 
                     return render(request, self.template_name, context)
-            elif form_type == 'delete-voter':
-                # The submitted form is for deleting voters
-                voters_list = request.POST.getlist('voters')
+            if (not ResultsView.get_election_state() or ResultsView.get_election_state() == ElectionState.ARCHIVED.value) and ResultsView.is_votes_empty():
+                if form_type == 'edit-voter':
+                    # The submitted form is for editing a voter
+                    page = request.POST.get('page', False)
+                    voter_id = request.POST.get('edit-id', False)
+                    eligibility_status_name = request.POST.get('voter-eligibility-status', False)
 
-                if voters_list is not False and len(voters_list) > 0:
-                    try:
-                        voters_deleted = 0
+                    if page is not False and voter_id is not False and eligibility_status_name is not False:
+                        try:
+                            with transaction.atomic():
+                                # Edit the voter
+                                self.change_voter_eligibility(voter_id, eligibility_status_name)
 
-                        # Try to delete each voter in the list
-                        with transaction.atomic():
-                            for voter in voters_list:
-                                self.delete_voter(voter)
+                                # Display a success message
+                                messages.success(request, 'Voter successfully edited.')
+                        except Voter.DoesNotExist:
+                            messages.error(request, 'No such voter exists.')
 
-                                voters_deleted += 1
+                        context = self.display_objects(page)
 
-                            messages.success(request,
-                                                "All {0} voter(s) successfully deleted.".format(voters_deleted))
-                    except User.DoesNotExist:
-                        # If the user does not exist
-                        messages.error(request,
-                                        'One of the selected users has not existed in the first place. '
-                                        'No voters were deleted.')
+                        return render(request, self.template_name, context)
+                    else:
+                        # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                        # message
+                        messages.error(request, 'Invalid request.')
 
-                    context = self.display_objects(1)
+                        context = self.display_objects(1)
 
-                    return render(request, self.template_name, context)
+                        return render(request, self.template_name, context)
+                elif form_type == 'delete-voter':
+                    # The submitted form is for deleting voters
+                    voters_list = request.POST.getlist('voters')
+
+                    if voters_list is not False and len(voters_list) > 0:
+                        election_state = ResultsView.get_election_state()
+
+                        if (election_state == ElectionState.ONGOING.value or election_state == ElectionState.PAUSED.value):
+                            messages.error(request,
+                                                'Cannot delete voters while an election is ongoing')
+                        else:
+                            try:
+                                voters_deleted = 0
+
+                                # Try to delete each voter in the list
+                                with transaction.atomic():
+                                    for voter in voters_list:
+                                        self.delete_voter(voter)
+
+                                        voters_deleted += 1
+
+                                    messages.success(request,
+                                                        "All {0} voter(s) successfully deleted.".format(voters_deleted))
+                            except User.DoesNotExist:
+                                # If the user does not exist
+                                messages.error(request,
+                                                'One of the selected users has not existed in the first place. '
+                                                'No voters were deleted.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
+                    else:
+                        # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
+                        # message
+                        messages.error(request, 'Invalid request.')
+
+                        context = self.display_objects(1)
+
+                        return render(request, self.template_name, context)
                 else:
                     # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
                     # message
@@ -436,7 +453,8 @@ class VotersView(OfficerView):
             else:
                 # If the form type is unknown, it's an invalid request, so stay on the page and then show an error
                 # message
-                messages.error(request, 'Invalid request.')
+                messages.error(request, 'You cannot do that now because there are still votes being tracked. There may be '
+                                    'elections still ongoing, or you haven\'t archived the votes yet.')
 
                 context = self.display_objects(1)
 
