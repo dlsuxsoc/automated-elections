@@ -10,6 +10,7 @@ requests = "*"
 django-admin-honeypot = "*"
 django-honeypot = "*"
 django = "*"
+django-audittrail = "*"
 
 [requires]
 python_version = "3.8"

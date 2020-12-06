@@ -41,7 +41,8 @@ INSTALLED_APPS = [
     'passcode',
     'sysadmin',
     'honeypot',
-    'admin_honeypot'
+    'admin_honeypot',
+    'audit_trail',
 ]
 
 MIDDLEWARE = [
@@ -52,6 +53,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'audit_trail.middleware.AuditMiddleware',
 ]
 
 ROOT_URLCONF = 'autoelect.urls'
