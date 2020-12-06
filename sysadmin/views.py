@@ -1,6 +1,7 @@
 # Create your views here.
 import csv
 import datetime
+import smtplib
 from email.mime.image import MIMEImage
 
 from django.conf import settings
@@ -309,7 +310,7 @@ class ElectionsView(SysadminView):
                 if election_state != ElectionState.FINISHED.value:
                     messages.error(request, 'You may not archive while the elections are not yet finished.')
 
-                    context = self.display_objects(1)
+                    context = self.get_context()
 
                     return render(request, self.template_name, context)
                 elif self.is_votes_empty():
@@ -317,7 +318,7 @@ class ElectionsView(SysadminView):
                     messages.error(request,
                                    'There aren\'t any election results to archive yet.')
 
-                    context = self.display_objects(1)
+                    context = self.get_context()
 
                     return render(request, self.template_name, context)
                 else:
@@ -332,7 +333,7 @@ class ElectionsView(SysadminView):
                                        'The election results weren\'t archived because the password was incorrect. '
                                        'Try again.')
 
-                        context = self.display_objects(1)
+                        context = self.get_context()
 
                         return render(request, self.template_name, context)
                     else:
@@ -481,6 +482,10 @@ class ElectionsView(SysadminView):
                             electionPollZip.write('Poll Results.csv', compress_type=ZIP_DEFLATED)
                             electionPollZip.close()
 
+                            dbBackupZip = ZipFile('dbBackup.zip', 'w')
+                            dbBackupZip.write('db.sqlite3', compress_type=ZIP_DEFLATED)
+                            dbBackupZip.close()
+
                             # Create a response object, and classify it as a ZIP response
                             response = HttpResponse(open('Election and Poll Results.zip', 'rb').read(), content_type='application/x-zip-compressed')
                             response['Content-Disposition'] = 'attachment; filename="Election and Poll Results.zip"'
@@ -588,7 +593,7 @@ class ElectionsView(SysadminView):
                 # message
                 messages.error(request, 'Invalid request.')
 
-                context = self.display_objects(1)
+                context = self.get_context()
 
                 return render(request, self.template_name, context)
 
@@ -633,6 +638,22 @@ class VotersView(SysadminView):
         # Create the voter using the created user
         Voter.objects.create(user=user, college=college,
                              voting_status=voting_status, eligibility_status=eligibility_status)
+
+        election_state = ResultsView.get_election_state()
+
+        if (election_state == ElectionState.ONGOING.value or election_state == ElectionState.PAUSED.value) \
+                and not voting_status and eligibility_status:
+            # Also check if his batch and college is in the election status
+            if ElectionStatus.objects.filter(college=college, batch=int(username[:3])).count() > 0:
+                 # Init email server
+                server = smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT)
+                server.ehlo()
+                server.starttls()
+                server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
+                send_email(username, password)
+                print('Email sent to ' + username)
+                # close server
+                server.quit()
 
     # A convenience function for changing a voter
     @staticmethod

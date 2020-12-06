@@ -33,6 +33,17 @@ def vote_test_func(user):
 class VoteView(UserPassesTestMixin, View):
     template_name = 'vote/voting.html'
 
+    # TODO: To remove this, restart the server
+    context_cache = {
+        'BAGCED': {},
+        'CCS': {},
+        'CLA': {},
+        'COS': {},
+        'GCOE': {},
+        'RVR-COB': {},
+        'SOE': {}
+    }
+
     # Check for duplicate votes and positions in a voteset
     @staticmethod
     def contains_duplicates(position_votes):
@@ -122,85 +133,90 @@ class VoteView(UserPassesTestMixin, View):
         # Get the batch of the current voter
         batch = voter.user.username[:3]
 
-        # Get all candidates
-        candidates = {}
+        if batch in self.context_cache[college]:
+            print('Cached {} {}'.format(college, batch))
+        else:
+            # Get all candidates
+            candidates = {}
 
-        # And remember all "voteable" positions
-        positions = []
-        positions_json = []
+            # And remember all "voteable" positions
+            positions = []
+            positions_json = []
 
-        # Partition the candidates into their position's types
-        base_positions = BasePosition.objects.values('type').distinct().order_by('-type')
+            # Partition the candidates into their position's types
+            base_positions = BasePosition.objects.values('type').distinct().order_by('-type')
 
-        for base_position in base_positions:
-            # Take note of the position type
-            position_type = base_position['type']
+            for base_position in base_positions:
+                # Take note of the position type
+                position_type = base_position['type']
 
-            # Create a partition for that position type
-            candidates[position_type] = {}
+                # Create a partition for that position type
+                candidates[position_type] = {}
 
-            # Then try to fill that partition with candidates running for that position type
-            candidates_type = Candidate.objects.filter(position__base_position__type=position_type).order_by(
-                'party__name').order_by('position__priority')
+                # Then try to fill that partition with candidates running for that position type
+                candidates_type = Candidate.objects.filter(position__base_position__type=position_type).order_by(
+                    'party__name').order_by('position__priority')
 
-            if candidates_type.count() != 0:
-                for candidate in candidates_type:
-                    # If the position is of type college, the position's college must match the voter's college
-                    # If the position is of type batch, that position's batch must match the voter's batch and college
-                    if position_type == BasePosition.COLLEGE and candidate.position.unit.college.name != college \
-                            or position_type == BasePosition.BATCH \
-                            and (candidate.position.unit.batch != batch
-                                 or candidate.position.unit.college.name != college):
-                        continue
+                if candidates_type.count() != 0:
+                    for candidate in candidates_type:
+                        # If the position is of type college, the position's college must match the voter's college
+                        # If the position is of type batch, that position's batch must match the voter's batch and college
+                        if position_type == BasePosition.COLLEGE and candidate.position.unit.college.name != college \
+                                or position_type == BasePosition.BATCH \
+                                and (candidate.position.unit.batch != batch
+                                    or candidate.position.unit.college.name != college):
+                            continue
 
-                    # Only add the candidate if all the conditions above have been satisfied
-                    position = candidate.position
+                        # Only add the candidate if all the conditions above have been satisfied
+                        position = candidate.position
 
-                    if position not in candidates[position_type]:
-                        candidates[position_type][position] = []
+                        if position not in candidates[position_type]:
+                            candidates[position_type][position] = []
 
-                    candidates[position_type][position].append(candidate)
+                        candidates[position_type][position].append(candidate)
 
-                    # Remember the positions, if they haven't already been remembered
-                    if position not in positions:
-                        positions.append(position)
-                        positions_json.append(str(position.identifier))
+                        # Remember the positions, if they haven't already been remembered
+                        if position not in positions:
+                            positions.append(position)
+                            positions_json.append(str(position.identifier))
 
-                # If there turned out to be no candidates running for this position type relevant to the voter, just
-                # forget about that position type and move on
-                if not candidates[position_type]:
+                    # If there turned out to be no candidates running for this position type relevant to the voter, just
+                    # forget about that position type and move on
+                    if not candidates[position_type]:
+                        candidates.pop(position_type)
+                else:
+                    # If there are no candidates running for this position type, just forget about that position type and
+                    # move on
                     candidates.pop(position_type)
-            else:
-                # If there are no candidates running for this position type, just forget about that position type and
-                # move on
-                candidates.pop(position_type)
 
-        # print(candidates["Executive"])
+            # print(candidates["Executive"])
 
-        # Dump the positions into JSON
-        positions_json = json.dumps(list(positions_json))
+            # Dump the positions into JSON
+            positions_json = json.dumps(list(positions_json))
 
-        # Get all issues
-        issues = Issue.objects.all().order_by('name')
+            # Get all issues
+            issues = Issue.objects.all().order_by('name')
 
-        # Get polls
-        polls = Poll.objects.all().order_by('name')
-        polls_json = []
-        for poll in polls:
-            polls_json.append(str(poll.identifier))
-        polls_json = json.dumps(list(polls_json))
+            # Get polls
+            polls = Poll.objects.all().order_by('name')
+            polls_json = []
+            for poll in polls:
+                polls_json.append(str(poll.identifier))
+            polls_json = json.dumps(list(polls_json))
 
-        context = {
-            'candidates': candidates,
-            'positions': positions,
-            'positions_json': positions_json,
-            'issues': issues,
-            'polls': polls,
-            'polls_json': polls_json
-        }
+            context = {
+                'candidates': candidates,
+                'positions': positions,
+                'positions_json': positions_json,
+                'issues': issues,
+                'polls': polls,
+                'polls_json': polls_json
+            }
+
+            self.context_cache[college][batch] = context
 
         # Get this page
-        return render(request, self.template_name, context)
+        return render(request, self.template_name, self.context_cache[college][batch])
 
     def post(self, request):
         voter = request.user.voter
