@@ -37,6 +37,7 @@
     <button class="tab-buttons active" onclick="openTab(event, 'Controls')" id="tab-controls">Election Control</button>
     <button class="tab-buttons" onclick="openTab(event, 'Unblock')" id="tab-archive">Unblock Results</button>
     <button class="tab-buttons" onclick="openTab(event, 'Archive')" id="tab-archive">Archive all results</button>
+    <button class="tab-buttons" onclick="openTab(event, 'Audit')" id="tab-archive">Check Audits</button>
 </div>
 
 <!-- CONTAINER WHERE TABS WILL OCCUPY -->
@@ -198,6 +199,34 @@
                     <input class="button confirm" type="submit" value="Unblock election results">
                 </div>
             </form>
+        {% endif %}
+
+        <div id="logo">
+            <img width=500 height=50 src="{% static 'passcode/assets/svg/org-logos.svg' %}">
+        </div>
+    </div>
+
+    <div id="Audit" class="tab-content" style="display: none">
+        {% if audits %}
+            <div id="table-container">
+                <div class="table-row row-0">
+                    <div class="col-50">ID Number</div>
+                    <div class="col-50">Timestamp</div>
+                </div>
+
+                <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
+                {% for audit in audits.0 %}
+                    <div class="table-row {% cycle 'row-1' 'row-2' %}">
+                        <div class="col-50">{{ audit.0 }}</div>
+                        <div class="col-50">{{ audit.1 }}</div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <header>Oops!</header>
+            <div class="prohibited">
+                No one has voted yet.
+            </div>
         {% endif %}
 
         <div id="logo">

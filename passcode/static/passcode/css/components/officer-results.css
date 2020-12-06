@@ -49,6 +49,10 @@
     flex-basis: 10%;
 }
 
+.col-50 {
+    flex-basis: 50%;
+}
+
 .password-reauth {
     width: 60%;
     height: 40px;

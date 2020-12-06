@@ -118,6 +118,31 @@ class ElectionsView(SysadminView):
         # Set a flag indicating whether elections have started or not
         election_state = ElectionsView.get_election_state()
 
+        audits = []
+
+        AUDITS_QUERY = (
+            "SELECT\n"
+            "    a.username AS \"ID Number\",\n"
+            "    x.ts AS \"Timestamp\"\n"
+            "FROM\n"
+            "    xaction AS x\n"
+            "INNER JOIN\n"
+            "    auth_user AS a\n"
+            "ON\n"
+            "    x.user_id=a.id\n"
+            "WHERE\n"
+            "    x.entity_id=1 AND x.xaction_type=\"I\"\n"
+            "ORDER BY\n"
+            "    x.id DESC\n"
+            "LIMIT\n"
+            "    100"
+        )
+
+        with connection.cursor() as cursor:
+            cursor.execute(AUDITS_QUERY)
+
+            audits.append(cursor.fetchall())
+
         context = {}
 
         if not election_state or election_state == ElectionState.ARCHIVED.value:
@@ -132,6 +157,7 @@ class ElectionsView(SysadminView):
                 'election_state': election_state,
                 'colleges': colleges,
                 'batches': batches,
+                'audits': audits,
             }
         else:
             # Show the eligible batches when the elections are on
@@ -149,6 +175,7 @@ class ElectionsView(SysadminView):
                 'college_batch_dict': college_batch_dict,
                 'election_state': election_state,
                 'colleges': colleges,
+                'audits': audits,
             }
         
         return context
