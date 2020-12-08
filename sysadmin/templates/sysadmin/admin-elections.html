@@ -68,15 +68,19 @@
 
                     <div class="controls-header">
                         Colleges
-                        <input type="button" class="smallbutton" onclick="selectAll()"
-                            value="Select All">
+                        {% if not election_state or election_state == 'archived' %}
+                            <input type="button" class="smallbutton" onclick="selectAll()"
+                                value="Select All">
+                        {% endif %}
                     </div>
                     </br>
                     {% for college in colleges %}
                         <div class="controls-header">
                             {{ college.name }}
-                            <input type="button" class="smallbutton" onclick="selectAllCollege('{{ college.name }}-batch')"
-                                value="Select {{ college.name }}">
+                            {% if not election_state or election_state == 'archived' %}
+                                <input type="button" class="smallbutton" onclick="selectAllCollege('{{ college.name }}-batch')"
+                                    value="Select {{ college.name }}">
+                            {% endif %}
                         </div>
                         <div class="controls">
                             {% if not election_state or election_state == 'archived'%}
