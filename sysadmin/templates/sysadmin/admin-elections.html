@@ -214,15 +214,15 @@
         {% if audits %}
             <div id="table-container">
                 <div class="table-row row-0">
-                    <div class="col-50">ID Number</div>
-                    <div class="col-50">Timestamp</div>
+                    <div class="col-ID">ID Number</div>
+                    <div class="col-TS">Timestamp</div>
                 </div>
 
                 <!-- TEMPLATES FOR DATA INSERTION. NOTE THAT THERE IS A "row-1" AND "row-2"  FOR THEIR ALTERNATING COLORS -->
                 {% for audit in audits.0 %}
                     <div class="table-row {% cycle 'row-1' 'row-2' %}">
-                        <div class="col-50">{{ audit.0 }}</div>
-                        <div class="col-50">{{ audit.1 }}</div>
+                        <div class="col-ID">{{ audit.0 }}</div>
+                        <div class="col-TS">{{ audit.1 }}</div>
                     </div>
                 {% endfor %}
             </div>
