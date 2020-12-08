@@ -21,7 +21,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 from passcode.views import PasscodeView, ResultsView
 from sysadmin.forms import IssueForm, OfficerForm, UnitForm, PositionForm, PollForm
-from vote.models import Vote, Voter, College, Candidate, ElectionStatus, Position, Unit, Party, Issue, Take, BasePosition, Poll, Election, ElectionState
+from vote.models import Vote, Voter, VoteSet, PollSet, College, Candidate, ElectionStatus, Position, Unit, Party, Issue, Take, BasePosition, Poll, Election, ElectionState
 
 
 # Test function for this view
@@ -493,6 +493,14 @@ class ElectionsView(SysadminView):
                             e = Election.objects.latest('timestamp')
                             e.state = ElectionState.ARCHIVED.value
                             e.save()
+
+                            # Delete these objects first otherwise it will cause an error with
+                            # post_delete_handler creating audit trails
+                            VoteSet.objects.all().delete()
+
+                            PollSet.objects.all().delete()
+
+                            Vote.objects.all().delete()
 
                             # Clear all users who are voters
                             # This also clears the following tables: voters, candidates, takes, vote set, poll set
