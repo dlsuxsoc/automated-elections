@@ -21,7 +21,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 from passcode.views import PasscodeView, ResultsView
 from sysadmin.forms import IssueForm, OfficerForm, UnitForm, PositionForm, PollForm
-from vote.models import Vote, Voter, College, Candidate, ElectionStatus, Position, Unit, Party, Issue, Take, BasePosition, Poll, Election, ElectionState
+from vote.models import Vote, Voter, VoteSet, PollSet, College, Candidate, ElectionStatus, Position, Unit, Party, Issue, Take, BasePosition, Poll, Election, ElectionState
 
 
 # Test function for this view
@@ -119,6 +119,31 @@ class ElectionsView(SysadminView):
         # Set a flag indicating whether elections have started or not
         election_state = ElectionsView.get_election_state()
 
+        audits = []
+
+        AUDITS_QUERY = (
+            "SELECT\n"
+            "    a.username AS \"ID Number\",\n"
+            "    x.ts AS \"Timestamp\"\n"
+            "FROM\n"
+            "    xaction AS x\n"
+            "INNER JOIN\n"
+            "    auth_user AS a\n"
+            "ON\n"
+            "    x.user_id=a.id\n"
+            "WHERE\n"
+            "    x.entity_id=1 AND x.xaction_type=\"I\"\n"
+            "ORDER BY\n"
+            "    x.id DESC\n"
+            "LIMIT\n"
+            "    100"
+        )
+
+        with connection.cursor() as cursor:
+            cursor.execute(AUDITS_QUERY)
+
+            audits.append(cursor.fetchall())
+
         context = {}
 
         if not election_state or election_state == ElectionState.ARCHIVED.value:
@@ -133,6 +158,7 @@ class ElectionsView(SysadminView):
                 'election_state': election_state,
                 'colleges': colleges,
                 'batches': batches,
+                'audits': audits,
             }
         else:
             # Show the eligible batches when the elections are on
@@ -150,6 +176,7 @@ class ElectionsView(SysadminView):
                 'college_batch_dict': college_batch_dict,
                 'election_state': election_state,
                 'colleges': colleges,
+                'audits': audits,
             }
         
         return context
@@ -466,6 +493,14 @@ class ElectionsView(SysadminView):
                             e = Election.objects.latest('timestamp')
                             e.state = ElectionState.ARCHIVED.value
                             e.save()
+
+                            # Delete these objects first otherwise it will cause an error with
+                            # post_delete_handler creating audit trails
+                            VoteSet.objects.all().delete()
+
+                            PollSet.objects.all().delete()
+
+                            Vote.objects.all().delete()
 
                             # Clear all users who are voters
                             # This also clears the following tables: voters, candidates, takes, vote set, poll set
