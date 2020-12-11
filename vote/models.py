@@ -169,7 +169,7 @@ class VoteSet(models.Model):
                + self.candidate.voter.user.first_name + " " + self.candidate.voter.user.last_name
 
 class Poll(models.Model):
-    name = models.CharField(max_length=64, unique=True)
+    name = models.CharField(max_length=250, unique=True)
     identifier = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
 
     def __str__(self):
