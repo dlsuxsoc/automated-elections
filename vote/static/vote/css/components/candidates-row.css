@@ -15,12 +15,15 @@
     margin-bottom: -35px;
 }
 .abstain {
-    border: 0;
-    background: none;
-    box-shadow: none;
+    /* border: 0; */
+    /* background: none;
+    box-shadow: none; */
     border-radius: 5px;
-    background-color: var(--theme-green);
-    color: white;
+    border-color: black;
+    border-style: solid; 
+    /* background-color: var(--theme-green); */
+    background-color: white; 
+    color: var(--theme-green);;
     font-family: 'Open Sans', sans-serif;
     font-size: 0.85rem;
     padding-left: 10px;
@@ -37,6 +40,7 @@
 }
 
 .abstain-active{
+    border-color: var(--theme-green);
     text-decoration: underline;
 }
 
@@ -87,6 +91,7 @@
 .candidate-party {
     font-style: italic;
     font-size: 0.85rem;
+    height: 45px;
 }
 
 .candidate-response {
@@ -117,4 +122,22 @@
 
 .response-link:hover:after {
     width: 100%;
+}
+
+@media only screen and (min-width: 900px) {
+    .candidate-party {
+      height: 90px; 
+    }
+}
+
+@media only screen and (min-width: 1000px) {
+    .candidate-party {
+      height: 75px; 
+    }
+}
+
+@media only screen and (min-width: 1280px) {
+    .candidate-party {
+      height: 61px; 
+    }
 }
