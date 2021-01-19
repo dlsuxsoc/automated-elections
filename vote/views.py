@@ -1,7 +1,6 @@
 # Create your views here.
 import json
 import traceback
-from datetime import datetime
 from email.mime.image import MIMEImage
 
 from django.conf import settings
@@ -68,7 +67,7 @@ class VoteView(UserPassesTestMixin, View):
 
     # Sends an email receipt to the voter
     @staticmethod
-    def send_email_receipt(user, voted, serial_number):
+    def send_email_receipt(user, voted, serial_number, timestamp):
         # Email template
         fp = open(settings.BASE_DIR + '/email_receipt_template.html', 'r')
         HTML_STR = fp.read()
@@ -82,7 +81,7 @@ class VoteView(UserPassesTestMixin, View):
 
         # Prepare the email contents  
         voter_name = user.first_name + ' ' + user.last_name
-        current_time = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        current_time = timestamp
         to_email = user.email
         subject = '[COMELEC] Voter\'s receipt for ' + voter_name
 
@@ -303,12 +302,15 @@ class VoteView(UserPassesTestMixin, View):
                         for actual_poll_vote in actual_poll_votes:
                             actual_poll_vote.save()
 
-                        # Send email receipt
-                        self.send_email_receipt(request.user, votes, serial_number)
-
                         # Mark the voter as already voted
                         voter.voting_status = True
                         voter.save()
+
+                        timestamp = vote.timestamp.__str__()
+                        print(timestamp)
+
+                        # Send email receipt
+                        self.send_email_receipt(request.user, votes, serial_number, timestamp)
 
                     # Log the user out
                     logout(request)
